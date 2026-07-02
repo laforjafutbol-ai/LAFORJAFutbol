@@ -142,17 +142,25 @@ export function PrivatePage({addInquiry, inquiries, isBlocked, blocked, getLocat
       <div style={{maxWidth:680,margin:"0 auto",padding:"40px 20px 100px",animation:"fadeUp 0.4s ease"}}>
 
         {/* Hero */}
-        <div style={{background:`linear-gradient(135deg,${C.redDark},${C.goldDark})`,border:`1px solid ${C.gold}33`,borderRadius:18,padding:"28px 24px",marginBottom:28,position:"relative",overflow:"hidden"}}>
-          <div style={{position:"absolute",inset:0,backgroundImage:`linear-gradient(${C.gold}06 1px,transparent 1px),linear-gradient(90deg,${C.gold}06 1px,transparent 1px)`,backgroundSize:"40px 40px"}}/>
+        <div style={{background:`linear-gradient(135deg,${C.goldDark},#1a0e06)`,border:`1px solid ${C.gold}33`,borderRadius:18,padding:"28px 24px",marginBottom:28,position:"relative",overflow:"hidden"}}>
+          <div style={{position:"absolute",top:-30,right:-30,width:160,height:160,borderRadius:"50%",background:`radial-gradient(circle,${C.red}18,transparent 70%)`,pointerEvents:"none"}}/>
           <div style={{position:"relative",zIndex:1}}>
-            <div style={{fontSize:9,letterSpacing:5,color:C.silverDim,textTransform:"uppercase",marginBottom:8,fontFamily:D.body}}>Private Training</div>
-            <h1 style={{margin:"0 0 8px",fontSize:30,fontWeight:600,color:C.white,fontFamily:D.display}}>1-on-1 Sessions</h1>
-            <p style={{margin:"0 0 16px",fontSize:13,color:C.textMid,lineHeight:1.8,fontFamily:D.body}}>Full attention from Coach Carlos. Pick your slot, fill in your details, send payment, and you're locked in.</p>
-            <div style={{display:"flex",gap:20,flexWrap:"wrap"}}>
-              {[{icon:"📅",label:"Wed · Sat"},{icon:"⚽",label:"Position Specific"},{icon:"💰",label:`$${PRICE_1ON1} per session`}].map((item,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:16}}>{item.icon}</span>
-                  <div style={{fontSize:12,color:C.white,fontFamily:D.body,fontWeight:500}}>{item.label}</div>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+              <span style={{fontSize:28}}>⚒️</span>
+              <div>
+                <div style={{fontSize:9,letterSpacing:5,color:C.goldDim,textTransform:"uppercase",fontFamily:D.body}}>Private Training</div>
+                <h1 style={{margin:0,fontSize:26,fontWeight:600,color:C.white,fontFamily:D.display}}>The Tempering</h1>
+              </div>
+            </div>
+            <p style={{margin:"0 0 18px",fontSize:13,color:C.textMid,lineHeight:1.8,fontFamily:D.body}}>Your position. Your weaknesses. Your game. One coach, full attention, every session built around you specifically.</p>
+            <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+              {[{icon:"📅",label:"Wed · Sat"},
+                {icon:"🎯",label:"Position Specific"},
+                {icon:"💰",label:`$${PRICE_1ON1} / session`},
+              ].map((item,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{fontSize:14}}>{item.icon}</span>
+                  <span style={{fontSize:11,color:C.silverBright,fontFamily:D.body}}>{item.label}</span>
                 </div>
               ))}
             </div>
@@ -279,59 +287,71 @@ export function PrivatePage({addInquiry, inquiries, isBlocked, blocked, getLocat
             )}
 
             {lookSt!=="idle"&&(<>
+
+            {/* Player picker for logged-in users */}
             {user&&players.length>0&&(
-              <div style={{marginBottom:18}}>
-                <FL>Booking For (optional)</FL>
-                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 18px",marginBottom:18}}>
+                <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Who is training?</div>
+                <div style={{display:"grid",gap:8}}>
                   {players.map(p=>(
                     <button key={p.id} onClick={()=>{
                       setSelPlayerId(p.id);
-                      setForm(f=>({...f, age:p.age||f.age, position:p.position||f.position, goals:p.notes||f.goals }));
-                    }} style={{background:selPlayerId===p.id?"rgba(168,168,188,0.12)":C.card,border:selPlayerId===p.id?`1px solid ${C.silver}`:`1px solid ${C.cardBorder}`,color:selPlayerId===p.id?C.silverBright:C.textDim,borderRadius:10,padding:"9px 16px",fontSize:12,cursor:"pointer",fontFamily:D.body}}>
-                      {p.name}{p.age?` (${p.age})`:""}
+                      setForm(f=>({...f, age:p.age||f.age, position:p.position||f.position, goals:p.notes||f.goals, name:p.name||f.name }));
+                    }} style={{background:selPlayerId===p.id?`linear-gradient(135deg,${C.goldDark},#1c0e04)`:C.black,border:selPlayerId===p.id?`1px solid ${C.gold}`:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"11px 16px",cursor:"pointer",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.2s"}}>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:600,color:selPlayerId===p.id?C.gold:C.white,fontFamily:D.display,marginBottom:2}}>{p.name}</div>
+                        <div style={{fontSize:11,color:selPlayerId===p.id?C.goldDim:C.textDim,fontFamily:D.body}}>{p.age?`Age ${p.age}`:""}{p.position?` · ${p.position}`:""}</div>
+                      </div>
+                      {selPlayerId===p.id&&<span style={{color:C.gold,fontSize:14}}>✓</span>}
                     </button>
                   ))}
-                  {selPlayerId&&(
-                    <button onClick={()=>setSelPlayerId(null)} style={{background:"none",border:"none",color:C.silverDark,fontSize:11,cursor:"pointer",fontFamily:D.body,textDecoration:"underline"}}>Clear</button>
-                  )}
                 </div>
+                {selPlayerId&&<button onClick={()=>setSelPlayerId(null)} style={{background:"none",border:"none",color:C.silverDark,fontSize:11,cursor:"pointer",fontFamily:D.body,textDecoration:"underline",marginTop:8,padding:0}}>Clear selection</button>}
               </div>
             )}
-            <FL>Select Your Position *</FL>
-            <FieldPositionPicker selected={form.position} onSelect={pos=>setForm(p=>({...p,position:pos}))}/>
-            {form.position&&<div style={{textAlign:"center",marginTop:8,marginBottom:16,fontSize:11,color:C.gold,fontFamily:D.body,letterSpacing:2}}>{POSITIONS.find(p=>p.id===form.position)?.full}</div>}
-            <div style={{marginBottom:16}}/>
 
-            <FL>Your Details</FL>
-            <div style={{display:"grid",gap:13,marginBottom:18}}>
-              {[
-                {key:"name",  label:"Full Name *",  type:"text",     ph:"Jane Smith"},
-                {key:"email", label:"Email *",       type:"email",    ph:"jane@email.com"},
-                {key:"phone", label:"Phone *",       type:"tel",      ph:"+1 (555) 000-0000"},
-                {key:"age",   label:"Player Age",    type:"text",     ph:"e.g. 14"},
-                {key:"goals", label:"Goals / Focus", type:"textarea", ph:"e.g. Finishing, 1v1, weak foot..."},
-              ].map(f=>(
-                <div key={f.key}>
-                  <label style={{display:"block",fontSize:9,letterSpacing:2,color:C.gold,marginBottom:5,textTransform:"uppercase",fontFamily:D.body}}>{f.label}</label>
-                  {f.type==="textarea"?<textarea rows={2} placeholder={f.ph} value={form[f.key]} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))} style={IS}/>:<input type={f.type} placeholder={f.ph} value={form[f.key]} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))} style={IS}/>}
-                </div>
-              ))}
+            {/* Position picker */}
+            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 18px",marginBottom:18}}>
+              <FL>Select Position *</FL>
+              <FieldPositionPicker selected={form.position} onSelect={pos=>setForm(p=>({...p,position:pos}))}/>
+              {form.position&&<div style={{textAlign:"center",marginTop:10,fontSize:11,color:C.gold,fontFamily:D.body,letterSpacing:1}}>{POSITIONS.find(p=>p.id===form.position)?.full}</div>}
+            </div>
+
+            {/* Contact details */}
+            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 18px",marginBottom:18}}>
+              <FL>Your Details</FL>
+              <div style={{display:"grid",gap:12}}>
+                {[
+                  {key:"name",  label:"Player's Full Name *", type:"text",     ph:"Player name"},
+                  {key:"email", label:"Parent Email *",        type:"email",    ph:"parent@email.com"},
+                  {key:"phone", label:"Parent Phone *",        type:"tel",      ph:"+1 (555) 000-0000"},
+                  {key:"age",   label:"Player Age",            type:"text",     ph:"e.g. 14"},
+                  {key:"goals", label:"Goals / Focus Areas",   type:"textarea", ph:"e.g. Finishing, 1v1, weak foot, decision making..."},
+                ].map(f=>(
+                  <div key={f.key}>
+                    <label style={{display:"block",fontSize:9,letterSpacing:2,color:C.gold,marginBottom:5,textTransform:"uppercase",fontFamily:D.body}}>{f.label}</label>
+                    {f.type==="textarea"?<textarea rows={2} placeholder={f.ph} value={form[f.key]} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))} style={IS}/>:<input type={f.type} placeholder={f.ph} value={form[f.key]} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))} style={IS}/>}
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Remember Me */}
             {!user&&(
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20,cursor:"pointer"}} onClick={()=>setRememberMe(r=>!r)}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18,cursor:"pointer"}} onClick={()=>setRememberMe(r=>!r)}>
                 <div style={{width:20,height:20,borderRadius:5,border:`1px solid ${rememberMe?C.gold:C.cardBorder}`,background:rememberMe?C.goldDark:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.2s"}}>
                   {rememberMe&&<span style={{color:C.gold,fontSize:12,lineHeight:1}}>✓</span>}
                 </div>
-                <span style={{fontSize:12,color:rememberMe?C.gold:C.textDim,fontFamily:D.body}}>Remember me — save my details for next time</span>
+                <span style={{fontSize:12,color:rememberMe?C.gold:C.textDim,fontFamily:D.body}}>Remember my details for next time</span>
               </div>
             )}
 
+            {/* Summary */}
             <SC rows={[
               {label:"Date",     value:fmtDate(selDate)},
-              {label:"Session",  value:selSlot?.time},
-              {label:"Position", value:form.position, color:C.gold},
+              {label:"Time",     value:selSlot?.time},
+              {label:"Location", value:getLocation(dKey(selDate))||"TBD"},
+              {label:"Position", value:form.position?POSITIONS.find(p=>p.id===form.position)?.full||form.position:"Not selected", color:C.gold},
               {label:"Total",    value:`$${total}`, accent:true},
             ]}/>
 
@@ -661,7 +681,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
 
         {showLoc&&<LocationManager locations={locations} saveLocation={saveLocation} getDates={getDates} getPrivateDates={getPrivateDates} fmtDate={fmtDate} dKey={dKey}/>}
 
-                    {showAvail&&(()=>{
+        {showAvail&&(()=>{
             const today = new Date(); today.setHours(0,0,0,0);
             const monthStart = new Date(today.getFullYear(), today.getMonth()+availWeek, 1);
             const monthName = monthStart.toLocaleDateString("en-US",{month:"long",year:"numeric"});
@@ -817,9 +837,17 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
           })()}
 
         {/* ── TAB BAR ── */}
-        <div style={{display:"flex",gap:6,marginBottom:24,borderBottom:`1px solid ${C.cardBorder}`,paddingBottom:0}}>
-          {[["bookings","Group Bookings"],["inquiries","1-on-1"],["reminders","📧 Reminders"],["reviews","⭐ Reviews"]].map(([key,lbl])=>(
-            <button key={key} onClick={()=>setTab(key)} style={{background:"none",border:"none",borderBottom:tab===key?`2px solid ${C.gold}`:"2px solid transparent",color:tab===key?C.gold:C.textDim,padding:"10px 16px",fontSize:11,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:tab===key?600:400,transition:"all 0.2s",marginBottom:-1}}>{lbl}</button>
+        <div style={{display:"flex",gap:6,marginBottom:24,flexWrap:"wrap"}}>
+          {[
+            ["bookings", "🔥 Group", pendingCount],
+            ["inquiries", "⚒️ 1-on-1", newInquiries],
+            ["reminders", "📧 Reminders", 0],
+            ["reviews", "⭐ Reviews", 0],
+          ].map(([key,lbl,badge])=>(
+            <button key={key} onClick={()=>setTab(key)} style={{background:tab===key?`linear-gradient(135deg,${C.goldDark},#1c0e04)`:C.card,border:tab===key?`1px solid ${C.gold}55`:`1px solid ${C.cardBorder}`,color:tab===key?C.gold:C.textDim,borderRadius:10,padding:"9px 18px",fontSize:11,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:tab===key?600:400,transition:"all 0.2s",display:"flex",alignItems:"center",gap:6}}>
+              {lbl}
+              {badge>0&&<span style={{background:C.red,color:C.white,borderRadius:10,fontSize:9,padding:"1px 6px",fontWeight:700,fontFamily:D.body}}>{badge}</span>}
+            </button>
           ))}
         </div>
 
