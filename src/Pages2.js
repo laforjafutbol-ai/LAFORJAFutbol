@@ -230,46 +230,44 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries}){
 
   return(
     <div style={{maxWidth:760,margin:"0 auto",padding:"110px 24px 80px",animation:"fadeUp 0.5s ease"}}>
-      {/* Header */}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:32,flexWrap:"wrap",gap:16}}>
-        <div>
-          <div style={{fontSize:10,letterSpacing:4,color:C.silverDim,textTransform:"uppercase",marginBottom:6,fontFamily:D.body}}>My Account</div>
-          <h1 style={{margin:0,fontSize:28,fontWeight:600,color:C.white,fontFamily:D.display}}>Welcome, {user.displayName?user.displayName.split(" ")[0]:"there"}</h1>
-          <div style={{fontSize:12,color:C.textDim,fontFamily:D.body,marginTop:6}}>{email}</div>
-        </div>
-        <button onClick={handleSignOut} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:8,padding:"9px 18px",fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
-          Sign Out
-        </button>
-      </div>
 
-      {/* Quick actions */}
-      <div style={{display:"flex",gap:10,marginBottom:28,flexWrap:"wrap"}}>
-        <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"12px 24px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>
-          + Book Group Session
-        </button>
-        <button onClick={()=>setPage("private")} style={{background:"transparent",border:`1px solid ${C.silver}44`,color:C.gold,borderRadius:10,padding:"12px 24px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>
-          + Request 1-on-1
-        </button>
+      {/* Header */}
+      <div style={{background:`linear-gradient(135deg,#1c130a,#120d06)`,border:`1px solid ${C.gold}22`,borderRadius:16,padding:"22px 24px",marginBottom:22,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:16}}>
+        <div style={{display:"flex",alignItems:"center",gap:14}}>
+          <div style={{width:46,height:46,borderRadius:"50%",background:C.redDark,border:`2px solid ${C.red}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>⚽</div>
+          <div>
+            <div style={{fontSize:9,letterSpacing:4,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>La Forja Account</div>
+            <div style={{fontSize:22,fontWeight:600,color:C.white,fontFamily:D.display}}>{user.displayName?.split(" ")[0]||"Welcome back"}</div>
+            <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,marginTop:2}}>{email}</div>
+          </div>
+        </div>
+        <button onClick={handleSignOut} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:8,padding:"9px 18px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Sign Out</button>
       </div>
 
       {/* Stats */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:28}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:20}}>
         {[
-          {label:"Upcoming", value:upcoming.length, color:C.gold},
-          {label:"Completed", value:past.filter(s=>s.status==="confirmed"||s.status==="scheduled").length, color:C.green},
-          {label:"Total Sessions", value:allSessions.length, color:C.silverBright},
+          {label:"Upcoming",value:upcoming.length,color:C.gold},
+          {label:"Completed",value:past.filter(s=>s.status==="confirmed"||s.status==="scheduled").length,color:C.green},
+          {label:"Total",value:allSessions.length,color:C.silverBright},
         ].map((s,i)=>(
-          <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 18px",textAlign:"center"}}>
-            <div style={{fontSize:26,fontWeight:700,color:s.color,fontFamily:D.display,marginBottom:4}}>{s.value}</div>
+          <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"14px 16px",textAlign:"center"}}>
+            <div style={{fontSize:26,fontWeight:700,color:s.color,fontFamily:D.display,marginBottom:3}}>{s.value}</div>
             <div style={{fontSize:9,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
           </div>
         ))}
       </div>
 
+      {/* Book buttons */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:22}}>
+        <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"13px 16px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>🔥 Book The Furnace</button>
+        <button onClick={()=>setPage("private")} style={{background:"transparent",border:`1px solid ${C.silver}44`,color:C.gold,borderRadius:10,padding:"13px 16px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>⚒️ Book The Tempering</button>
+      </div>
+
       {/* Tabs */}
-      <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
+      <div style={{display:"flex",gap:8,marginBottom:20}}>
         {[["upcoming",`Upcoming (${upcoming.length})`],["past",`Past (${past.length})`],["players",`Players (${players.length})`]].map(([key,lbl])=>(
-          <button key={key} onClick={()=>setTab(key)} style={{background:tab===key?"rgba(168,168,188,0.1)":"transparent",border:tab===key?`1px solid ${C.silver}44`:`1px solid ${C.cardBorder}`,color:tab===key?C.silverBright:C.textDim,borderRadius:8,padding:"8px 18px",fontSize:11,letterSpacing:1,cursor:"pointer",fontFamily:D.body}}>
+          <button key={key} onClick={()=>setTab(key)} style={{background:tab===key?`linear-gradient(135deg,${C.goldDark},#1c0e04)`:C.card,border:tab===key?`1px solid ${C.gold}44`:`1px solid ${C.cardBorder}`,color:tab===key?C.gold:C.textDim,borderRadius:8,padding:"9px 18px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:tab===key?600:400,transition:"all 0.2s"}}>
             {lbl}
           </button>
         ))}
@@ -286,8 +284,8 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries}){
             <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:`3px solid ${statusColor[s.status]||C.silverDark}`,borderRadius:12,padding:"16px 18px"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16,flexWrap:"wrap"}}>
                 <div style={{flex:1,minWidth:200}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6,flexWrap:"wrap"}}>
-                    <span style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display}}>{s.dateLabel}</span>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,flexWrap:"wrap"}}>
+                    <span style={{fontSize:16,fontWeight:700,color:C.white,fontFamily:D.display}}>{s.dateLabel}</span>
                     <span style={{fontSize:9,padding:"2px 9px",borderRadius:10,letterSpacing:1,textTransform:"uppercase",fontFamily:D.body,background:`${statusColor[s.status]}1a`,color:statusColor[s.status]||C.silverDim,border:`1px solid ${statusColor[s.status]||C.silverDark}33`}}>
                       {statusLabel[s.status]||s.status}
                     </span>
@@ -297,12 +295,15 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries}){
                       </span>
                     )}
                   </div>
-                  <div style={{fontSize:12,color:C.textDim,fontFamily:D.body,lineHeight:1.8}}>
-                    {s._time}
+                  <div style={{display:"flex",flexWrap:"wrap",gap:"4px 14px",marginBottom:s.location?5:0}}>
+                    <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>🕐 {s._time}</span>
                     {s.type==="group"?(
-                      <> · {s.skillIcon} {s.skill} · {s.ageGroup} · {s.count} player{s.count>1?"s":""}</>
+                      <>
+                        <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>🔥 {s.skill||"The Furnace"}</span>
+                        <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>👥 {s.count} player{s.count>1?"s":""}</span>
+                      </>
                     ):(
-                      <> · 1-on-1 Private{s.position?` · ${s.position}`:""}</>
+                      <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>⚒️ The Tempering{s.position?` · ${s.position}`:""}</span>
                     )}
                   </div>
                   {s.location&&<div style={{fontSize:11,color:C.silverDim,fontFamily:D.body,marginTop:4}}>📍 {s.location}</div>}
@@ -314,10 +315,10 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries}){
               {tab==="upcoming"&&!s.requestType&&(
                 <div style={{display:"flex",gap:8,marginTop:12,paddingTop:12,borderTop:`1px solid ${C.cardBorder}`}}>
                   <button onClick={()=>setRequestModal({session:s,action:"reschedule"})} style={{background:"transparent",border:`1px solid ${C.silver}44`,color:C.silver,borderRadius:8,padding:"7px 14px",fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
-                    Request Reschedule
+                    Reschedule
                   </button>
                   <button onClick={()=>setRequestModal({session:s,action:"cancel"})} style={{background:"transparent",border:`1px solid ${C.redDim}`,color:C.redDim,borderRadius:8,padding:"7px 14px",fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
-                    Request Cancellation
+                    Cancel
                   </button>
                 </div>
               )}
@@ -362,7 +363,7 @@ export function RequestModal({session,action,onClose,onSubmit}){
     <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}} onClick={onClose}>
       <div onClick={e=>e.stopPropagation()} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"24px",maxWidth:420,width:"100%",animation:"fadeUp 0.3s ease"}}>
         <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",marginBottom:6,fontFamily:D.body}}>
-          {action==="cancel"?"Request Cancellation":"Request Reschedule"}
+          {action==="cancel"?"Cancel":"Reschedule"}
         </div>
         <h3 style={{margin:"0 0 12px",fontSize:18,color:C.white,fontFamily:D.display}}>
           {session.dateLabel} · {session._time}
