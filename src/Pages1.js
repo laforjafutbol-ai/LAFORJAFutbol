@@ -615,43 +615,51 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
   const weekRevenue    = weekSessions.reduce((s,x)=>s+(Number(x.total)||0),0);
 
   return(
-    <div style={{paddingTop:100}}>
-      <div style={{maxWidth:940,margin:"0 auto",padding:"40px 24px 100px",animation:"fadeUp 0.4s ease"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:16,marginBottom:20}}>
-          <SH eyebrow="Coach" title="Bookings Dashboard"/>
-          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-            {pendingCount>0&&<button onClick={()=>setTab("bookings")} style={{fontSize:12,padding:"7px 16px",borderRadius:20,background:C.redDark,border:`1px solid ${C.red}55`,color:C.red,fontFamily:D.body,animation:"pulse 2s infinite",cursor:"pointer"}}>{pendingCount} pending payment{pendingCount>1?"s":""}</button>}
-            {newInquiries>0&&<button onClick={()=>setTab("inquiries")} style={{fontSize:12,padding:"7px 16px",borderRadius:20,background:C.goldDark,border:`1px solid ${C.silver}44`,color:C.gold,fontFamily:D.body,animation:"pulse 2s infinite",cursor:"pointer"}}>{newInquiries} new 1-on-1 {newInquiries>1?"inquiries":"inquiry"}</button>}
-            {requestCount>0&&<button onClick={()=>setTab("bookings")} style={{fontSize:12,padding:"7px 16px",borderRadius:20,background:"rgba(168,168,188,0.1)",border:`1px solid ${C.silver}44`,color:C.silverBright,fontFamily:D.body,animation:"pulse 2s infinite",cursor:"pointer"}}>⚠ {requestCount} reschedule/cancel request{requestCount>1?"s":""}</button>}
+    <div style={{paddingTop:100,background:C.black,minHeight:"100vh"}}>
+      <div style={{maxWidth:960,margin:"0 auto",padding:"32px 24px 100px",animation:"fadeUp 0.4s ease"}}>
+
+        {/* ── HEADER ── */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24,flexWrap:"wrap",gap:12}}>
+          <div>
+            <div style={{fontSize:9,letterSpacing:4,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>La Forja</div>
+            <h1 style={{margin:0,fontSize:26,fontWeight:600,color:C.white,fontFamily:D.display}}>Coach Dashboard</h1>
+          </div>
+          {/* Alert badges */}
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {pendingCount>0&&<button onClick={()=>setTab("bookings")} style={{fontSize:11,padding:"6px 14px",borderRadius:20,background:C.redDark,border:`1px solid ${C.red}44`,color:C.red,fontFamily:D.body,animation:"pulse 2s infinite",cursor:"pointer",whiteSpace:"nowrap"}}>⏳ {pendingCount} pending</button>}
+            {newInquiries>0&&<button onClick={()=>setTab("inquiries")} style={{fontSize:11,padding:"6px 14px",borderRadius:20,background:C.goldDark,border:`1px solid ${C.gold}44`,color:C.gold,fontFamily:D.body,animation:"pulse 2s infinite",cursor:"pointer",whiteSpace:"nowrap"}}>🔔 {newInquiries} new 1-on-1</button>}
+            {requestCount>0&&<button onClick={()=>setTab("bookings")} style={{fontSize:11,padding:"6px 14px",borderRadius:20,background:"rgba(180,174,160,0.08)",border:`1px solid ${C.silver}33`,color:C.silver,fontFamily:D.body,animation:"pulse 2s infinite",cursor:"pointer",whiteSpace:"nowrap"}}>⚠ {requestCount} request{requestCount>1?"s":""}</button>}
           </div>
         </div>
 
-        {/* Quick stats */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:24}}>
+        {/* ── STATS ROW ── */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:20}}>
           {[
-            {label:"Today's Sessions", value:todaysSessions.length, color:C.gold},
-            {label:"Confirmed This Week", value:weekSessions.length, color:C.green},
-            {label:"This Week's Revenue", value:`$${weekRevenue}`, color:C.silverBright},
+            {label:"Today's Sessions", value:todaysSessions.length, color:C.gold, icon:"🔥"},
+            {label:"Confirmed This Week", value:weekSessions.length, color:C.green, icon:"✓"},
+            {label:"Week Revenue", value:`$${weekRevenue}`, color:C.silverBright, icon:"$"},
           ].map((s,i)=>(
-            <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"14px 16px",textAlign:"center"}}>
-              <div style={{fontSize:24,fontWeight:700,color:s.color,fontFamily:D.display,marginBottom:3}}>{s.value}</div>
-              <div style={{fontSize:9,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
+            <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"16px 18px",display:"flex",alignItems:"center",gap:14}}>
+              <div style={{width:40,height:40,borderRadius:10,background:`${s.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{s.icon}</div>
+              <div>
+                <div style={{fontSize:22,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:3}}>{s.value}</div>
+                <div style={{fontSize:9,letterSpacing:1.5,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
+              </div>
             </div>
           ))}
         </div>
 
-        {/* Availability Manager */}
-        <div style={{marginBottom:22}}>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            <button onClick={()=>setShowAvail(v=>!v)} style={{background:showAvail?"rgba(201,168,76,0.1)":C.card,border:`1px solid ${showAvail?C.goldDim:C.cardBorder}`,color:showAvail?C.gold:C.textDim,borderRadius:8,padding:"8px 18px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500,display:"flex",alignItems:"center",gap:8}}>
-              🔒 {showAvail?"Hide":"Manage"} Availability
-            </button>
-            <button onClick={()=>setShowLoc(v=>!v)} style={{background:showLoc?"rgba(204,34,34,0.1)":C.card,border:`1px solid ${showLoc?C.red:C.cardBorder}`,color:showLoc?C.red:C.textDim,borderRadius:8,padding:"8px 18px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500,display:"flex",alignItems:"center",gap:8}}>
-              📍 {showLoc?"Hide":"Set"} Locations
-            </button>
-          </div>
+        {/* ── CONTROLS ROW ── */}
+        <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
+          <button onClick={()=>setShowAvail(v=>!v)} style={{background:showAvail?`${C.gold}15`:C.card,border:`1px solid ${showAvail?C.gold:C.cardBorder}`,color:showAvail?C.gold:C.textDim,borderRadius:8,padding:"8px 16px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,display:"flex",alignItems:"center",gap:6,transition:"all 0.2s"}}>
+            🔒 Availability
+          </button>
+          <button onClick={()=>setShowLoc(v=>!v)} style={{background:showLoc?`${C.red}15`:C.card,border:`1px solid ${showLoc?C.red:C.cardBorder}`,color:showLoc?C.red:C.textDim,borderRadius:8,padding:"8px 16px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,display:"flex",alignItems:"center",gap:6,transition:"all 0.2s"}}>
+            📍 Locations
+          </button>
+        </div>
 
-          {showLoc&&<LocationManager locations={locations} saveLocation={saveLocation} getDates={getDates} getPrivateDates={getPrivateDates} fmtDate={fmtDate} dKey={dKey}/>}
+        {showLoc&&<LocationManager locations={locations} saveLocation={saveLocation} getDates={getDates} getPrivateDates={getPrivateDates} fmtDate={fmtDate} dKey={dKey}/>}
 
                     {showAvail&&(()=>{
             const today = new Date(); today.setHours(0,0,0,0);
@@ -807,11 +815,11 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
               </div>
             );
           })()}
-        </div>
 
-        <div style={{display:"flex",gap:8,marginBottom:22,flexWrap:"wrap"}}>
-          {[["bookings","Group Bookings"],["inquiries","1-on-1 Inquiries"],["reminders","📧 Reminders"],["reviews","⭐ Reviews"]].map(([key,lbl])=>(
-            <button key={key} onClick={()=>setTab(key)} style={{background:tab===key?C.goldDark:C.card,border:tab===key?`1px solid ${C.gold}`:`1px solid ${C.cardBorder}`,color:tab===key?C.gold:C.textDim,borderRadius:8,padding:"9px 18px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500,transition:"all 0.2s"}}>{lbl}</button>
+        {/* ── TAB BAR ── */}
+        <div style={{display:"flex",gap:6,marginBottom:24,borderBottom:`1px solid ${C.cardBorder}`,paddingBottom:0}}>
+          {[["bookings","Group Bookings"],["inquiries","1-on-1"],["reminders","📧 Reminders"],["reviews","⭐ Reviews"]].map(([key,lbl])=>(
+            <button key={key} onClick={()=>setTab(key)} style={{background:"none",border:"none",borderBottom:tab===key?`2px solid ${C.gold}`:"2px solid transparent",color:tab===key?C.gold:C.textDim,padding:"10px 16px",fontSize:11,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:tab===key?600:400,transition:"all 0.2s",marginBottom:-1}}>{lbl}</button>
           ))}
         </div>
 
@@ -830,38 +838,48 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
               groups[k].bookings.push(b);
             });
             return Object.entries(groups).sort((a,b)=>a[0]>b[0]?1:-1).map(([key,group])=>(
-              <div key={key} style={{marginBottom:20}}>
-                <div style={{background:`linear-gradient(135deg,${C.goldDark},#150c04)`,border:`1px solid ${C.silver}33`,borderRadius:12,padding:"12px 18px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
-                  <div>
-                    <div style={{fontSize:14,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:2}}>{group.dateLabel}</div>
-                    <div style={{fontSize:11,color:C.gold,fontFamily:D.body}}>{group.sessTime} · {group.skillIcon} {group.skill}</div>
+              <div key={key} style={{marginBottom:24}}>
+                <div style={{background:`linear-gradient(135deg,${C.goldDark},#150c04)`,border:`1px solid ${C.gold}22`,borderRadius:12,padding:"12px 16px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+                  <div style={{display:"flex",alignItems:"center",gap:12}}>
+                    <div style={{width:36,height:36,borderRadius:8,background:`${C.gold}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🔥</div>
+                    <div>
+                      <div style={{fontSize:15,color:C.white,fontFamily:D.display,fontWeight:600}}>{group.dateLabel}</div>
+                      <div style={{fontSize:11,color:C.gold,fontFamily:D.body}}>{group.sessTime}</div>
+                    </div>
                   </div>
-                  <div style={{fontSize:11,color:C.goldDim,fontFamily:D.body}}>{group.bookings.length}/{MAX_PLAYERS} players</div>
+                  <div style={{background:`${C.gold}15`,border:`1px solid ${C.gold}22`,borderRadius:8,padding:"4px 12px"}}>
+                    <span style={{fontSize:12,fontWeight:600,color:C.gold,fontFamily:D.display}}>{group.bookings.length}</span>
+                    <span style={{fontSize:10,color:C.goldDim,fontFamily:D.body}}>/{MAX_PLAYERS} players</span>
+                  </div>
                 </div>
-                <div style={{display:"grid",gap:8,paddingLeft:8,borderLeft:`2px solid ${C.goldDim}33`}}>
+                <div style={{display:"grid",gap:8,paddingLeft:8,borderLeft:`2px solid ${C.gold}22`}}>
                   {group.bookings.map(b=>(
-                    <div key={b.id} style={{background:b.requestType?"rgba(180,174,160,0.06)":C.card,border:`1px solid ${b.requestType?C.silver+"44":b.status==="confirmed"?C.green+"22":C.cardBorder}`,borderLeft:`3px solid ${b.requestType?C.silver:b.status==="confirmed"?C.green:C.gold}`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                    <div key={b.id} style={{background:b.requestType?`${C.silver}08`:C.card,border:`1px solid ${b.requestType?C.silver+"33":b.status==="confirmed"?C.green+"22":C.cardBorder}`,borderLeft:`3px solid ${b.requestType?C.silver:b.status==="confirmed"?C.green:C.gold}`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
                       <div style={{flex:1,minWidth:160}}>
-                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap"}}>
-                          <span style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display}}>{b.name}</span>
-                          {b.parentName&&b.parentName!==b.name&&<span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>via {b.parentName}</span>}
-                          {b.returning&&<span style={{fontSize:8,padding:"1px 6px",borderRadius:8,background:C.greenDark,color:C.green,border:`1px solid ${C.green}33`,letterSpacing:1,fontFamily:D.body}}>RETURNING</span>}
-                          {b.packageBooking&&<span style={{fontSize:8,padding:"1px 6px",borderRadius:8,background:C.goldDark,color:C.gold,border:`1px solid ${C.gold}33`,letterSpacing:1,fontFamily:D.body}}>📦 PACKAGE</span>}
-                          <span style={{fontSize:8,padding:"1px 7px",borderRadius:10,letterSpacing:1,textTransform:"uppercase",fontFamily:D.body,background:b.status==="confirmed"?C.greenDark:C.goldDark,color:b.status==="confirmed"?C.green:C.gold,border:`1px solid ${b.status==="confirmed"?C.green+"33":C.goldDim}`}}>{b.status}</span>
-                          {b.requestType&&<span style={{fontSize:8,padding:"1px 7px",borderRadius:10,letterSpacing:1,textTransform:"uppercase",fontFamily:D.body,background:"rgba(180,174,160,0.15)",color:C.silver,border:`1px solid ${C.silver}44`}}>⚠ {b.requestType==="cancel"?"CANCEL":"RESCHEDULE"}</span>}
+                        {/* Name row */}
+                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5,flexWrap:"wrap"}}>
+                          <span style={{fontSize:15,fontWeight:600,color:C.white,fontFamily:D.display}}>{b.name}</span>
+                          {b.parentName&&b.parentName!==b.name&&<span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>· parent: {b.parentName}</span>}
+                          <span style={{fontSize:8,padding:"2px 7px",borderRadius:8,letterSpacing:1,textTransform:"uppercase",fontFamily:D.body,background:b.status==="confirmed"?`${C.green}18`:`${C.gold}18`,color:b.status==="confirmed"?C.green:C.gold}}>{b.status==="confirmed"?"✓ Confirmed":"⏳ Pending"}</span>
+                          {b.packageBooking&&<span style={{fontSize:8,padding:"2px 6px",borderRadius:8,background:`${C.gold}15`,color:C.gold,fontFamily:D.body}}>📦 Pack</span>}
+                          {b.returning&&<span style={{fontSize:8,padding:"2px 6px",borderRadius:8,background:`${C.green}15`,color:C.green,fontFamily:D.body}}>↩ Return</span>}
+                          {b.requestType&&<span style={{fontSize:8,padding:"2px 7px",borderRadius:8,background:`${C.silver}15`,color:C.silver,fontFamily:D.body}}>⚠ {b.requestType==="cancel"?"Cancel Req":"Reschedule Req"}</span>}
                         </div>
-                        <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,display:"flex",gap:12,flexWrap:"wrap"}}>
-                          <span>{b.count} player{b.count>1?"s":""} · <span style={{color:C.gold}}>${b.total}</span></span>
-                          {b.phone&&<span style={{color:C.silverDim}}>{b.phone}</span>}
-                          <span style={{color:C.silverDark}}>{b.email}</span>
+                        {/* Details row */}
+                        <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+                          <span style={{fontSize:11,color:C.gold,fontFamily:D.body,fontWeight:600}}>${b.total}</span>
+                          <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>· {b.count} player{b.count>1?"s":""}</span>
+                          {b.phone&&<span style={{fontSize:11,color:C.silverDim,fontFamily:D.body}}>· {b.phone}</span>}
+                          <span style={{fontSize:10,color:C.silverDark,fontFamily:D.body}}>{b.email}</span>
                         </div>
-                        {b.notes&&<div style={{fontSize:10,color:C.silverDim,marginTop:3,fontStyle:"italic",fontFamily:D.body}}>{b.notes}</div>}
-                        {b.requestType&&<div style={{fontSize:10,color:C.silver,marginTop:5,fontFamily:D.body}}>📩 {b.requestNote||"No note"}</div>}
+                        {b.notes&&<div style={{fontSize:10,color:C.silverDim,marginTop:4,fontStyle:"italic",fontFamily:D.body,lineHeight:1.5}}>{b.notes}</div>}
+                        {b.requestType&&b.requestNote&&<div style={{fontSize:10,color:C.silver,marginTop:5,fontFamily:D.body,background:`${C.silver}08`,borderRadius:6,padding:"4px 8px"}}>📩 {b.requestNote}</div>}
                       </div>
-                      <div style={{display:"flex",gap:8,flexShrink:0,alignItems:"center"}}>
-                        {b.status==="pending"&&<button onClick={()=>confirmBooking(b.id)} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:8,padding:"8px 14px",color:C.white,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500,whiteSpace:"nowrap"}}>✓ Confirm</button>}
-                        {b.requestType&&<button onClick={()=>updateDoc(doc(db,"bookings",b.id),{requestType:null,requestNote:null})} style={{background:"transparent",border:`1px solid ${C.silver}44`,borderRadius:8,padding:"6px 12px",color:C.silver,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>Clear</button>}
-                        <button onClick={()=>removeBooking(b.id)} style={{background:"transparent",border:`1px solid ${C.redDim}`,borderRadius:8,padding:"6px 10px",color:C.redDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>✕</button>
+                      {/* Action buttons */}
+                      <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
+                        {b.status==="pending"&&<button onClick={()=>confirmBooking(b.id)} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:8,padding:"8px 14px",color:C.white,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,whiteSpace:"nowrap"}}>✓ Confirm</button>}
+                        {b.requestType&&<button onClick={()=>updateDoc(doc(db,"bookings",b.id),{requestType:null,requestNote:null})} style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:8,padding:"6px 10px",color:C.silver,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>Clear</button>}
+                        <button onClick={()=>removeBooking(b.id)} style={{width:30,height:30,background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:8,color:C.redDim,fontSize:12,cursor:"pointer",fontFamily:D.body,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
                       </div>
                     </div>
                   ))}
@@ -874,9 +892,10 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
             {/* TODAY */}
             {todayB.length>0&&(
               <div style={{marginBottom:28}}>
-                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,paddingBottom:8,borderBottom:`1px solid ${C.cardBorder}`}}>
                   <div style={{width:8,height:8,borderRadius:"50%",background:C.green,animation:"pulse 1.5s infinite",flexShrink:0}}/>
-                  <span style={{fontSize:9,letterSpacing:3,color:C.green,textTransform:"uppercase",fontFamily:D.body}}>Today</span>
+                  <span style={{fontSize:10,letterSpacing:3,color:C.green,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Today</span>
+                  <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {todayB.length} booking{todayB.length!==1?"s":""}</span>
                 </div>
                 {renderBookings(todayB)}
               </div>
@@ -884,20 +903,21 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
 
             {/* UPCOMING */}
             <div style={{marginBottom:28}}>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-                <span style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body}}>Upcoming</span>
-                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>({upcomingB.length} booking{upcomingB.length!==1?"s":""})</span>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,paddingBottom:8,borderBottom:`1px solid ${C.cardBorder}`}}>
+                <span style={{fontSize:10,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Upcoming</span>
+                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {upcomingB.length} booking{upcomingB.length!==1?"s":""}</span>
               </div>
               {upcomingB.length===0?(
                 <div style={{textAlign:"center",padding:"40px 20px",color:C.textDim,fontSize:13,fontFamily:D.body,background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12}}>No upcoming bookings.</div>
               ):renderBookings(upcomingB)}
             </div>
 
-            {/* PAST — collapsed by default */}
+            {/* PAST */}
             <div>
-              <button onClick={()=>setShowPast(p=>!p)} style={{display:"flex",alignItems:"center",gap:10,background:"none",border:"none",cursor:"pointer",marginBottom:showPast?14:0,padding:0}}>
-                <span style={{fontSize:9,letterSpacing:3,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body}}>Past Sessions ({pastB.length})</span>
-                <span style={{color:C.silverDim,fontSize:11}}>{showPast?"▲":"▼"}</span>
+              <button onClick={()=>setShowPast(p=>!p)} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",marginBottom:showPast?12:0,padding:"0 0 8px 0",borderBottom:`1px solid ${C.cardBorder}`,width:"100%"}}>
+                <span style={{fontSize:10,letterSpacing:3,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body}}>Past Sessions</span>
+                <span style={{fontSize:10,color:C.silverDim,fontFamily:D.body}}>— {pastB.length}</span>
+                <span style={{color:C.silverDim,fontSize:10,marginLeft:"auto"}}>{showPast?"▲":"▼"}</span>
               </button>
               {showPast&&(
                 pastB.length===0?(
@@ -916,30 +936,30 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
 
           function renderInqCard(inq){
             return(
-              <div key={inq.id} style={{background:inq.requestType?"rgba(180,174,160,0.06)":C.card,border:`1px solid ${inq.requestType?C.silver+"44":inq.status==="confirmed"?C.green+"22":C.cardBorder}`,borderLeft:`3px solid ${inq.requestType?C.silver:inq.status==="confirmed"?C.green:C.gold}`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+              <div key={inq.id} style={{background:inq.requestType?`${C.silver}08`:C.card,border:`1px solid ${inq.requestType?C.silver+"33":inq.status==="confirmed"?C.green+"22":C.cardBorder}`,borderLeft:`3px solid ${inq.requestType?C.silver:inq.status==="confirmed"?C.green:C.gold}`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
                 <div style={{flex:1,minWidth:160}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap"}}>
-                    <span style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display}}>{inq.name}</span>
-                    {inq.position&&<span style={{fontSize:9,padding:"1px 7px",borderRadius:8,background:C.goldDark,color:C.gold,border:`1px solid ${C.silver}44`,fontFamily:D.body}}>{inq.position}</span>}
-                    <span style={{fontSize:8,padding:"1px 7px",borderRadius:10,letterSpacing:1,textTransform:"uppercase",fontFamily:D.body,background:inq.status==="confirmed"?C.greenDark:C.goldDark,color:inq.status==="confirmed"?C.green:C.gold,border:`1px solid ${inq.status==="confirmed"?C.green+"33":C.goldDim}`}}>
-                      {inq.status==="confirmed"?"Confirmed":"Pending"}
-                    </span>
-                    {inq.requestType&&<span style={{fontSize:8,padding:"1px 7px",borderRadius:10,letterSpacing:1,textTransform:"uppercase",fontFamily:D.body,background:"rgba(180,174,160,0.15)",color:C.silver,border:`1px solid ${C.silver}44`}}>⚠ {inq.requestType==="cancel"?"CANCEL":"RESCHEDULE"}</span>}
+                  {/* Name + status row */}
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5,flexWrap:"wrap"}}>
+                    <span style={{fontSize:15,fontWeight:600,color:C.white,fontFamily:D.display}}>{inq.name}</span>
+                    {inq.position&&<span style={{fontSize:9,padding:"2px 7px",borderRadius:6,background:`${C.gold}15`,color:C.gold,fontFamily:D.body}}>{inq.position}</span>}
+                    <span style={{fontSize:8,padding:"2px 7px",borderRadius:8,letterSpacing:1,textTransform:"uppercase",fontFamily:D.body,background:inq.status==="confirmed"?`${C.green}18`:`${C.gold}18`,color:inq.status==="confirmed"?C.green:C.gold}}>{inq.status==="confirmed"?"✓ Confirmed":"⏳ Pending"}</span>
+                    {inq.requestType&&<span style={{fontSize:8,padding:"2px 7px",borderRadius:8,background:`${C.silver}15`,color:C.silver,fontFamily:D.body}}>⚠ {inq.requestType==="cancel"?"Cancel Req":"Reschedule Req"}</span>}
                   </div>
-                  <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,display:"flex",gap:10,flexWrap:"wrap"}}>
-                    <span style={{color:C.textMid}}>{inq.dateLabel} · {inq.slotTime}</span>
-                    <span style={{color:C.gold}}>${inq.price}</span>
-                    {inq.age&&<span>Age {inq.age}</span>}
-                    {inq.phone&&<span style={{color:C.silverDim}}>{inq.phone}</span>}
-                    <span style={{color:C.silverDark}}>{inq.email}</span>
+                  {/* Details row */}
+                  <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+                    <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>{inq.dateLabel} · {inq.slotTime}</span>
+                    <span style={{fontSize:11,color:C.gold,fontFamily:D.body,fontWeight:600}}>${inq.price||inq.total}</span>
+                    {inq.age&&<span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Age {inq.age}</span>}
+                    {inq.phone&&<span style={{fontSize:11,color:C.silverDim,fontFamily:D.body}}>{inq.phone}</span>}
+                    <span style={{fontSize:10,color:C.silverDark,fontFamily:D.body}}>{inq.email}</span>
                   </div>
-                  {inq.goals&&<div style={{fontSize:10,color:C.silverDim,marginTop:3,fontStyle:"italic",fontFamily:D.body}}>{inq.goals}</div>}
-                  {inq.requestType&&<div style={{fontSize:10,color:C.silver,marginTop:5,fontFamily:D.body}}>📩 {inq.requestNote||"No note"}</div>}
+                  {inq.goals&&<div style={{fontSize:10,color:C.silverDim,marginTop:4,fontStyle:"italic",fontFamily:D.body,lineHeight:1.5}}>{inq.goals}</div>}
+                  {inq.requestType&&inq.requestNote&&<div style={{fontSize:10,color:C.silver,marginTop:5,fontFamily:D.body,background:`${C.silver}08`,borderRadius:6,padding:"4px 8px"}}>📩 {inq.requestNote}</div>}
                 </div>
-                <div style={{display:"flex",gap:8,flexShrink:0,alignItems:"center"}}>
-                  {inq.status==="pending"&&<button onClick={()=>confirmBooking(inq.id,"inquiries")} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:8,padding:"8px 14px",color:C.white,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500,whiteSpace:"nowrap"}}>✓ Confirm</button>}
-                  {inq.requestType&&<button onClick={()=>updateDoc(doc(db,"inquiries",inq.id),{requestType:null,requestNote:null})} style={{background:"transparent",border:`1px solid ${C.silver}44`,borderRadius:8,padding:"6px 12px",color:C.silver,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>Clear</button>}
-                  <button onClick={()=>removeInquiry(inq.id)} style={{background:"transparent",border:`1px solid ${C.redDim}`,borderRadius:8,padding:"6px 10px",color:C.redDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>✕</button>
+                <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
+                  {inq.status==="pending"&&<button onClick={()=>confirmBooking(inq.id,"inquiries")} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:8,padding:"8px 14px",color:C.white,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,whiteSpace:"nowrap"}}>✓ Confirm</button>}
+                  {inq.requestType&&<button onClick={()=>updateDoc(doc(db,"inquiries",inq.id),{requestType:null,requestNote:null})} style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:8,padding:"6px 10px",color:C.silver,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>Clear</button>}
+                  <button onClick={()=>removeInquiry(inq.id)} style={{width:30,height:30,background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:8,color:C.redDim,fontSize:12,cursor:"pointer",fontFamily:D.body,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
                 </div>
               </div>
             );
@@ -949,35 +969,37 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
             {/* TODAY */}
             {todayI.length>0&&(
               <div style={{marginBottom:28}}>
-                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,paddingBottom:8,borderBottom:`1px solid ${C.cardBorder}`}}>
                   <div style={{width:8,height:8,borderRadius:"50%",background:C.green,animation:"pulse 1.5s infinite",flexShrink:0}}/>
-                  <span style={{fontSize:9,letterSpacing:3,color:C.green,textTransform:"uppercase",fontFamily:D.body}}>Today</span>
+                  <span style={{fontSize:10,letterSpacing:3,color:C.green,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Today</span>
+                  <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {todayI.length} session{todayI.length!==1?"s":""}</span>
                 </div>
-                <div style={{display:"grid",gap:10}}>{todayI.map(i=>renderInqCard(i))}</div>
+                <div style={{display:"grid",gap:8}}>{todayI.map(i=>renderInqCard(i))}</div>
               </div>
             )}
 
             {/* UPCOMING */}
             <div style={{marginBottom:28}}>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-                <span style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body}}>Upcoming</span>
-                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>({upcomingI.length} request{upcomingI.length!==1?"s":""})</span>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,paddingBottom:8,borderBottom:`1px solid ${C.cardBorder}`}}>
+                <span style={{fontSize:10,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Upcoming</span>
+                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {upcomingI.length} request{upcomingI.length!==1?"s":""}</span>
               </div>
               {upcomingI.length===0?(
                 <div style={{textAlign:"center",padding:"40px 20px",color:C.textDim,fontSize:13,fontFamily:D.body,background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12}}>No upcoming 1-on-1 requests.</div>
-              ):<div style={{display:"grid",gap:10}}>{upcomingI.map(i=>renderInqCard(i))}</div>}
+              ):<div style={{display:"grid",gap:8}}>{upcomingI.map(i=>renderInqCard(i))}</div>}
             </div>
 
             {/* PAST */}
             <div>
-              <button onClick={()=>setShowPastI(p=>!p)} style={{display:"flex",alignItems:"center",gap:10,background:"none",border:"none",cursor:"pointer",marginBottom:showPastI?14:0,padding:0}}>
-                <span style={{fontSize:9,letterSpacing:3,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body}}>Past Sessions ({pastI.length})</span>
-                <span style={{color:C.silverDim,fontSize:11}}>{showPastI?"▲":"▼"}</span>
+              <button onClick={()=>setShowPastI(p=>!p)} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",marginBottom:showPastI?12:0,padding:"0 0 8px 0",borderBottom:`1px solid ${C.cardBorder}`,width:"100%"}}>
+                <span style={{fontSize:10,letterSpacing:3,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body}}>Past Sessions</span>
+                <span style={{fontSize:10,color:C.silverDim,fontFamily:D.body}}>— {pastI.length}</span>
+                <span style={{color:C.silverDim,fontSize:10,marginLeft:"auto"}}>{showPastI?"▲":"▼"}</span>
               </button>
               {showPastI&&(
                 pastI.length===0?(
                   <div style={{textAlign:"center",padding:"40px 20px",color:C.textDim,fontSize:13,fontFamily:D.body,background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12}}>No past requests.</div>
-                ):<div style={{display:"grid",gap:10}}>{pastI.map(i=>renderInqCard(i))}</div>
+                ):<div style={{display:"grid",gap:8}}>{pastI.map(i=>renderInqCard(i))}</div>
               )}
             </div>
           </>);
