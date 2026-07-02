@@ -963,32 +963,64 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
           const pastI     = allI.filter(i=>i.dateKey<todayStr0);
 
           function renderInqCard(inq){
+            const posColor = C.gold;
             return(
-              <div key={inq.id} style={{background:inq.requestType?`${C.silver}08`:C.card,border:`1px solid ${inq.requestType?C.silver+"33":inq.status==="confirmed"?C.green+"22":C.cardBorder}`,borderLeft:`3px solid ${inq.requestType?C.silver:inq.status==="confirmed"?C.green:C.gold}`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                <div style={{flex:1,minWidth:160}}>
-                  {/* Name + status row */}
-                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5,flexWrap:"wrap"}}>
-                    <span style={{fontSize:15,fontWeight:600,color:C.white,fontFamily:D.display}}>{inq.name}</span>
-                    {inq.position&&<span style={{fontSize:9,padding:"2px 7px",borderRadius:6,background:`${C.gold}15`,color:C.gold,fontFamily:D.body}}>{inq.position}</span>}
+              <div key={inq.id} style={{background:inq.requestType?`${C.silver}08`:C.card,border:`1px solid ${inq.requestType?C.silver+"33":inq.status==="confirmed"?C.green+"22":C.cardBorder}`,borderLeft:`3px solid ${inq.requestType?C.silver:inq.status==="confirmed"?C.green:C.gold}`,borderRadius:12,padding:"14px 18px",transition:"all 0.2s"}}>
+
+                {/* Top row — name + status + actions */}
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:10}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    <span style={{fontSize:16,fontWeight:700,color:C.white,fontFamily:D.display}}>{inq.name}</span>
                     <span style={{fontSize:8,padding:"2px 7px",borderRadius:8,letterSpacing:1,textTransform:"uppercase",fontFamily:D.body,background:inq.status==="confirmed"?`${C.green}18`:`${C.gold}18`,color:inq.status==="confirmed"?C.green:C.gold}}>{inq.status==="confirmed"?"✓ Confirmed":"⏳ Pending"}</span>
                     {inq.requestType&&<span style={{fontSize:8,padding:"2px 7px",borderRadius:8,background:`${C.silver}15`,color:C.silver,fontFamily:D.body}}>⚠ {inq.requestType==="cancel"?"Cancel Req":"Reschedule Req"}</span>}
                   </div>
-                  {/* Details row */}
-                  <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-                    <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>{inq.dateLabel} · {inq.slotTime}</span>
+                  <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
+                    {inq.status==="pending"&&<button onClick={()=>confirmBooking(inq.id,"inquiries")} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:8,padding:"7px 14px",color:C.white,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,whiteSpace:"nowrap"}}>✓ Confirm</button>}
+                    {inq.requestType&&<button onClick={()=>updateDoc(doc(db,"inquiries",inq.id),{requestType:null,requestNote:null})} style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:8,padding:"6px 10px",color:C.silver,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
+                    <button onClick={()=>removeInquiry(inq.id)} style={{width:28,height:28,background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:7,color:C.redDim,fontSize:12,cursor:"pointer",fontFamily:D.body,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                  </div>
+                </div>
+
+                {/* Session info row */}
+                <div style={{display:"grid",gridTemplateColumns:"auto auto auto 1fr",gap:10,alignItems:"center",marginBottom:inq.goals||inq.requestNote?10:0,flexWrap:"wrap"}}>
+                  <div style={{background:`${C.gold}12`,border:`1px solid ${C.gold}33`,borderRadius:8,padding:"5px 12px",textAlign:"center"}}>
+                    <div style={{fontSize:9,color:C.goldDim,fontFamily:D.body,letterSpacing:1,marginBottom:1}}>⚒️ SESSION</div>
+                    <div style={{fontSize:11,color:C.gold,fontFamily:D.body,fontWeight:600,whiteSpace:"nowrap"}}>{inq.dateLabel}</div>
+                    <div style={{fontSize:10,color:C.goldDim,fontFamily:D.body}}>{inq.slotTime}</div>
+                  </div>
+                  {inq.position&&(
+                    <div style={{background:`${C.red}10`,border:`1px solid ${C.red}33`,borderRadius:8,padding:"5px 12px",textAlign:"center"}}>
+                      <div style={{fontSize:9,color:C.redDim,fontFamily:D.body,letterSpacing:1,marginBottom:1}}>POSITION</div>
+                      <div style={{fontSize:11,color:C.white,fontFamily:D.body,fontWeight:600}}>{inq.position}</div>
+                    </div>
+                  )}
+                  {inq.age&&(
+                    <div style={{background:`${C.silver}08`,border:`1px solid ${C.silver}22`,borderRadius:8,padding:"5px 12px",textAlign:"center"}}>
+                      <div style={{fontSize:9,color:C.silverDim,fontFamily:D.body,letterSpacing:1,marginBottom:1}}>AGE</div>
+                      <div style={{fontSize:11,color:C.silver,fontFamily:D.body,fontWeight:600}}>{inq.age}</div>
+                    </div>
+                  )}
+                  <div style={{display:"flex",flexDirection:"column",gap:2,paddingLeft:4}}>
                     <span style={{fontSize:11,color:C.gold,fontFamily:D.body,fontWeight:600}}>${inq.price||inq.total}</span>
-                    {inq.age&&<span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Age {inq.age}</span>}
-                    {inq.phone&&<span style={{fontSize:11,color:C.silverDim,fontFamily:D.body}}>{inq.phone}</span>}
+                    {inq.phone&&<span style={{fontSize:10,color:C.silverDim,fontFamily:D.body}}>{inq.phone}</span>}
                     <span style={{fontSize:10,color:C.silverDark,fontFamily:D.body}}>{inq.email}</span>
                   </div>
-                  {inq.goals&&<div style={{fontSize:10,color:C.silverDim,marginTop:4,fontStyle:"italic",fontFamily:D.body,lineHeight:1.5}}>{inq.goals}</div>}
-                  {inq.requestType&&inq.requestNote&&<div style={{fontSize:10,color:C.silver,marginTop:5,fontFamily:D.body,background:`${C.silver}08`,borderRadius:6,padding:"4px 8px"}}>📩 {inq.requestNote}</div>}
                 </div>
-                <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
-                  {inq.status==="pending"&&<button onClick={()=>confirmBooking(inq.id,"inquiries")} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:8,padding:"8px 14px",color:C.white,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,whiteSpace:"nowrap"}}>✓ Confirm</button>}
-                  {inq.requestType&&<button onClick={()=>updateDoc(doc(db,"inquiries",inq.id),{requestType:null,requestNote:null})} style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:8,padding:"6px 10px",color:C.silver,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>Clear</button>}
-                  <button onClick={()=>removeInquiry(inq.id)} style={{width:30,height:30,background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:8,color:C.redDim,fontSize:12,cursor:"pointer",fontFamily:D.body,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
-                </div>
+
+                {/* Goals */}
+                {inq.goals&&(
+                  <div style={{background:`${C.gold}08`,border:`1px solid ${C.gold}22`,borderRadius:8,padding:"8px 12px",marginTop:2}}>
+                    <div style={{fontSize:9,letterSpacing:2,color:C.goldDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>Goals / Focus</div>
+                    <div style={{fontSize:11,color:C.textMid,fontFamily:D.body,lineHeight:1.6}}>{inq.goals}</div>
+                  </div>
+                )}
+
+                {/* Request note */}
+                {inq.requestType&&inq.requestNote&&(
+                  <div style={{background:`${C.silver}08`,borderRadius:8,padding:"8px 12px",marginTop:8}}>
+                    <div style={{fontSize:10,color:C.silver,fontFamily:D.body}}>📩 {inq.requestNote}</div>
+                  </div>
+                )}
               </div>
             );
           }
