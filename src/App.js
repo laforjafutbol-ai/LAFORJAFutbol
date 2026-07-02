@@ -391,7 +391,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
   for(let i=0;i<allDates.length;i+=4) weeks.push(allDates.slice(i,i+4));
   const visDates=weeks[weekOff]||[];
   const myBooking=bookings.find(b=>b.id===myId);
-  const total=PRICE_GROUP;
+  const total=count*PRICE_GROUP;
   const canNext1=selDate&&selSess;
   const canNext2=form.name&&form.email;
 
@@ -422,7 +422,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
       status:"pending",dateKey:dKey(selDate),dateLabel:fmtDate(selDate),
       sessId:selSess.id,sessTime:selSess.time,ageGroup:selSess.ageGroup,ageTag:selSess.ageTag,
       skill:DAY_SCHEDULE[selDate.getDay()].skill,skillIcon:DAY_SCHEDULE[selDate.getDay()].skillIcon,
-      count:1,total:PRICE_GROUP,
+      count,total,
       name:bookingName,email:form.email,phone:form.phone,notes:form.notes,
       parentName:user?form.name:null,
       returning:!!retClient,createdAt:new Date().toISOString(),
@@ -669,15 +669,14 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
               const sp=spotsLeft(selDate,selSess.id);
               const ac=AGE_COLORS[selSess.ageTag]||{bg:C.card,border:C.gold,text:C.gold,badge:C.goldDark};
               return(<>
-                <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"14px 18px",marginBottom:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div>
-                    <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>Booking 1 Spot</div>
-                    <div style={{fontSize:13,color:C.white,fontFamily:D.body}}>One spot = one player. Each player needs their own booking.</div>
-                  </div>
-                  <div style={{textAlign:"right"}}>
-                    <div style={{fontSize:22,fontWeight:700,color:C.gold,fontFamily:D.display}}>${PRICE_GROUP}</div>
-                    <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{sp} spot{sp!==1?"s":""} left</div>
-                  </div>
+                <FL>How many players are training?</FL>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:32}}>
+                  {[1,2,3,4].map(n=>{
+                    const avail=n<=sp;
+                    const sel=count===n;
+                    return(<button key={n} disabled={!avail} onClick={()=>setCount(n)} style={{width:52,height:52,borderRadius:12,border:sel?`1px solid ${ac.border}`:`1px solid ${C.cardBorder}`,background:sel?ac.bg:C.card,color:avail?(sel?ac.text:C.white):C.silverDark,fontSize:18,fontWeight:700,cursor:avail?"pointer":"not-allowed",opacity:avail?1:0.25,transition:"all 0.2s",fontFamily:D.display}}>{n}</button>);
+                  })}
+                  <div style={{marginLeft:8,fontSize:13,color:C.textDim,fontFamily:D.body}}>× ${PRICE_GROUP} = <span style={{color:C.gold,fontWeight:600,fontSize:18,marginLeft:4,fontFamily:D.display}}>${count*PRICE_GROUP}</span></div>
                 </div>
               </>);
             })()}
@@ -789,7 +788,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
                   </div>
                 ))}
               </div>
-              <SC rows={[{label:"Date",value:fmtDate(selDate)},{label:"Session",value:selSess?.time},{label:"Age Group",value:selSess?.ageGroup,color:AGE_COLORS[selSess?.ageTag]?.text},{label:"Focus",value:`${DAY_SCHEDULE[selDate?.getDay()]?.skillIcon} ${DAY_SCHEDULE[selDate?.getDay()]?.skill}`,color:SKILL_COLORS[DAY_SCHEDULE[selDate?.getDay()]?.skill]?.color},{label:"Players",value:"1 player — one spot per booking"},{label:"Total Due",value:`$${PRICE_GROUP}`,accent:true}]}/>
+              <SC rows={[{label:"Date",value:fmtDate(selDate)},{label:"Session",value:selSess?.time},{label:"Age Group",value:selSess?.ageGroup,color:AGE_COLORS[selSess?.ageTag]?.text},{label:"Focus",value:`${DAY_SCHEDULE[selDate?.getDay()]?.skillIcon} ${DAY_SCHEDULE[selDate?.getDay()]?.skill}`,color:SKILL_COLORS[DAY_SCHEDULE[selDate?.getDay()]?.skill]?.color},{label:"Players Training",value:`${count} player${count>1?"s":""}`},{label:"Total Due",value:`$${total}`,accent:true}]}/>
               <div style={{display:"flex",gap:10,marginTop:18}}>
                 <GB onClick={()=>setStep(1)}>← Back</GB>
                 <AB disabled={!canNext2||bookingLoading} onClick={doBook}>{bookingLoading?"Reserving…":"Reserve My Spot →"}</AB>
