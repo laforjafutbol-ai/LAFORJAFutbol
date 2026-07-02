@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="description" content="La Forja — Private Soccer Training with Coach Carlos Cepeda." />
+    <title>La Forja | Private Soccer Training</title>
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{background:#0a0a0a;color:#f0f0f0}
+      ::-webkit-scrollbar{width:4px}
+      ::-webkit-scrollbar-track{background:#111}
+      ::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+      #ie-warning,#load-fallback{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#0a0908;z-index:9999;font-family:Georgia,serif;text-align:center;padding:60px 24px;flex-direction:column;align-items:center;justify-content:center}
+      #ie-warning h1,#load-fallback h1{font-size:28px;color:#e8a93c;margin-bottom:16px;font-weight:600}
+      #ie-warning p,#load-fallback p{font-size:15px;color:#a8a194;line-height:1.8;max-width:480px;margin:0 auto 28px}
+      #ie-warning a,#load-fallback a{display:inline-block;background:#ff4d2e;color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:13px;letter-spacing:2px;text-transform:uppercase;font-family:Georgia,serif;cursor:pointer;border:none}
+    </style>
+    <!--[if IE]>
+    <style>#ie-warning{display:flex!important}#root{display:none}</style>
+    <![endif]-->
+  </head>
+  <body>
+    <div id="ie-warning">
+      <h1>⚽ La Forja Futbol</h1>
+      <p>It looks like you're using Internet Explorer, which is no longer supported by modern websites.<br/><br/>Please open this page in <strong style="color:#e8a93c">Chrome, Safari, Firefox, or Edge</strong> for the full experience — it only takes a minute to download.</p>
+      <a href="https://www.google.com/chrome/">Download Chrome — It's Free →</a>
+    </div>
+
+    <!-- Fallback if the app fails to render within a few seconds (blocked script, stale cache, network issue) -->
+    <div id="load-fallback">
+      <h1>⚽ La Forja Futbol</h1>
+      <p>This page is taking longer than expected to load. This usually means the network you're on (often a work or school WiFi) is blocking part of the site, or your browser has an old cached version saved.<br/><br/>Try refreshing, switching to cell data, or opening this on a different network.</p>
+      <a onclick="window.location.reload(true)">Reload Page</a>
+    </div>
+
+    <div id="root"></div>
+
+    <script>
+      // If the React app hasn't rendered anything into #root within 8 seconds,
+      // show a helpful message instead of leaving the screen blank.
+      window.__laforjaLoadTimer = setTimeout(function(){
+        var root = document.getElementById('root');
+        if (root && root.children.length === 0) {
+          document.getElementById('load-fallback').style.display = 'flex';
+        }
+      }, 8000);
+    </script>
+  </body>
+</html>
