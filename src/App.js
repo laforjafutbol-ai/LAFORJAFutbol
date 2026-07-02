@@ -358,7 +358,9 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
   const [lookSt,setLookSt]       = useState("idle");
   const [retClient,setRetClient] = useState(null);
   const [players,setPlayers]     = useState([]);
-  const [selPlayerId,setSelPlayerId] = useState(null);
+  const [selPlayerIds,setSelPlayerIds] = useState([]); // array of selected player ids
+  const [addingPlayer,setAddingPlayer] = useState(false);
+  const [newPlayerForm,setNewPlayerForm] = useState({name:"",age:"",position:""});
 
   // If logged in, load saved players and auto-fill email/name
   useEffect(()=>{
@@ -391,7 +393,8 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
   for(let i=0;i<allDates.length;i+=4) weeks.push(allDates.slice(i,i+4));
   const visDates=weeks[weekOff]||[];
   const myBooking=bookings.find(b=>b.id===myId);
-  const total=count*PRICE_GROUP;
+  const effectiveCount = user&&selPlayerIds.length>0 ? selPlayerIds.length : count;
+  const total=effectiveCount*PRICE_GROUP;
   const canNext1=selDate&&selSess;
   const canNext2=form.name&&form.email;
 
@@ -416,19 +419,29 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
   async function doBook(){
     if(bookingLoading) return;
     setBookingLoading(true);
-    const selectedPlayer = players.find(p=>p.id===selPlayerId);
-    const bookingName = selectedPlayer ? selectedPlayer.name : form.name;
+
+    // Build name and count from selected players
+    const selectedPlayers = players.filter(p=>selPlayerIds.includes(p.id));
+    const bookingName = selectedPlayers.length>0
+      ? selectedPlayers.map(p=>p.name).join(", ")
+      : form.name;
+    const bookingCount = selectedPlayers.length>0 ? selectedPlayers.length : count;
+    const bookingTotal = bookingCount * PRICE_GROUP;
+    const bookingNotes = selectedPlayers.length>0
+      ? selectedPlayers.map(p=>`${p.name}${p.age?` (Age ${p.age})`:""}${p.position?` · ${p.position}`:""}`).join(" | ")
+      : form.notes;
+
     const booking={
       status:"pending",dateKey:dKey(selDate),dateLabel:fmtDate(selDate),
       sessId:selSess.id,sessTime:selSess.time,ageGroup:selSess.ageGroup,ageTag:selSess.ageTag,
       skill:DAY_SCHEDULE[selDate.getDay()].skill,skillIcon:DAY_SCHEDULE[selDate.getDay()].skillIcon,
-      count,total,
-      name:bookingName,email:form.email,phone:form.phone,notes:form.notes,
-      parentName:user?form.name:null,
+      count:bookingCount,total:bookingTotal,
+      name:bookingName,email:form.email,phone:form.phone,notes:bookingNotes,
+      parentName:user?user.displayName||form.name:null,
       returning:!!retClient,createdAt:new Date().toISOString(),
       location:getLocation(dKey(selDate)),locationDetail:getLocationDetail(dKey(selDate)),locationMaps:getLocationMaps(dKey(selDate)),
       ...(user?{userId:user.uid}:{}),
-      ...(selPlayerId?{playerId:selPlayerId}:{}),
+      ...(selPlayerIds.length>0?{playerIds:selPlayerIds}:{}),
     };
     const ref=await addBooking(booking);
     if(ref?.id) setMyId(ref.id);
@@ -438,7 +451,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
 
   function reset(){
     setStep(1);setSelDate(null);setSelSess(null);setCount(1);setMyId(null);setLookEmail("");setPayMethod(STRIPE_ENABLED?null:"venmo");setSelPlayerId(null);
-    setBookMode(null);setPackDates([]);setPackWeekOff(0);setPackMyIds([]);
+    setBookMode(null);setPackDates([]);setPackWeekOff(0);setPackMyIds([]);setSelPlayerIds([]);setAddingPlayer(false);setNewPlayerForm({name:"",age:"",position:""});
     if(user){
       setForm({name:user.displayName||"",email:user.email||"",phone:retClient?.phone||"",notes:""});
       setLookSt(retClient?"found":"notfound");
@@ -484,22 +497,23 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
   async function doBookPack(){
     if(bookingLoading) return;
     setBookingLoading(true);
-    const selectedPlayer = players.find(p=>p.id===selPlayerId);
-    const bookingName = selectedPlayer ? selectedPlayer.name : form.name;
+    const selectedPlayers = players.filter(p=>selPlayerIds.includes(p.id));
+    const bookingName = selectedPlayers.length>0 ? selectedPlayers.map(p=>p.name).join(", ") : form.name;
     const refs=[];
     for(const pd of [...packDates].sort((a,b)=>a.dateKey>b.dateKey?1:-1)){
       const b={
         status:"pending",dateKey:pd.dateKey,dateLabel:pd.dateLabel,
         sessId:pd.sessId,sessTime:pd.sessTime,ageGroup:pd.ageGroup,ageTag:pd.ageTag,
         skill:pd.skill,skillIcon:pd.skillIcon,
-        count:1,total:PRICE_PACK/PACK_SIZE,
+        count:selectedPlayers.length>0?selectedPlayers.length:1,
+        total:selectedPlayers.length>0?(selectedPlayers.length*(PRICE_PACK/PACK_SIZE)):(PRICE_PACK/PACK_SIZE),
         name:bookingName,email:form.email,phone:form.phone,notes:form.notes,
-        parentName:user?form.name:null,
+        parentName:user?user.displayName||form.name:null,
         returning:!!retClient,createdAt:new Date().toISOString(),
         location:pd.location,locationDetail:pd.locationDetail,locationMaps:pd.locationMaps,
         packageBooking:true,packageTotal:PRICE_PACK,packageSize:PACK_SIZE,
         ...(user?{userId:user.uid}:{}),
-        ...(selPlayerId?{playerId:selPlayerId}:{}),
+        ...(selPlayerIds.length>0?{playerIds:selPlayerIds}:{}),
       };
       const ref=await addBooking(b);
       if(ref?.id) refs.push(ref.id);
@@ -669,15 +683,18 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
               const sp=spotsLeft(selDate,selSess.id);
               const ac=AGE_COLORS[selSess.ageTag]||{bg:C.card,border:C.gold,text:C.gold,badge:C.goldDark};
               return(<>
-                <FL>How many players are training?</FL>
-                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:32}}>
-                  {[1,2,3,4].map(n=>{
-                    const avail=n<=sp;
-                    const sel=count===n;
-                    return(<button key={n} disabled={!avail} onClick={()=>setCount(n)} style={{width:52,height:52,borderRadius:12,border:sel?`1px solid ${ac.border}`:`1px solid ${C.cardBorder}`,background:sel?ac.bg:C.card,color:avail?(sel?ac.text:C.white):C.silverDark,fontSize:18,fontWeight:700,cursor:avail?"pointer":"not-allowed",opacity:avail?1:0.25,transition:"all 0.2s",fontFamily:D.display}}>{n}</button>);
-                  })}
-                  <div style={{marginLeft:8,fontSize:13,color:C.textDim,fontFamily:D.body}}>× ${PRICE_GROUP} = <span style={{color:C.gold,fontWeight:600,fontSize:18,marginLeft:4,fontFamily:D.display}}>${count*PRICE_GROUP}</span></div>
-                </div>
+                {/* For guests — show manual picker */}
+                {!user&&(<>
+                  <FL>How many players are training?</FL>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:32}}>
+                    {[1,2,3,4].map(n=>{
+                      const avail=n<=sp;
+                      const sel=count===n;
+                      return(<button key={n} disabled={!avail} onClick={()=>setCount(n)} style={{width:52,height:52,borderRadius:12,border:sel?`1px solid ${ac.border}`:`1px solid ${C.cardBorder}`,background:sel?ac.bg:C.card,color:avail?(sel?ac.text:C.white):C.silverDark,fontSize:18,fontWeight:700,cursor:avail?"pointer":"not-allowed",opacity:avail?1:0.25,transition:"all 0.2s",fontFamily:D.display}}>{n}</button>);
+                    })}
+                    <div style={{marginLeft:8,fontSize:13,color:C.textDim,fontFamily:D.body}}>× ${PRICE_GROUP} = <span style={{color:C.gold,fontWeight:600,fontSize:18,marginLeft:4,fontFamily:D.display}}>${count*PRICE_GROUP}</span></div>
+                  </div>
+                </>)}
               </>);
             })()}
             <AB disabled={!canNext1} onClick={()=>setStep(2)}>Continue →</AB>
@@ -746,37 +763,96 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
             {lookSt!=="idle"&&(<>
               {user&&players.length>0&&(
                 <div style={{marginBottom:20}}>
-                  <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Who is this session for? *</div>
-                  <div style={{display:"grid",gap:8}}>
-                    {players.map(p=>(
-                      <button key={p.id} onClick={()=>{
-                        setSelPlayerId(p.id);
-                        setForm(f=>({...f,
-                          name: p.name,
-                          notes: (p.age?`Age ${p.age}`:"") + (p.position?` · ${p.position}`:"") + (p.notes?` · ${p.notes}`:""),
-                        }));
-                      }} style={{background:selPlayerId===p.id?`linear-gradient(135deg,${C.redDark},#1a0804)`:C.card,border:selPlayerId===p.id?`1px solid ${C.red}`:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"12px 16px",cursor:"pointer",textAlign:"left",transition:"all 0.2s",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                        <div>
-                          <div style={{fontSize:14,fontWeight:600,color:selPlayerId===p.id?C.white:C.silverBright,fontFamily:D.display,marginBottom:2}}>{p.name}</div>
-                          <div style={{fontSize:11,color:selPlayerId===p.id?C.red:C.textDim,fontFamily:D.body}}>{p.age?`Age ${p.age}`:""}{p.position?` · ${p.position}`:""}</div>
-                        </div>
-                        {selPlayerId===p.id&&<div style={{fontSize:16,color:C.red}}>✓</div>}
-                      </button>
-                    ))}
-                    {selPlayerId&&(
-                      <button onClick={()=>{setSelPlayerId(null);setForm(f=>({...f,name:user.displayName||"",notes:""}));}} style={{background:"none",border:"none",color:C.silverDark,fontSize:11,cursor:"pointer",fontFamily:D.body,textDecoration:"underline",textAlign:"left",padding:0}}>← Book for someone else</button>
-                    )}
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                    <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body}}>Who is training? *</div>
+                    {selPlayerIds.length>0&&<div style={{fontSize:11,color:C.green,fontFamily:D.body}}>{selPlayerIds.length} selected · ${selPlayerIds.length*PRICE_GROUP}</div>}
                   </div>
-                  {!selPlayerId&&(
+                  <div style={{display:"grid",gap:8,marginBottom:10}}>
+                    {players.map(p=>{
+                      const sel=selPlayerIds.includes(p.id);
+                      return(
+                        <button key={p.id} onClick={()=>{
+                          setSelPlayerIds(ids=>sel?ids.filter(id=>id!==p.id):[...ids,p.id]);
+                          if(!form.email&&user) setForm(f=>({...f,email:user.email||"",phone:f.phone}));
+                        }} style={{background:sel?`linear-gradient(135deg,${C.redDark},#1a0804)`:C.card,border:sel?`1px solid ${C.red}`:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"12px 16px",cursor:"pointer",textAlign:"left",transition:"all 0.2s",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <div>
+                            <div style={{fontSize:14,fontWeight:600,color:sel?C.white:C.silverBright,fontFamily:D.display,marginBottom:2}}>{p.name}</div>
+                            <div style={{fontSize:11,color:sel?C.red:C.textDim,fontFamily:D.body}}>{p.age?`Age ${p.age}`:""}{p.position?` · ${p.position}`:""}</div>
+                          </div>
+                          <div style={{width:22,height:22,borderRadius:6,border:sel?`none`:`1px solid ${C.cardBorder}`,background:sel?C.red:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                            {sel&&<span style={{color:C.white,fontSize:12,fontWeight:700}}>✓</span>}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Add another player inline */}
+                  {!addingPlayer?(
+                    <button onClick={()=>setAddingPlayer(true)} style={{background:"none",border:`1px dashed ${C.cardBorder}`,borderRadius:10,padding:"10px 16px",cursor:"pointer",width:"100%",textAlign:"left",color:C.textDim,fontSize:12,fontFamily:D.body,display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{fontSize:16,color:C.gold}}>+</span> Add another player
+                    </button>
+                  ):(
+                    <div style={{background:C.card,border:`1px solid ${C.gold}33`,borderRadius:12,padding:"14px 16px"}}>
+                      <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>New Player</div>
+                      <div style={{display:"grid",gap:10,marginBottom:12}}>
+                        {[{key:"name",ph:"Player name *"},{key:"age",ph:"Age"},{key:"position",ph:"Position (e.g. Forward)"}].map(f=>(
+                          <input key={f.key} placeholder={f.ph} value={newPlayerForm[f.key]} onChange={e=>setNewPlayerForm(p=>({...p,[f.key]:e.target.value}))} style={{...IS,fontSize:13}}/>
+                        ))}
+                      </div>
+                      <div style={{display:"flex",gap:8}}>
+                        <button onClick={async()=>{
+                          if(!newPlayerForm.name.trim()) return;
+                          const ref = await addDoc(collection(db,"users",user.uid,"players"),{...newPlayerForm,createdAt:new Date().toISOString()});
+                          setSelPlayerIds(ids=>[...ids,ref.id]);
+                          setNewPlayerForm({name:"",age:"",position:""});
+                          setAddingPlayer(false);
+                        }} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",borderRadius:8,padding:"9px 18px",color:C.white,fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>Save & Select</button>
+                        <button onClick={()=>{setAddingPlayer(false);setNewPlayerForm({name:"",age:"",position:""}); }} style={{background:"none",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"9px 14px",color:C.textDim,fontSize:11,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {selPlayerIds.length===0&&!addingPlayer&&(
                     <div style={{marginTop:10,padding:"10px 14px",background:`${C.red}11`,border:`1px solid ${C.red}33`,borderRadius:8}}>
-                      <div style={{fontSize:11,color:C.red,fontFamily:D.body}}>⚠ Select which player this spot is for. Parents don't take up a spot — only the player training does.</div>
+                      <div style={{fontSize:11,color:C.red,fontFamily:D.body}}>⚠ Select which players are training. Parents don't take up a spot.</div>
                     </div>
                   )}
                 </div>
               )}
               {user&&players.length===0&&(
-                <div style={{background:`${C.red}11`,border:`1px solid ${C.red}33`,borderRadius:10,padding:"12px 16px",marginBottom:18}}>
-                  <div style={{fontSize:11,color:C.red,fontFamily:D.body,lineHeight:1.7}}>⚠ Enter your <strong style={{color:C.white}}>player's name</strong> below — not yours as the parent. The spot is for the player training, not the person booking.</div>
+                <div style={{marginBottom:18}}>
+                  {!addingPlayer?(
+                    <button onClick={()=>setAddingPlayer(true)} style={{background:`${C.gold}11`,border:`1px dashed ${C.gold}44`,borderRadius:10,padding:"14px 16px",cursor:"pointer",width:"100%",textAlign:"left",display:"flex",alignItems:"center",gap:10}}>
+                      <span style={{fontSize:20,color:C.gold}}>+</span>
+                      <div>
+                        <div style={{fontSize:13,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:2}}>Add your player</div>
+                        <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Save their name, age and position for faster booking next time</div>
+                      </div>
+                    </button>
+                  ):(
+                    <div style={{background:C.card,border:`1px solid ${C.gold}33`,borderRadius:12,padding:"14px 16px",marginBottom:10}}>
+                      <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Add Player</div>
+                      <div style={{display:"grid",gap:10,marginBottom:12}}>
+                        {[{key:"name",ph:"Player name *"},{key:"age",ph:"Age"},{key:"position",ph:"Position (e.g. Forward)"}].map(f=>(
+                          <input key={f.key} placeholder={f.ph} value={newPlayerForm[f.key]} onChange={e=>setNewPlayerForm(p=>({...p,[f.key]:e.target.value}))} style={{...IS,fontSize:13}}/>
+                        ))}
+                      </div>
+                      <div style={{display:"flex",gap:8}}>
+                        <button onClick={async()=>{
+                          if(!newPlayerForm.name.trim()) return;
+                          const ref = await addDoc(collection(db,"users",user.uid,"players"),{...newPlayerForm,createdAt:new Date().toISOString()});
+                          setSelPlayerIds(ids=>[...ids,ref.id]);
+                          setNewPlayerForm({name:"",age:"",position:""});
+                          setAddingPlayer(false);
+                        }} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",borderRadius:8,padding:"9px 18px",color:C.white,fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>Save & Select</button>
+                        <button onClick={()=>{setAddingPlayer(false);setNewPlayerForm({name:"",age:"",position:""});}} style={{background:"none",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"9px 14px",color:C.textDim,fontSize:11,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+                      </div>
+                    </div>
+                  )}
+                  <div style={{marginTop:10,padding:"10px 14px",background:`${C.red}11`,border:`1px solid ${C.red}33`,borderRadius:8}}>
+                    <div style={{fontSize:11,color:C.red,fontFamily:D.body}}>⚠ Enter your <strong style={{color:C.white}}>player's name</strong> below — not yours as the parent.</div>
+                  </div>
                 </div>
               )}
               <FL>Parent / Guardian Contact Details</FL>
@@ -788,7 +864,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
                   </div>
                 ))}
               </div>
-              <SC rows={[{label:"Date",value:fmtDate(selDate)},{label:"Session",value:selSess?.time},{label:"Age Group",value:selSess?.ageGroup,color:AGE_COLORS[selSess?.ageTag]?.text},{label:"Focus",value:`${DAY_SCHEDULE[selDate?.getDay()]?.skillIcon} ${DAY_SCHEDULE[selDate?.getDay()]?.skill}`,color:SKILL_COLORS[DAY_SCHEDULE[selDate?.getDay()]?.skill]?.color},{label:"Players Training",value:`${count} player${count>1?"s":""}`},{label:"Total Due",value:`$${total}`,accent:true}]}/>
+              <SC rows={[{label:"Date",value:fmtDate(selDate)},{label:"Session",value:selSess?.time},{label:"Age Group",value:selSess?.ageGroup,color:AGE_COLORS[selSess?.ageTag]?.text},{label:"Focus",value:`${DAY_SCHEDULE[selDate?.getDay()]?.skillIcon} ${DAY_SCHEDULE[selDate?.getDay()]?.skill}`,color:SKILL_COLORS[DAY_SCHEDULE[selDate?.getDay()]?.skill]?.color},{label:"Players Training",value:`${effectiveCount} player${effectiveCount>1?"s":""}`},{label:"Total Due",value:`$${total}`,accent:true}]}/>
               <div style={{display:"flex",gap:10,marginTop:18}}>
                 <GB onClick={()=>setStep(1)}>← Back</GB>
                 <AB disabled={!canNext2||bookingLoading} onClick={doBook}>{bookingLoading?"Reserving…":"Reserve My Spot →"}</AB>
@@ -1053,14 +1129,26 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
 
                 {user&&players.length>0&&(
                   <div style={{marginBottom:18}}>
-                    <FL>Booking For (optional)</FL>
-                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                      {players.map(p=>(
-                        <button key={p.id} onClick={()=>{setSelPlayerId(p.id);setForm(f=>({...f,notes:p.name+(p.age?` (Age ${p.age})`:"")+(p.notes?` — ${p.notes}`:"")  }));}} style={{background:selPlayerId===p.id?"rgba(180,174,160,0.12)":C.card,border:selPlayerId===p.id?`1px solid ${C.silver}`:`1px solid ${C.cardBorder}`,color:selPlayerId===p.id?C.silverBright:C.textDim,borderRadius:10,padding:"9px 16px",fontSize:12,cursor:"pointer",fontFamily:D.body}}>
-                          {p.name}{p.age?` (${p.age})`:""}
-                        </button>
-                      ))}
-                      {selPlayerId&&<button onClick={()=>{setSelPlayerId(null);setForm(f=>({...f,notes:""}));}} style={{background:"none",border:"none",color:C.silverDark,fontSize:11,cursor:"pointer",fontFamily:D.body,textDecoration:"underline"}}>Clear</button>}
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                      <FL>Who is training?</FL>
+                      {selPlayerIds.length>0&&<div style={{fontSize:11,color:C.green,fontFamily:D.body}}>{selPlayerIds.length} selected</div>}
+                    </div>
+                    <div style={{display:"grid",gap:8}}>
+                      {players.map(p=>{
+                        const sel=selPlayerIds.includes(p.id);
+                        return(
+                          <button key={p.id} onClick={()=>setSelPlayerIds(ids=>sel?ids.filter(id=>id!==p.id):[...ids,p.id])}
+                            style={{background:sel?`linear-gradient(135deg,${C.redDark},#1a0804)`:C.card,border:sel?`1px solid ${C.red}`:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"10px 14px",cursor:"pointer",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.2s"}}>
+                            <div>
+                              <div style={{fontSize:13,fontWeight:600,color:sel?C.white:C.silverBright,fontFamily:D.display}}>{p.name}</div>
+                              <div style={{fontSize:11,color:sel?C.red:C.textDim,fontFamily:D.body}}>{p.age?`Age ${p.age}`:""}{p.position?` · ${p.position}`:""}</div>
+                            </div>
+                            <div style={{width:20,height:20,borderRadius:5,border:sel?`none`:`1px solid ${C.cardBorder}`,background:sel?C.red:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                              {sel&&<span style={{color:C.white,fontSize:11,fontWeight:700}}>✓</span>}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
