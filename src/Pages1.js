@@ -714,7 +714,9 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
   const [pw,setPw]           = useState("");
   const [pwErr,setPwErr]     = useState(false);
   const [tab,setTab]         = useState("bookings");
-  const [moveModal,setMoveModal] = useState(null); // {booking} when open
+  const [moveId,setMoveId] = useState(null);
+  const [moveDate,setMoveDate] = useState(null);
+  const [moveSess,setMoveSess] = useState(null);
   const [schedId,setSchedId] = useState(null);
   const [schedTime,setSchedTime] = useState("");
   const [showAvail,setShowAvail] = useState(false);
@@ -1028,9 +1030,73 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                       <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
                         {b.status==="pending"&&<button onClick={()=>confirmBooking(b.id)} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:8,padding:"8px 14px",color:C.white,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,whiteSpace:"nowrap"}}>✓ Confirm</button>}
                         {b.requestType&&<button onClick={()=>updateDoc(doc(db,"bookings",b.id),{requestType:null,requestNote:null})} style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:8,padding:"6px 10px",color:C.silver,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>Clear</button>}
-                        <button onClick={()=>{console.log("MOVE CLICKED",b.id,b.name);setMoveModal({booking:b});}} style={{background:"transparent",border:`1px solid ${C.gold}44`,borderRadius:8,padding:"6px 10px",color:C.gold,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>↗ Move</button>
+                        <button onClick={()=>{setMoveId(moveId===b.id?null:b.id);setMoveDate(null);setMoveSess(null);}} style={{background:moveId===b.id?`${C.gold}22`:"transparent",border:`1px solid ${C.gold}44`,borderRadius:8,padding:"6px 10px",color:C.gold,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>↗ Move</button>
                         <button onClick={()=>removeBooking(b.id)} style={{width:30,height:30,background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:8,color:C.redDim,fontSize:12,cursor:"pointer",fontFamily:D.body,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
                       </div>
+                      {/* Inline Move Picker */}
+                      {moveId===b.id&&(
+                        <div style={{width:"100%",marginTop:12,paddingTop:12,borderTop:`1px solid ${C.cardBorder}`}}>
+                          <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Select New Date</div>
+                          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:10}}>
+                            {getDates().map((d,i)=>{
+                              const sel=moveDate&&dKey(d)===dKey(moveDate);
+                              const sched=DAY_SCHEDULE[d.getDay()];
+                              if(!sched) return null;
+                              const sp=sched.sessions.reduce((s,sess)=>s+spotsLeft(d,sess.id),0);
+                              return(
+                                <button key={i} onClick={()=>{setMoveDate(d);setMoveSess(null);}}
+                                  style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:8,padding:"8px 4px",cursor:"pointer",textAlign:"center",color:C.white}}>
+                                  <div style={{fontSize:8,color:sel?C.gold:C.silverDim,fontFamily:D.body}}>{DAY_ABBR[d.getDay()]}</div>
+                                  <div style={{fontSize:15,fontWeight:700,fontFamily:D.display}}>{d.getDate()}</div>
+                                  <div style={{fontSize:8,color:sel?C.gold:C.silverDim,fontFamily:D.body}}>{d.toLocaleDateString("en-US",{month:"short"})}</div>
+                                  <div style={{fontSize:8,color:sp===0?"#555":sp<=2?C.red:C.silverDim,marginTop:2,fontFamily:D.body}}>{sp===0?"FULL":`${sp} left`}</div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {moveDate&&(()=>{
+                            const sched=DAY_SCHEDULE[moveDate.getDay()];
+                            if(!sched) return null;
+                            return(
+                              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:10}}>
+                                {sched.sessions.map(sess=>{
+                                  const sp=spotsLeft(moveDate,sess.id);
+                                  const sel=moveSess?.id===sess.id;
+                                  return(
+                                    <button key={sess.id} disabled={sp===0} onClick={()=>setMoveSess(sess)}
+                                      style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:8,padding:"10px 10px",cursor:sp===0?"not-allowed":"pointer",textAlign:"left",opacity:sp===0?0.4:1}}>
+                                      <div style={{fontSize:11,fontWeight:600,color:sel?C.gold:C.white,fontFamily:D.display}}>{sess.time}</div>
+                                      <div style={{fontSize:10,color:sel?C.gold:C.textDim,fontFamily:D.body}}>{sess.ageGroup}</div>
+                                      <div style={{fontSize:9,color:sp===0?"#555":sp<=2?C.red:C.silverDim,marginTop:2,fontFamily:D.body}}>{sp===0?"FULL":`${sp}/${MAX_PLAYERS} open`}</div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
+                          {moveDate&&moveSess?(
+                            <button onClick={async()=>{
+                              const sched=DAY_SCHEDULE[moveDate.getDay()];
+                              await updateDoc(doc(db,"bookings",b.id),{
+                                dateKey:dKey(moveDate),dateLabel:fmtDate(moveDate),
+                                sessId:moveSess.id,sessTime:moveSess.time,
+                                ageGroup:moveSess.ageGroup,ageTag:moveSess.ageTag,
+                                skill:sched.skill,skillIcon:sched.skillIcon,
+                                requestType:null,requestNote:null,
+                                movedAt:new Date().toISOString(),
+                              });
+                              try{await callEmailAPI({...b,dateLabel:fmtDate(moveDate),sessTime:moveSess.time},"reschedule");}catch(e){}
+                              setMoveId(null);setMoveDate(null);setMoveSess(null);
+                            }} style={{width:"100%",background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:8,padding:"11px",color:"#0a0a0a",fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>
+                              ✓ Confirm → {fmtDate(moveDate)} · {moveSess.time}
+                            </button>
+                          ):(
+                            <div style={{fontSize:10,color:"#444",fontFamily:D.body,textAlign:"center",padding:"6px 0"}}>
+                              {!moveDate?"↑ Pick a date":"↑ Now pick a session time"}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1099,10 +1165,70 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                   <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
                     {inq.status==="pending"&&<button onClick={()=>confirmBooking(inq.id,"inquiries")} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:8,padding:"7px 14px",color:C.white,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,whiteSpace:"nowrap"}}>✓ Confirm</button>}
                     {inq.requestType&&<button onClick={()=>updateDoc(doc(db,"inquiries",inq.id),{requestType:null,requestNote:null})} style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:8,padding:"6px 10px",color:C.silver,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
-                    <button onClick={()=>setMoveModal({booking:inq,type:"1on1"})} style={{background:"transparent",border:`1px solid ${C.gold}44`,borderRadius:8,padding:"6px 10px",color:C.gold,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>↗ Move</button>
+                    <button onClick={()=>setMoveId(moveId===inq.id?null:inq.id)} style={{background:moveId===inq.id?`${C.gold}22`:"transparent",border:`1px solid ${C.gold}44`,borderRadius:8,padding:"6px 10px",color:C.gold,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>↗ Move</button>
                     <button onClick={()=>removeInquiry(inq.id)} style={{width:28,height:28,background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:7,color:C.redDim,fontSize:12,cursor:"pointer",fontFamily:D.body,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
                   </div>
                 </div>
+                {/* Inline Move Picker for 1-on-1 */}
+                {moveId===inq.id&&(
+                  <div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${C.cardBorder}`}}>
+                    <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Select New Date</div>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:10}}>
+                      {getPrivateDates().map((d,i)=>{
+                        const sel=moveDate&&dKey(d)===dKey(moveDate);
+                        const sched=PRIVATE_SCHEDULE[d.getDay()];
+                        if(!sched) return null;
+                        const avail=sched.slots.filter(sl=>!(blocked||[]).some(x=>x.dateKey===dKey(d)&&x.sessId===sl.id)&&!(inquiries||[]).some(x=>x.dateKey===dKey(d)&&x.slotId===sl.id&&x.status!=="cancelled")).length;
+                        return(
+                          <button key={i} onClick={()=>{setMoveDate(d);setMoveSess(null);}}
+                            style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:8,padding:"8px 4px",cursor:"pointer",textAlign:"center",color:C.white}}>
+                            <div style={{fontSize:8,color:sel?C.gold:C.silverDim,fontFamily:D.body}}>{d.toLocaleDateString("en-US",{weekday:"short"}).slice(0,3).toUpperCase()}</div>
+                            <div style={{fontSize:15,fontWeight:700,fontFamily:D.display}}>{d.getDate()}</div>
+                            <div style={{fontSize:8,color:sel?C.gold:C.silverDim,fontFamily:D.body}}>{d.toLocaleDateString("en-US",{month:"short"})}</div>
+                            <div style={{fontSize:8,color:avail===0?"#555":avail===1?C.red:C.silverDim,marginTop:2,fontFamily:D.body}}>{avail===0?"FULL":`${avail} open`}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {moveDate&&(()=>{
+                      const sched=PRIVATE_SCHEDULE[moveDate.getDay()];
+                      if(!sched) return null;
+                      return(
+                        <div style={{display:"grid",gap:6,marginBottom:10}}>
+                          {sched.slots.map(slot=>{
+                            const taken=(blocked||[]).some(x=>x.dateKey===dKey(moveDate)&&x.sessId===slot.id)||(inquiries||[]).some(x=>x.dateKey===dKey(moveDate)&&x.slotId===slot.id&&x.status!=="cancelled");
+                            const sel=moveSess?.id===slot.id;
+                            return(
+                              <button key={slot.id} disabled={taken} onClick={()=>setMoveSess(slot)}
+                                style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:8,padding:"10px 14px",cursor:taken?"not-allowed":"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",opacity:taken?0.4:1}}>
+                                <span style={{fontSize:12,fontWeight:600,color:sel?C.gold:C.white,fontFamily:D.display}}>{slot.time}</span>
+                                <span style={{fontSize:10,color:taken?"#555":sel?C.gold:C.silverDim,fontFamily:D.body}}>{taken?"BOOKED":"OPEN"}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                    {moveDate&&moveSess?(
+                      <button onClick={async()=>{
+                        await updateDoc(doc(db,"inquiries",inq.id),{
+                          dateKey:dKey(moveDate),dateLabel:fmtDate(moveDate),
+                          slotId:moveSess.id,slotTime:moveSess.time,
+                          requestType:null,requestNote:null,
+                          movedAt:new Date().toISOString(),
+                        });
+                        try{await callEmailAPI({...inq,dateLabel:fmtDate(moveDate),sessTime:moveSess.time},"reschedule");}catch(e){}
+                        setMoveId(null);setMoveDate(null);setMoveSess(null);
+                      }} style={{width:"100%",background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:8,padding:"11px",color:"#0a0a0a",fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>
+                        ✓ Confirm → {fmtDate(moveDate)} · {moveSess.time}
+                      </button>
+                    ):(
+                      <div style={{fontSize:10,color:"#444",fontFamily:D.body,textAlign:"center",padding:"6px 0"}}>
+                        {!moveDate?"↑ Pick a date":"↑ Now pick a slot"}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Session info row */}
                 <div style={{display:"grid",gridTemplateColumns:"auto auto auto 1fr",gap:10,alignItems:"center",marginBottom:inq.goals||inq.requestNote?10:0,flexWrap:"wrap"}}>
@@ -1344,21 +1470,6 @@ export function ReviewsModeration(){
       </div>
 
       {/* ── MOVE BOOKING MODAL — outside transformed div so position:fixed works ── */}
-      {moveModal&&<MoveModal
-        booking={moveModal.booking}
-        type={moveModal.type}
-        selDate={moveModal.selDate||null}
-        selSess={moveModal.selSess||null}
-        onClose={()=>setMoveModal(null)}
-        onSelectDate={d=>setMoveModal(m=>({...m,selDate:d,selSess:null}))}
-        onSelectSess={s=>setMoveModal(m=>({...m,selSess:s}))}
-        getDates={getDates}
-        getPrivateDates={getPrivateDates}
-        spotsLeft={spotsLeft}
-        bookings={bookings}
-        inquiries={inquiries}
-        blocked={blocked}
-      />}
     </div>
   );
 }
