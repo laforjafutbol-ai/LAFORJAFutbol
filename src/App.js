@@ -159,7 +159,7 @@ export default function App(){
       {page==="about"     && <AboutPage     setPage={setPage}/>}
       {page==="book"      && <BookPage      spotsLeft={spotsLeft} addBooking={addBooking} bookings={bookings} isBlocked={isBlocked} getLocation={getLocation} getLocationDetail={getLocationDetail} getLocationMaps={getLocationMaps} user={user} setPage={setPage}/>}
       {page==="private"   && <PrivatePage   addInquiry={addInquiry} inquiries={inquiries} isBlocked={isBlocked} blocked={blocked} getLocation={getLocation} getLocationDetail={getLocationDetail} getLocationMaps={getLocationMaps} user={user}/>}
-      {page==="dashboard" && <Dashboard     bookings={bookings} inquiries={inquiries} confirmBooking={confirmBooking} removeBooking={removeBooking} scheduleInquiry={scheduleInquiry} removeInquiry={removeInquiry} sendReminderEmail={sendReminderEmail} blocked={blocked} blockSession={blockSession} locations={locations} saveLocation={saveLocation} spotsLeft={spotsLeft} getDates={getDates} getDatesRaw={getDates}/>}
+      {page==="dashboard" && <Dashboard bookings={bookings} inquiries={inquiries} confirmBooking={confirmBooking} removeBooking={removeBooking} scheduleInquiry={scheduleInquiry} removeInquiry={removeInquiry} sendReminderEmail={sendReminderEmail} blocked={blocked} blockSession={blockSession} locations={locations} saveLocation={saveLocation} spotsLeft={spotsLeft} getDates={getDates} getPrivateDates={getPrivateDates}/>}
       {page==="login"     && <AuthPage      setPage={setPage} authChecked={authChecked} user={user}/>}
       {page==="account"   && <AccountPage   setPage={setPage} user={user} authChecked={authChecked} bookings={bookings} inquiries={inquiries}/>}
       {page==="contact"   && <ContactPage   setPage={setPage} user={user}/>}
