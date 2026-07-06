@@ -757,7 +757,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
 
   return(
     <div style={{paddingTop:100,background:C.black,minHeight:"100vh"}}>
-      <div style={{maxWidth:960,margin:"0 auto",padding:"32px 24px 100px",animation:"fadeUp 0.4s ease"}}>
+      <div style={{maxWidth:960,margin:"0 auto",padding:"32px 24px 100px"}}>
 
         {/* ── HEADER ── */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24,flexWrap:"wrap",gap:12}}>
@@ -1028,7 +1028,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                       <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
                         {b.status==="pending"&&<button onClick={()=>confirmBooking(b.id)} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:8,padding:"8px 14px",color:C.white,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,whiteSpace:"nowrap"}}>✓ Confirm</button>}
                         {b.requestType&&<button onClick={()=>updateDoc(doc(db,"bookings",b.id),{requestType:null,requestNote:null})} style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:8,padding:"6px 10px",color:C.silver,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>Clear</button>}
-                        <button onClick={()=>setMoveModal({booking:b})} style={{background:"transparent",border:`1px solid ${C.gold}44`,borderRadius:8,padding:"6px 10px",color:C.gold,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>↗ Move</button>
+                        <button onClick={()=>{console.log("MOVE CLICKED",b.id,b.name);setMoveModal({booking:b});}} style={{background:"transparent",border:`1px solid ${C.gold}44`,borderRadius:8,padding:"6px 10px",color:C.gold,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>↗ Move</button>
                         <button onClick={()=>removeBooking(b.id)} style={{width:30,height:30,background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:8,color:C.redDim,fontSize:12,cursor:"pointer",fontFamily:D.body,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
                       </div>
                     </div>
@@ -1343,7 +1343,7 @@ export function ReviewsModeration(){
         ))}
       </div>
 
-      {/* ── MOVE BOOKING MODAL ── */}
+      {/* ── MOVE BOOKING MODAL — outside transformed div so position:fixed works ── */}
       {moveModal&&<MoveModal
         booking={moveModal.booking}
         type={moveModal.type}
