@@ -184,6 +184,21 @@ module.exports = async function handler(req, res) {
       '<div style="font-size:11px;color:#444;margin-top:10px;">@carlos-cepeda-41 · Include your name in the note</div></div>'
     );
 
+  } else if (type === "reschedule") {
+    subject = "📅 Your La Forja Session Has Been Moved";
+    html = wrap(
+      '<h1 style="text-align:center;font-size:26px;font-weight:normal;color:#c9a84c;letter-spacing:2px;margin-bottom:20px;">Session Updated ✓</h1>' +
+      '<div style="background:#141414;border:1px solid #222;border-radius:14px;padding:24px;margin-bottom:20px;">' +
+      '<p style="margin:0 0 16px;font-size:14px;color:#999;line-height:1.8;">Hi <strong style="color:#f0f0f0;">' + booking.name + '</strong>,<br/>Coach Carlos has moved your session to a new date and time. Here are your updated details:</p>' +
+      '<div style="border-top:1px solid #222;padding-top:14px;"><div style="font-size:9px;letter-spacing:3px;color:#c9a84c;text-transform:uppercase;margin-bottom:12px;">Updated Session Details</div>' +
+      row("New Date", booking.dateLabel) +
+      row("New Time", booking.sessTime) +
+      row("Location", booking.locationDetail || "Bayview Park · James Island Youth Soccer Club Fields") +
+      row("Session", (booking.skillIcon||"🔥") + " " + (booking.skill||"The Furnace")) +
+      '</div></div>' +
+      '<p style="font-size:12px;color:#555;text-align:center;">Questions? Reply to this email or reach out directly.</p>'
+    );
+
   } else {
     return res.status(400).json({ error: "Unknown type" });
   }
