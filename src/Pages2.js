@@ -213,7 +213,11 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
   const upcoming = allSessions.filter(s=>s._date>=todayStr && s.status!=="cancelled" && s.status!=="removed");
   const past     = allSessions.filter(s=>s._date<todayStr || s.status==="cancelled" || s.status==="removed");
 
-  const statusColor = {confirmed:C.green, pending:C.gold, cancelled:C.red, removed:C.red, scheduled:C.green, change_requested:C.silver};
+  const packBookings = myBookings.filter(b=>b.packageBooking);
+  const packUsed = packBookings.filter(b=>b._date<todayStr||b.status==="confirmed").length;
+  const packTotal = packBookings.length;
+  const packRemaining = Math.max(0, packTotal - packUsed);
+  const hasPack = packTotal > 0;
   const statusLabel = {confirmed:"Confirmed", pending:"Pending Payment", cancelled:"Cancelled", removed:"Cancelled", scheduled:"Confirmed", change_requested:"Change Requested"};
 
   async function handleSignOut(){
@@ -273,7 +277,24 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
         ))}
       </div>
 
-      {/* Book buttons */}
+      {/* Package counter */}
+      {hasPack&&(
+        <div style={{background:`linear-gradient(135deg,#1a1209,#120d06)`,border:`1px solid ${C.gold}33`,borderRadius:12,padding:"14px 18px",marginBottom:20,display:"flex",alignItems:"center",gap:16}}>
+          <div style={{fontSize:28}}>📦</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:9,letterSpacing:3,color:C.goldDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>4-Session Package</div>
+            <div style={{fontSize:13,color:C.white,fontFamily:D.body,marginBottom:8}}>{packRemaining} of {packTotal} sessions remaining</div>
+            {/* Progress bar */}
+            <div style={{background:"#1a1209",borderRadius:6,height:6,overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${((packTotal-packRemaining)/packTotal)*100}%`,background:`linear-gradient(90deg,${C.gold},${C.goldDim})`,borderRadius:6,transition:"width 0.5s ease"}}/>
+            </div>
+          </div>
+          <div style={{textAlign:"right",flexShrink:0}}>
+            <div style={{fontSize:24,fontWeight:700,color:C.gold,fontFamily:D.display}}>{packRemaining}</div>
+            <div style={{fontSize:9,color:C.goldDim,fontFamily:D.body,letterSpacing:1}}>LEFT</div>
+          </div>
+        </div>
+      )}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:22}}>
         <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"13px 16px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>🔥 Book The Furnace</button>
         <button onClick={()=>setPage("private")} style={{background:"transparent",border:`1px solid ${C.silver}44`,color:C.gold,borderRadius:10,padding:"13px 16px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>⚒️ Book The Tempering</button>
