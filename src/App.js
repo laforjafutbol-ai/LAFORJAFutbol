@@ -5,7 +5,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndP
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { PrivatePage, Dashboard, ReviewsModeration } from "./Pages1";
-import { AuthPage, AccountPage, ContactPage, ReviewsPage, AboutPage, StripeCheckout } from "./Pages2";
+import { AuthPage, AccountPage, ContactPage, ReviewsPage, AboutPage, StripeCheckout, SessionsPage } from "./Pages2";
 import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, POSITIONS, DAY_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, stripePromise, TX, EMBER_GLOW, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles } from "./constants";
 
 
@@ -161,7 +161,8 @@ export default function App(){
       {page==="private"   && <PrivatePage   addInquiry={addInquiry} inquiries={inquiries} isBlocked={isBlocked} blocked={blocked} getLocation={getLocation} getLocationDetail={getLocationDetail} getLocationMaps={getLocationMaps} user={user}/>}
       {page==="dashboard" && <Dashboard bookings={bookings} inquiries={inquiries} confirmBooking={confirmBooking} removeBooking={removeBooking} scheduleInquiry={scheduleInquiry} removeInquiry={removeInquiry} sendReminderEmail={sendReminderEmail} blocked={blocked} blockSession={blockSession} locations={locations} saveLocation={saveLocation} spotsLeft={spotsLeft} getDates={getDates} getPrivateDates={getPrivateDates}/>}
       {page==="login"     && <AuthPage      setPage={setPage} authChecked={authChecked} user={user}/>}
-      {page==="account"   && <AccountPage   setPage={setPage} user={user} authChecked={authChecked} bookings={bookings} inquiries={inquiries}/>}
+      {page==="sessions"  && <SessionsPage  setPage={setPage} user={user}/>}
+      {page==="account"   && <AccountPage   setPage={setPage} user={user} authChecked={authChecked} bookings={bookings} inquiries={inquiries} getDates={getDates} getPrivateDates={getPrivateDates}/>}
       {page==="contact"   && <ContactPage   setPage={setPage} user={user}/>}
       {page==="reviews"   && <ReviewsPage   setPage={setPage} user={user}/>}
       <Footer setPage={setPage}/>
@@ -184,7 +185,7 @@ function Nav({page,setPage,user}){
         <Crest size={30}/><span style={{fontSize:18,letterSpacing:4,color:C.gold,textTransform:"uppercase",fontFamily:D.display,fontWeight:600}}>La Forja</span>
       </button>
       <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
-        {[["home","Home"],["about","About"],["book","Book"],["private","1-on-1"]].map(([key,lbl])=>(
+        {[["home","Home"],["about","About"],["book","Book"],["private","1-on-1"],["sessions","My Sessions"]].map(([key,lbl])=>(
           <button key={key} onClick={()=>setPage(key)} style={{background:key==="book"&&page!=="book"?`linear-gradient(135deg,${C.red},${C.redDim})`:page===key?"rgba(201,168,76,0.1)":"transparent",border:key==="book"&&page!=="book"?`1px solid ${C.red}`:page===key?`1px solid ${C.silver}44`:"1px solid transparent",color:key==="book"&&page!=="book"?C.white:page===key?C.silverBright:C.textMid,borderRadius:8,padding:"6px 13px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",transition:"all 0.2s",fontFamily:D.body,fontWeight:500}}>
             {lbl}
           </button>
