@@ -962,6 +962,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
         {/* ── TAB BAR ── */}
         <div style={{display:"flex",gap:6,marginBottom:24,flexWrap:"wrap"}}>
           {[
+            ["roster","📋 Today's Roster"],
             ["bookings", "🔥 Group", pendingCount],
             ["inquiries", "⚒️ 1-on-1", newInquiries],
             ["reminders", "📧 Reminders", 0],
@@ -973,6 +974,93 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
             </button>
           ))}
         </div>
+
+        {/* ── ROSTER TAB ── */}
+        {tab==="roster"&&(()=>{
+          const today = new Date();
+          const todayKey = dKey(today);
+          const todayBookings = (bookings||[]).filter(b=>b.dateKey===todayKey&&b.status!=="cancelled"&&b.status!=="removed");
+          const todayInquiries = (inquiries||[]).filter(i=>i.dateKey===todayKey&&i.status!=="cancelled"&&i.status!=="removed");
+
+          // Group by session time
+          const groups = {};
+          todayBookings.forEach(b=>{
+            const key = b.sessTime||b.sessId||"group";
+            if(!groups[key]) groups[key]={time:b.sessTime,skill:b.skill,skillIcon:b.skillIcon,ageGroup:b.ageGroup,players:[],type:"group"};
+            groups[key].players.push(b);
+          });
+          todayInquiries.forEach(i=>{
+            const key = i.slotTime||"1on1";
+            if(!groups[key]) groups[key]={time:i.slotTime,skill:"The Tempering",skillIcon:"⚒️",players:[],type:"1on1"};
+            groups[key].players.push(i);
+          });
+
+          const sortedGroups = Object.values(groups).sort((a,b)=>(a.time||"")>(b.time||"")?1:-1);
+
+          if(sortedGroups.length===0) return(
+            <div style={{textAlign:"center",padding:"60px 20px",background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14}}>
+              <div style={{fontSize:32,marginBottom:12}}>📋</div>
+              <div style={{fontSize:14,color:C.textDim,fontFamily:D.body}}>No sessions today.</div>
+            </div>
+          );
+
+          return(
+            <div>
+              {/* Date header */}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+                <div>
+                  <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>Today's Roster</div>
+                  <div style={{fontSize:20,fontWeight:600,color:C.white,fontFamily:D.display}}>{today.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</div>
+                </div>
+                <div style={{background:`${C.gold}15`,border:`1px solid ${C.gold}33`,borderRadius:10,padding:"8px 16px",textAlign:"center"}}>
+                  <div style={{fontSize:22,fontWeight:700,color:C.gold,fontFamily:D.display}}>{todayBookings.length+todayInquiries.length}</div>
+                  <div style={{fontSize:9,color:C.goldDim,fontFamily:D.body,letterSpacing:1}}>PLAYERS</div>
+                </div>
+              </div>
+
+              {/* Session groups */}
+              {sortedGroups.map((group,gi)=>(
+                <div key={gi} style={{marginBottom:20}}>
+                  {/* Session header */}
+                  <div style={{background:group.type==="1on1"?`linear-gradient(135deg,#1a1308,#0f0c05)`:`linear-gradient(135deg,${C.goldDark},#150c04)`,border:`1px solid ${group.type==="1on1"?C.gold+"33":C.gold+"22"}`,borderRadius:12,padding:"12px 16px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <span style={{fontSize:20}}>{group.skillIcon}</span>
+                      <div>
+                        <div style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display}}>{group.skill}</div>
+                        <div style={{fontSize:11,color:C.gold,fontFamily:D.body}}>{group.time}</div>
+                      </div>
+                    </div>
+                    <div style={{background:`${C.gold}15`,borderRadius:8,padding:"4px 12px"}}>
+                      <span style={{fontSize:13,fontWeight:700,color:C.gold,fontFamily:D.display}}>{group.players.length}</span>
+                      <span style={{fontSize:10,color:C.goldDim,fontFamily:D.body}}> player{group.players.length!==1?"s":""}</span>
+                    </div>
+                  </div>
+
+                  {/* Player cards */}
+                  <div style={{display:"grid",gap:8,paddingLeft:8,borderLeft:`2px solid ${C.gold}22`}}>
+                    {group.players.map((p,pi)=>(
+                      <div key={pi} style={{background:C.card,border:`1px solid ${p.status==="confirmed"?C.green+"22":C.cardBorder}`,borderLeft:`3px solid ${p.status==="confirmed"?C.green:C.gold}`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+                        <div>
+                          <div style={{fontSize:15,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:4}}>{p.name}</div>
+                          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                            {p.ageGroup&&<span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>👤 {p.ageGroup}</span>}
+                            {p.position&&<span style={{fontSize:10,color:C.gold,fontFamily:D.body}}>⚽ {p.position}</span>}
+                            {p.count>1&&<span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>👥 {p.count} players</span>}
+                            {p.notes&&<span style={{fontSize:10,color:C.silverDim,fontFamily:D.body,fontStyle:"italic"}}>{p.notes.split("|")[0]}</span>}
+                          </div>
+                        </div>
+                        <div style={{textAlign:"right",flexShrink:0}}>
+                          <div style={{fontSize:8,padding:"2px 7px",borderRadius:6,background:p.status==="confirmed"?`${C.green}18`:`${C.gold}18`,color:p.status==="confirmed"?C.green:C.gold,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>{p.status==="confirmed"?"✓ Confirmed":"⏳ Pending"}</div>
+                          {p.phone&&<div style={{fontSize:10,color:C.silverDark,fontFamily:D.body,marginTop:4}}>{p.phone}</div>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {tab==="bookings"&&(()=>{
           const allB = [...bookings].sort((a,b)=>a.dateKey>b.dateKey?1:-1);
