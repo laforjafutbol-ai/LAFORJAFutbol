@@ -24,6 +24,13 @@ export function AuthPage({setPage,authChecked,user}){
       if(mode==="signup"){
         const cred = await createUserWithEmailAndPassword(auth,email,pw);
         if(name) await updateProfile(cred.user,{displayName:name});
+        // Send welcome email with instructions
+        try{ await callEmailAPI({
+          name: name||"there",
+          email: email,
+          subject: "Welcome to La Forja — Here's How It Works",
+          message: `Hi ${name||"there"},\n\nWelcome to La Forja Futbol! Your account is all set.\n\nHere's what you can do from your account:\n\n1. Book Sessions — Book The Furnace (group) or The Tempering (1-on-1) directly from your account. No re-entering your info.\n\n2. Add Player Profiles — Save your player's name, age, and position so booking takes 10 seconds next time.\n\n3. View Upcoming Sessions — See everything you have booked in one place.\n\n4. Request Reschedules — Need to move a session? Log in, tap Reschedule on any upcoming session, pick a new date from the available spots, and submit. Coach Carlos will confirm within 24 hours.\n\nImportant: Reschedule requests are reviewed manually by Coach Carlos. You'll always get an email confirmation once your request is processed.\n\nIf you ever have questions, reply to this email or use the Contact page on the site.\n\nSee you on the field.\n\nCoach Carlos\nLa Forja Futbol\nlaforjafutbol.com`,
+        }, "contact"); }catch(e){}
       } else {
         await signInWithEmailAndPassword(auth,email,pw);
       }
@@ -161,11 +168,13 @@ export function AuthPage({setPage,authChecked,user}){
 }
 
 // ── ACCOUNT PAGE ──────────────────────────────────────────
-export function AccountPage({setPage,user,authChecked,bookings,inquiries}){
+export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDates,getPrivateDates}){
   const [tab,setTab] = useState("upcoming");
   const [players,setPlayers] = useState([]);
   const [playersLoaded,setPlayersLoaded] = useState(false);
-  const [requestModal,setRequestModal] = useState(null); // {session, action}
+  const [requestModal,setRequestModal] = useState(null);
+  const [reschedDate,setReschedDate] = useState(null);
+  const [reschedSess,setReschedSess] = useState(null);
 
   useEffect(()=>{
     if(authChecked && !user) setPage("login");
@@ -213,19 +222,25 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries}){
   }
 
   async function submitRequest(session, action, note){
-    // Mark the booking/inquiry with a request flag, and email Carlos
+    const requestedNew = reschedDate && reschedSess
+      ? `${fmtDate(reschedDate)} · ${reschedSess.time}`
+      : null;
+
     await updateDoc(doc(db, session._collection, session.id), {
       requestType: action,
       requestNote: note || "",
+      requestedNewDate: requestedNew || null,
       requestedAt: new Date().toISOString(),
     });
     await callEmailAPI({
       name: user.displayName || session.name || "Account holder",
       email: user.email,
       subject: (action==="cancel"?"Cancellation Request":"Reschedule Request") + " — " + session.dateLabel,
-      message: `${action==="cancel"?"Cancellation":"Reschedule"} request for session on ${session.dateLabel} at ${session._time}.\n\n${note?("Note from client: "+note):""}`,
+      message: `${action==="cancel"?"Cancellation":"Reschedule"} request for session on ${session.dateLabel} at ${session._time}.${requestedNew?`\n\nRequested new date: ${requestedNew}`:""}\n\n${note?("Note: "+note):""}`,
     }, "contact");
     setRequestModal(null);
+    setReschedDate(null);
+    setReschedSess(null);
   }
 
   return(
@@ -317,9 +332,6 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries}){
                   <button onClick={()=>setRequestModal({session:s,action:"reschedule"})} style={{background:"transparent",border:`1px solid ${C.silver}44`,color:C.silver,borderRadius:8,padding:"7px 14px",fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
                     Reschedule
                   </button>
-                  <button onClick={()=>setRequestModal({session:s,action:"cancel"})} style={{background:"transparent",border:`1px solid ${C.redDim}`,color:C.redDim,borderRadius:8,padding:"7px 14px",fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
-                    Cancel
-                  </button>
                 </div>
               )}
               {s.requestType&&(
@@ -336,9 +348,18 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries}){
       {tab==="players"&&<PlayersTab user={user} players={players} playersLoaded={playersLoaded}/>}
 
       {/* Request modal */}
-      {requestModal&&(
-        <RequestModal session={requestModal.session} action={requestModal.action} onClose={()=>setRequestModal(null)} onSubmit={submitRequest}/>
-      )}
+      {requestModal&&<RequestModal
+        session={requestModal.session}
+        action={requestModal.action}
+        onClose={()=>{setRequestModal(null);setReschedDate(null);setReschedSess(null);}}
+        onSubmit={submitRequest}
+        getDates={getDates}
+        getPrivateDates={getPrivateDates}
+        reschedDate={reschedDate}
+        setReschedDate={setReschedDate}
+        reschedSess={reschedSess}
+        setReschedSess={setReschedSess}
+      />}
 
       {/* Questions / contact */}
       <div style={{marginTop:32}}>
@@ -348,42 +369,128 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries}){
   );
 }
 
-// ── REQUEST MODAL (Cancel / Reschedule) ──────────────────
-export function RequestModal({session,action,onClose,onSubmit}){
+// ── REQUEST MODAL (Reschedule only) ──────────────────────
+export function RequestModal({session,action,onClose,onSubmit,getDates,getPrivateDates,reschedDate,setReschedDate,reschedSess,setReschedSess}){
   const [note,setNote] = useState("");
   const [busy,setBusy] = useState(false);
+  const is1on1 = session?.type==="1on1";
+  const availDates = is1on1 ? (getPrivateDates?getPrivateDates():[]) : (getDates?getDates():[]);
 
   async function handleSubmit(){
+    if(!reschedDate||!reschedSess) return;
     setBusy(true);
-    await onSubmit(session, action, note);
+    await onSubmit(session, "reschedule", note);
     setBusy(false);
   }
 
   return(
-    <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}} onClick={onClose}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"24px",maxWidth:420,width:"100%",animation:"fadeUp 0.3s ease"}}>
-        <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",marginBottom:6,fontFamily:D.body}}>
-          {action==="cancel"?"Cancel":"Reschedule"}
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:999,padding:20}} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#111",border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"24px",maxWidth:480,width:"100%",maxHeight:"85vh",overflowY:"auto"}}>
+
+        {/* Header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
+          <div>
+            <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>Request Reschedule</div>
+            <div style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display}}>{session.dateLabel} · {session._time}</div>
+          </div>
+          <button onClick={onClose} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,width:30,height:30,color:C.textDim,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
         </div>
-        <h3 style={{margin:"0 0 12px",fontSize:18,color:C.white,fontFamily:D.display}}>
-          {session.dateLabel} · {session._time}
-        </h3>
-        <p style={{fontSize:12,color:C.textDim,fontFamily:D.body,lineHeight:1.7,marginBottom:16}}>
-          {action==="cancel"
-            ? "This will send a cancellation request to Coach Carlos. He'll confirm by email and let you know about any refund or credit."
-            : "This will send a reschedule request to Coach Carlos. Let him know your preferred new date/time below and he'll follow up by email."}
-        </p>
+
+        {/* Info */}
+        <div style={{background:`${C.gold}10`,border:`1px solid ${C.gold}22`,borderRadius:10,padding:"12px 14px",marginBottom:16}}>
+          <div style={{fontSize:11,color:C.textMid,fontFamily:D.body,lineHeight:1.7}}>Pick your preferred new date below. Coach Carlos will review and confirm by email within 24 hours.</div>
+        </div>
+
+        {/* Date picker */}
+        <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Select Preferred Date</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:14}}>
+          {availDates.map((d,i)=>{
+            const sel=reschedDate&&dKey(d)===dKey(reschedDate);
+            return(
+              <button key={i} onClick={()=>{setReschedDate(d);setReschedSess(null);}}
+                style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:8,padding:"8px 4px",cursor:"pointer",textAlign:"center",color:C.white}}>
+                <div style={{fontSize:8,color:sel?C.gold:C.silverDim,fontFamily:D.body}}>{is1on1?d.toLocaleDateString("en-US",{weekday:"short"}).slice(0,3).toUpperCase():(DAY_ABBR[d.getDay()]||d.toLocaleDateString("en-US",{weekday:"short"}).slice(0,3).toUpperCase())}</div>
+                <div style={{fontSize:15,fontWeight:700,fontFamily:D.display}}>{d.getDate()}</div>
+                <div style={{fontSize:8,color:sel?C.gold:C.silverDim,fontFamily:D.body}}>{d.toLocaleDateString("en-US",{month:"short"})}</div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Session/slot picker */}
+        {reschedDate&&!is1on1&&(()=>{
+          const sched=DAY_SCHEDULE[reschedDate.getDay()];
+          if(!sched) return null;
+          return(<>
+            <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Select Session Time</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:14}}>
+              {sched.sessions.map(sess=>{
+                const sel=reschedSess?.id===sess.id;
+                return(
+                  <button key={sess.id} onClick={()=>setReschedSess(sess)}
+                    style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:8,padding:"10px 10px",cursor:"pointer",textAlign:"left"}}>
+                    <div style={{fontSize:11,fontWeight:600,color:sel?C.gold:C.white,fontFamily:D.display}}>{sess.time}</div>
+                    <div style={{fontSize:10,color:sel?C.gold:C.textDim,fontFamily:D.body}}>{sess.ageGroup}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </>);
+        })()}
+
+        {reschedDate&&is1on1&&(()=>{
+          const sched=PRIVATE_SCHEDULE[reschedDate.getDay()];
+          if(!sched) return null;
+          return(<>
+            <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Select Time Slot</div>
+            <div style={{display:"grid",gap:6,marginBottom:14}}>
+              {sched.slots.map(slot=>{
+                const sel=reschedSess?.id===slot.id;
+                return(
+                  <button key={slot.id} onClick={()=>setReschedSess(slot)}
+                    style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:8,padding:"10px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <span style={{fontSize:12,fontWeight:600,color:sel?C.gold:C.white,fontFamily:D.display}}>{slot.time}</span>
+                    {sel&&<span style={{fontSize:10,color:C.gold,fontFamily:D.body}}>Selected ✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </>);
+        })()}
+
+        {/* Confirmation */}
+        {reschedDate&&reschedSess&&(
+          <div style={{background:`${C.green}10`,border:`1px solid ${C.green}33`,borderRadius:8,padding:"10px 14px",marginBottom:14}}>
+            <div style={{fontSize:11,color:C.green,fontFamily:D.body}}>✓ Requesting: {fmtDate(reschedDate)} · {reschedSess.time}</div>
+          </div>
+        )}
+
+        {/* Note */}
         <div style={{marginBottom:16}}>
-          <FL>{action==="cancel"?"Reason (optional)":"Preferred new date/time"}</FL>
-          <textarea rows={3} value={note} onChange={e=>setNote(e.target.value)} placeholder={action==="cancel"?"Let Carlos know why...":"e.g. Could I move to Tuesday same time?"} style={IS}/>
+          <FL>Additional Note (optional)</FL>
+          <textarea rows={2} value={note} onChange={e=>setNote(e.target.value)} placeholder="Anything else Coach Carlos should know..." style={IS}/>
         </div>
+
+        {/* Submit */}
         <div style={{display:"flex",gap:10}}>
-          <button onClick={handleSubmit} disabled={busy} style={{flex:1,background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"12px",fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:500,opacity:busy?0.6:1}}>
-            {busy?"Sending…":"Send Request"}
+          <button onClick={handleSubmit} disabled={busy||!reschedDate||!reschedSess}
+            style={{flex:1,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",color:"#0a0a0a",borderRadius:10,padding:"13px",fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:(busy||!reschedDate||!reschedSess)?"not-allowed":"pointer",fontFamily:D.body,fontWeight:600,opacity:(busy||!reschedDate||!reschedSess)?0.5:1}}>
+            {busy?"Sending…":"Send Reschedule Request"}
           </button>
-          <button onClick={onClose} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:10,padding:"12px 18px",fontSize:11,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
-            Cancel
+          <button onClick={onClose} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:10,padding:"13px 16px",fontSize:11,cursor:"pointer",fontFamily:D.body}}>
+            Back
           </button>
+        </div>
+
+        {/* How it works */}
+        <div style={{marginTop:14,padding:"10px 14px",background:"#0d0d0d",borderRadius:8,border:`1px solid #1a1a1a`}}>
+          <div style={{fontSize:9,letterSpacing:2,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>How this works</div>
+          <div style={{fontSize:10,color:"#555",fontFamily:D.body,lineHeight:1.8}}>
+            1. Pick your preferred new date and time above<br/>
+            2. Submit your request<br/>
+            3. Coach Carlos reviews and confirms within 24 hours<br/>
+            4. You'll get a confirmation email once your session is moved
+          </div>
         </div>
       </div>
     </div>
@@ -797,6 +904,61 @@ export function StripeCheckout({amount,metadata,onSuccess}){
 // ── SHARED ────────────────────────────────────────────────
 
 // ── ABOUT ─────────────────────────────────────────────────
+// ── SESSIONS PAGE ─────────────────────────────────────────
+export function SessionsPage({setPage,user}){
+  if(user) {
+    // Already logged in — send straight to account
+    setPage("account");
+    return null;
+  }
+  return(
+    <div style={{maxWidth:600,margin:"0 auto",padding:"110px 24px 80px"}}>
+
+      {/* Hero */}
+      <div style={{textAlign:"center",marginBottom:40}}>
+        <div style={{fontSize:9,letterSpacing:5,color:C.goldDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>La Forja Futbol</div>
+        <h1 style={{margin:"0 0 16px",fontSize:32,fontWeight:600,color:C.white,fontFamily:D.display}}>Manage Your Sessions</h1>
+        <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:1.8,maxWidth:440,margin:"0 auto"}}>Create a free account to view your upcoming sessions, request reschedules, add player profiles, and book faster every time.</p>
+      </div>
+
+      {/* Benefits */}
+      <div style={{display:"grid",gap:10,marginBottom:36}}>
+        {[
+          {icon:"📅", title:"View Upcoming Sessions", desc:"See everything you have booked in one place — dates, times, and session details."},
+          {icon:"↗️", title:"Request Reschedules", desc:"Need to move a session? Pick a new date from available spots and submit. Coach Carlos confirms within 24 hours."},
+          {icon:"⚡", title:"Book in 10 Seconds", desc:"Save your player's name, age, and position once. Every future booking auto-fills — no re-entering anything."},
+          {icon:"👥", title:"Multiple Players", desc:"Add profiles for each of your kids. Select who's training when you book — the count updates automatically."},
+        ].map((item,i)=>(
+          <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 18px",display:"flex",gap:14,alignItems:"flex-start"}}>
+            <div style={{width:40,height:40,borderRadius:10,background:`${C.gold}12`,border:`1px solid ${C.gold}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{item.icon}</div>
+            <div>
+              <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:4}}>{item.title}</div>
+              <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.7}}>{item.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* CTA buttons */}
+      <div style={{display:"grid",gap:10,marginBottom:24}}>
+        <button onClick={()=>setPage("login")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:12,padding:"15px",fontSize:12,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>
+          Create Free Account →
+        </button>
+        <button onClick={()=>setPage("login")} style={{background:"transparent",border:`1px solid ${C.silver}44`,color:C.silver,borderRadius:12,padding:"15px",fontSize:12,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
+          Sign In to Existing Account
+        </button>
+      </div>
+
+      {/* Guest note */}
+      <div style={{background:`${C.gold}08`,border:`1px solid ${C.gold}22`,borderRadius:10,padding:"14px 16px",textAlign:"center"}}>
+        <div style={{fontSize:12,color:C.gold,fontFamily:D.display,fontWeight:600,marginBottom:6}}>Booked as a guest?</div>
+        <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.7}}>Create an account using the same email address you booked with. Your existing sessions will appear in your account automatically.</div>
+      </div>
+
+    </div>
+  );
+}
+
 export function AboutPage({setPage}){
   return(
     <div style={{paddingTop:100}}>
