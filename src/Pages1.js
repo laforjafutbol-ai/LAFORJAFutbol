@@ -717,6 +717,8 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
   const [moveId,setMoveId] = useState(null);
   const [moveDate,setMoveDate] = useState(null);
   const [moveSess,setMoveSess] = useState(null);
+  const [coachNoteId,setCoachNoteId] = useState(null);
+  const [coachNoteText,setCoachNoteText] = useState("");
   const [schedId,setSchedId] = useState(null);
   const [schedTime,setSchedTime] = useState("");
   const [showAvail,setShowAvail] = useState(false);
@@ -1113,14 +1115,53 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                         </div>
                         {b.notes&&<div style={{fontSize:10,color:C.silverDim,marginTop:4,fontStyle:"italic",fontFamily:D.body,lineHeight:1.5}}>{b.notes}</div>}
                         {b.requestType&&b.requestNote&&<div style={{fontSize:10,color:C.silver,marginTop:5,fontFamily:D.body,background:`${C.silver}08`,borderRadius:6,padding:"4px 8px"}}>📩 {b.requestNote}</div>}
+                        {b.coachNote&&coachNoteId!==b.id&&<div style={{fontSize:10,color:C.gold,marginTop:6,fontFamily:D.body,background:`${C.gold}08`,border:`1px solid ${C.gold}22`,borderRadius:6,padding:"5px 10px"}}>📝 {b.coachNote}</div>}
                       </div>
                       {/* Action buttons */}
                       <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
                         {b.status==="pending"&&<button onClick={()=>confirmBooking(b.id)} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:8,padding:"8px 14px",color:C.white,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,whiteSpace:"nowrap"}}>✓ Confirm</button>}
                         {b.requestType&&<button onClick={()=>updateDoc(doc(db,"bookings",b.id),{requestType:null,requestNote:null})} style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:8,padding:"6px 10px",color:C.silver,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>Clear</button>}
+                        <button onClick={()=>{
+                          if(coachNoteId===b.id){setCoachNoteId(null);}
+                          else{setCoachNoteId(b.id);setCoachNoteText(b.coachNote||"");}
+                        }} style={{background:coachNoteId===b.id?`${C.gold}22`:(b.coachNote?"#141008":"transparent"),border:`1px solid ${b.coachNote?C.gold+"44":C.cardBorder}`,borderRadius:8,padding:"6px 10px",color:b.coachNote?C.gold:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>
+                          📝{b.coachNote?" Note":""}
+                        </button>
                         <button onClick={()=>{setMoveId(moveId===b.id?null:b.id);setMoveDate(null);setMoveSess(null);}} style={{background:moveId===b.id?`${C.gold}22`:"transparent",border:`1px solid ${C.gold}44`,borderRadius:8,padding:"6px 10px",color:C.gold,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>↗ Move</button>
                         <button onClick={()=>removeBooking(b.id)} style={{width:30,height:30,background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:8,color:C.redDim,fontSize:12,cursor:"pointer",fontFamily:D.body,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
                       </div>
+
+                      {/* Inline Coach Notes */}
+                      {coachNoteId===b.id&&(
+                        <div style={{width:"100%",marginTop:12,paddingTop:12,borderTop:`1px solid ${C.cardBorder}`}}>
+                          <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Coach Notes — only you can see this</div>
+                          <textarea
+                            value={coachNoteText}
+                            onChange={e=>setCoachNoteText(e.target.value)}
+                            placeholder="Schedule change, player notes, anything you need to remember..."
+                            rows={3}
+                            style={{...IS,width:"100%",marginBottom:10,fontSize:12,resize:"vertical"}}
+                          />
+                          <div style={{display:"flex",gap:8}}>
+                            <button onClick={async()=>{
+                              await updateDoc(doc(db,"bookings",b.id),{coachNote:coachNoteText,coachNoteUpdated:new Date().toISOString()});
+                              setCoachNoteId(null);
+                            }} style={{background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:8,padding:"9px 18px",color:"#0a0a0a",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>
+                              Save Note
+                            </button>
+                            {b.coachNote&&<button onClick={async()=>{
+                              await updateDoc(doc(db,"bookings",b.id),{coachNote:"",coachNoteUpdated:new Date().toISOString()});
+                              setCoachNoteText("");
+                              setCoachNoteId(null);
+                            }} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:8,padding:"9px 14px",color:C.redDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>
+                              Clear
+                            </button>}
+                            <button onClick={()=>setCoachNoteId(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"9px 14px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
                       {/* Inline Move Picker */}
                       {moveId===b.id&&(
                         <div style={{width:"100%",marginTop:12,paddingTop:12,borderTop:`1px solid ${C.cardBorder}`}}>
@@ -1253,6 +1294,12 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                   <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
                     {inq.status==="pending"&&<button onClick={()=>confirmBooking(inq.id,"inquiries")} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:8,padding:"7px 14px",color:C.white,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,whiteSpace:"nowrap"}}>✓ Confirm</button>}
                     {inq.requestType&&<button onClick={()=>updateDoc(doc(db,"inquiries",inq.id),{requestType:null,requestNote:null})} style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:8,padding:"6px 10px",color:C.silver,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
+                    <button onClick={()=>{
+                      if(coachNoteId===inq.id){setCoachNoteId(null);}
+                      else{setCoachNoteId(inq.id);setCoachNoteText(inq.coachNote||"");}
+                    }} style={{background:coachNoteId===inq.id?`${C.gold}22`:(inq.coachNote?"#141008":"transparent"),border:`1px solid ${inq.coachNote?C.gold+"44":C.cardBorder}`,borderRadius:8,padding:"6px 10px",color:inq.coachNote?C.gold:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>
+                      📝{inq.coachNote?" Note":""}
+                    </button>
                     <button onClick={()=>setMoveId(moveId===inq.id?null:inq.id)} style={{background:moveId===inq.id?`${C.gold}22`:"transparent",border:`1px solid ${C.gold}44`,borderRadius:8,padding:"6px 10px",color:C.gold,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>↗ Move</button>
                     <button onClick={()=>removeInquiry(inq.id)} style={{width:28,height:28,background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:7,color:C.redDim,fontSize:12,cursor:"pointer",fontFamily:D.body,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
                   </div>
@@ -1356,6 +1403,33 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                 {inq.requestType&&inq.requestNote&&(
                   <div style={{background:`${C.silver}08`,borderRadius:8,padding:"8px 12px",marginTop:8}}>
                     <div style={{fontSize:10,color:C.silver,fontFamily:D.body}}>📩 {inq.requestNote}</div>
+                  </div>
+                )}
+
+                {/* Inline Coach Notes for 1-on-1 */}
+                {coachNoteId===inq.id&&(
+                  <div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${C.cardBorder}`}}>
+                    <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Coach Notes — only you can see this</div>
+                    <textarea
+                      value={coachNoteText}
+                      onChange={e=>setCoachNoteText(e.target.value)}
+                      placeholder="Session focus, player notes, anything you need to remember..."
+                      rows={3}
+                      style={{...IS,width:"100%",marginBottom:10,fontSize:12,resize:"vertical"}}
+                    />
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={async()=>{
+                        await updateDoc(doc(db,"inquiries",inq.id),{coachNote:coachNoteText,coachNoteUpdated:new Date().toISOString()});
+                        setCoachNoteId(null);
+                      }} style={{background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:8,padding:"9px 18px",color:"#0a0a0a",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>
+                        Save Note
+                      </button>
+                      {inq.coachNote&&<button onClick={async()=>{
+                        await updateDoc(doc(db,"inquiries",inq.id),{coachNote:"",coachNoteUpdated:new Date().toISOString()});
+                        setCoachNoteText("");setCoachNoteId(null);
+                      }} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:8,padding:"9px 14px",color:C.redDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
+                      <button onClick={()=>setCoachNoteId(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"9px 14px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+                    </div>
                   </div>
                 )}
               </div>
