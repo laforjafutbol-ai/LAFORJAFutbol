@@ -24,12 +24,14 @@ export function AuthPage({setPage,authChecked,user}){
       if(mode==="signup"){
         const cred = await createUserWithEmailAndPassword(auth,email,pw);
         if(name) await updateProfile(cred.user,{displayName:name});
+        // Send email verification
+        try{ await cred.user.sendEmailVerification(); }catch(e){}
         // Send welcome email with instructions
         try{ await callEmailAPI({
           name: name||"there",
           email: email,
-          subject: "Welcome to La Forja — Here's How It Works",
-          message: `Hi ${name||"there"},\n\nWelcome to La Forja Futbol! Your account is all set.\n\nHere's what you can do from your account:\n\n1. Book Sessions — Book The Furnace (group) or The Tempering (1-on-1) directly from your account. No re-entering your info.\n\n2. Add Player Profiles — Save your player's name, age, and position so booking takes 10 seconds next time.\n\n3. View Upcoming Sessions — See everything you have booked in one place.\n\n4. Request Reschedules — Need to move a session? Log in, tap Reschedule on any upcoming session, pick a new date from the available spots, and submit. Coach Carlos will confirm within 24 hours.\n\nImportant: Reschedule requests are reviewed manually by Coach Carlos. You'll always get an email confirmation once your request is processed.\n\nIf you ever have questions, reply to this email or use the Contact page on the site.\n\nSee you on the field.\n\nCoach Carlos\nLa Forja Futbol\nlaforjafutbol.com`,
+          subject: "Welcome to La Forja — Verify Your Email & Access Your Sessions",
+          message: `Hi ${name||"there"},\n\nWelcome to La Forja Futbol! Your account is almost set up.\n\nIMPORTANT: Please verify your email address by clicking the link we just sent you. Once verified, any sessions you've previously booked with this email address will automatically appear in your account.\n\nHere's what you can do once verified:\n\n1. Book Sessions — Book The Furnace (group) or The Tempering (1-on-1) directly from your account. No re-entering your info.\n\n2. Add Player Profiles — Save your player's name, age, and position so booking takes 10 seconds next time.\n\n3. View Upcoming Sessions — See everything you have booked in one place.\n\n4. Request Reschedules — Need to move a session? Log in, tap Reschedule on any upcoming session, pick a new date from the available spots, and submit. Coach Carlos will confirm within 24 hours.\n\nIf you ever have questions, reply to this email or use the Contact page on the site.\n\nSee you on the field.\n\nCoach Carlos\nLa Forja Futbol\nlaforjafutbol.com`,
         }, "contact"); }catch(e){}
       } else {
         await signInWithEmailAndPassword(auth,email,pw);
@@ -190,6 +192,31 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
     });
     return unsub;
   },[user]);
+
+  // Auto-link guest bookings by email when account is verified
+  useEffect(()=>{
+    if(!user||!user.emailVerified||!user.email) return;
+    async function linkGuestBookings(){
+      try{
+        const { collection:col, query:q, where, getDocs, updateDoc:upDoc, doc:d } = await import("firebase/firestore");
+        // Find unlinked bookings with matching email
+        const bSnap = await getDocs(q(col(db,"bookings"),where("email","==",user.email)));
+        for(const bDoc of bSnap.docs){
+          if(!bDoc.data().userId){
+            await upDoc(d(db,"bookings",bDoc.id),{userId:user.uid,linkedAt:new Date().toISOString()});
+          }
+        }
+        // Find unlinked inquiries with matching email
+        const iSnap = await getDocs(q(col(db,"inquiries"),where("email","==",user.email)));
+        for(const iDoc of iSnap.docs){
+          if(!iDoc.data().userId){
+            await upDoc(d(db,"inquiries",iDoc.id),{userId:user.uid,linkedAt:new Date().toISOString()});
+          }
+        }
+      }catch(e){ console.log("Link error:",e); }
+    }
+    linkGuestBookings();
+  },[user?.uid, user?.emailVerified]);
 
   if(!user) return(
     <div style={{maxWidth:440,margin:"0 auto",padding:"160px 24px 80px",textAlign:"center"}}>
