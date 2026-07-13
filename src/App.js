@@ -5,7 +5,6 @@ import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndP
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { PrivatePage, Dashboard, ReviewsModeration } from "./Pages1";
-import { CalendarDashboard } from "./Pages3";
 import { AuthPage, AccountPage, ContactPage, ReviewsPage, AboutPage, StripeCheckout, SessionsPage } from "./Pages2";
 import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, POSITIONS, DAY_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, stripePromise, TX, EMBER_GLOW, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles } from "./constants";
 
@@ -163,9 +162,6 @@ export default function App(){
       {page==="dashboard" && <div style={{paddingTop:100,background:C.black,minHeight:"100vh"}}>
         <Dashboard bookings={bookings} inquiries={inquiries} confirmBooking={confirmBooking} removeBooking={removeBooking} scheduleInquiry={scheduleInquiry} removeInquiry={removeInquiry} sendReminderEmail={sendReminderEmail} blocked={blocked} blockSession={blockSession} locations={locations} saveLocation={saveLocation} spotsLeft={spotsLeft} getDates={getDates} getPrivateDates={getPrivateDates}/>
       </div>}
-      {page==="calendar" && <div style={{paddingTop:100,background:C.black,minHeight:"100vh"}}>
-        <CalendarDashboard bookings={bookings} inquiries={inquiries} confirmBooking={confirmBooking} removeBooking={removeBooking} removeInquiry={removeInquiry} spotsLeft={spotsLeft} getDates={getDates} getPrivateDates={getPrivateDates} blocked={blocked}/>
-      </div>}
       {page==="login"     && <AuthPage      setPage={setPage} authChecked={authChecked} user={user}/>}
       {page==="sessions"  && <SessionsPage  setPage={setPage} user={user}/>}
       {page==="account"   && <AccountPage   setPage={setPage} user={user} authChecked={authChecked} bookings={bookings} inquiries={inquiries} getDates={getDates} getPrivateDates={getPrivateDates}/>}
@@ -198,9 +194,6 @@ function Nav({page,setPage,user}){
         ))}
         <button onClick={()=>setPage(user?"account":"login")} style={{background:page==="account"||page==="login"?"rgba(201,168,76,0.1)":"transparent",border:page==="account"||page==="login"?`1px solid ${C.silver}44`:"1px solid transparent",color:page==="account"||page==="login"?C.silverBright:C.textMid,borderRadius:8,padding:"6px 13px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",transition:"all 0.2s",fontFamily:D.body,fontWeight:500,display:"flex",alignItems:"center",gap:5}}>
           {user?<>👤 My Account</>:<>Sign In</>}
-        </button>
-        <button onClick={()=>setPage("calendar")} style={{background:page==="calendar"?"rgba(196,168,76,0.1)":"transparent",border:page==="calendar"?`1px solid ${C.gold}44`:"1px solid transparent",color:page==="calendar"?C.gold:C.silverDark,borderRadius:8,padding:"6px 10px",fontSize:14,cursor:"pointer",transition:"all 0.2s",fontFamily:D.body,fontWeight:500}}>
-          📅
         </button>
         <button onClick={()=>setPage("dashboard")} style={{background:page==="dashboard"?"rgba(201,168,76,0.1)":"transparent",border:page==="dashboard"?`1px solid ${C.silver}44`:"1px solid transparent",color:page==="dashboard"?C.silverBright:C.silverDark,borderRadius:8,padding:"6px 10px",fontSize:14,cursor:"pointer",transition:"all 0.2s",fontFamily:D.body,fontWeight:500}}>
           ⚙
