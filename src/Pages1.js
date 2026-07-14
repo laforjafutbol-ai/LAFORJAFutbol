@@ -737,6 +737,17 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
   const [calNoteId,setCalNoteId] = useState(null);
   const [calNoteText,setCalNoteText] = useState("");
   const [movingId,setMovingId]  = useState(null);
+  // Holding area
+  const [pendingClients,setPendingClients] = useState([]);
+  const [showAddPending,setShowAddPending] = useState(false);
+  const [pendingForm,setPendingForm] = useState({name:"",contact:"",note:""});
+
+  useEffect(()=>{
+    const unsub = onSnapshot(collection(db,"pending"), s=>{
+      setPendingClients(s.docs.map(d=>({id:d.id,...d.data()})).filter(p=>p.status==="pending"));
+    });
+    return unsub;
+  },[]);
 
   function login(){ if(pw===BRAND.coachPw){setAuthed(true);setPwErr(false);}else setPwErr(true); }
 
@@ -772,1110 +783,414 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
 
   return(
     <div style={{paddingTop:100,background:C.black,minHeight:"100vh"}}>
-      <div style={{maxWidth:960,margin:"0 auto",padding:"32px 24px 100px"}}>
+      <div style={{maxWidth:1200,margin:"0 auto",padding:"28px 24px 100px"}}>
 
         {/* ── HEADER ── */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24,flexWrap:"wrap",gap:12}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
           <div>
-            <div style={{fontSize:9,letterSpacing:4,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>La Forja</div>
-            <h1 style={{margin:0,fontSize:26,fontWeight:600,color:C.white,fontFamily:D.display}}>Coach Dashboard</h1>
+            <div style={{fontSize:9,letterSpacing:4,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>La Forja</div>
+            <h1 style={{margin:0,fontSize:22,fontWeight:600,color:C.white,fontFamily:D.display}}>Coach Dashboard</h1>
           </div>
-          {/* Alert badges */}
-          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            {pendingCount>0&&<button onClick={()=>setTab("bookings")} style={{fontSize:11,padding:"6px 14px",borderRadius:20,background:C.redDark,border:`1px solid ${C.red}44`,color:C.red,fontFamily:D.body,animation:"pulse 2s infinite",cursor:"pointer",whiteSpace:"nowrap"}}>⏳ {pendingCount} pending</button>}
-            {newInquiries>0&&<button onClick={()=>setTab("inquiries")} style={{fontSize:11,padding:"6px 14px",borderRadius:20,background:C.goldDark,border:`1px solid ${C.gold}44`,color:C.gold,fontFamily:D.body,animation:"pulse 2s infinite",cursor:"pointer",whiteSpace:"nowrap"}}>🔔 {newInquiries} new 1-on-1</button>}
-            {requestCount>0&&<button onClick={()=>setTab("bookings")} style={{fontSize:11,padding:"6px 14px",borderRadius:20,background:"rgba(180,174,160,0.08)",border:`1px solid ${C.silver}33`,color:C.silver,fontFamily:D.body,animation:"pulse 2s infinite",cursor:"pointer",whiteSpace:"nowrap"}}>⚠ {requestCount} request{requestCount>1?"s":""}</button>}
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+            {pendingCount>0&&<div style={{fontSize:10,padding:"5px 12px",borderRadius:20,background:C.redDark,border:`1px solid ${C.red}44`,color:C.red,fontFamily:D.body,animation:"pulse 2s infinite"}}>⏳ {pendingCount} pending</div>}
+            {newInquiries>0&&<div style={{fontSize:10,padding:"5px 12px",borderRadius:20,background:C.goldDark,border:`1px solid ${C.gold}44`,color:C.gold,fontFamily:D.body,animation:"pulse 2s infinite"}}>🔔 {newInquiries} new 1-on-1</div>}
+            {requestCount>0&&<div style={{fontSize:10,padding:"5px 12px",borderRadius:20,background:"rgba(180,174,160,0.08)",border:`1px solid ${C.silver}33`,color:C.silver,fontFamily:D.body,animation:"pulse 2s infinite"}}>⚠ {requestCount} request{requestCount>1?"s":""}</div>}
           </div>
         </div>
 
-        {/* ── STATS ROW ── */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:20}}>
+        {/* ── STATS ── */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:16}}>
           {[
-            {label:"Today's Sessions", value:todaysSessions.length, color:C.gold, icon:"🔥"},
-            {label:"Confirmed This Week", value:weekSessions.length, color:C.green, icon:"✓"},
-            {label:"Week Revenue", value:`$${weekRevenue}`, color:C.silverBright, icon:"$"},
+            {label:"Today",value:todaysSessions.length,icon:"🔥",color:C.gold},
+            {label:"This Week",value:weekSessions.length,icon:"✓",color:C.green},
+            {label:"Revenue",value:`$${weekRevenue}`,icon:"$",color:C.silverBright},
+            {label:"Pending",value:pendingCount,icon:"⏳",color:C.red},
           ].map((s,i)=>(
-            <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"16px 18px",display:"flex",alignItems:"center",gap:14}}>
-              <div style={{width:40,height:40,borderRadius:10,background:`${s.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{s.icon}</div>
+            <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:32,height:32,borderRadius:8,background:`${s.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>{s.icon}</div>
               <div>
-                <div style={{fontSize:22,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:3}}>{s.value}</div>
-                <div style={{fontSize:9,letterSpacing:1.5,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
+                <div style={{fontSize:18,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:2}}>{s.value}</div>
+                <div style={{fontSize:8,letterSpacing:1.5,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* ── CONTROLS ROW ── */}
-        <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
-          <button onClick={()=>setShowAvail(v=>!v)} style={{background:showAvail?`${C.gold}15`:C.card,border:`1px solid ${showAvail?C.gold:C.cardBorder}`,color:showAvail?C.gold:C.textDim,borderRadius:8,padding:"8px 16px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,display:"flex",alignItems:"center",gap:6,transition:"all 0.2s"}}>
-            🔒 Availability
-          </button>
-          <button onClick={()=>setShowLoc(v=>!v)} style={{background:showLoc?`${C.red}15`:C.card,border:`1px solid ${showLoc?C.red:C.cardBorder}`,color:showLoc?C.red:C.textDim,borderRadius:8,padding:"8px 16px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,display:"flex",alignItems:"center",gap:6,transition:"all 0.2s"}}>
-            📍 Locations
-          </button>
-        </div>
+        {/* ── MAIN LAYOUT: Calendar + Side Panel ── */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 260px",gap:14,marginBottom:16,alignItems:"start"}}>
 
-        {showLoc&&<LocationManager locations={locations} saveLocation={saveLocation} getDates={getDates} getPrivateDates={getPrivateDates} fmtDate={fmtDate} dKey={dKey}/>}
+          {/* ── CALENDAR ── */}
+          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"16px"}}>
+            {(()=>{
+              const monthNames=["January","February","March","April","May","June","July","August","September","October","November","December"];
+              const dayNames=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+              const todayD=new Date(); todayD.setHours(0,0,0,0);
+              const todayKey=dKey(todayD);
 
-        {showAvail&&(()=>{
-            const today = new Date(); today.setHours(0,0,0,0);
-            const monthStart = new Date(today.getFullYear(), today.getMonth()+availWeek, 1);
-            const monthName = monthStart.toLocaleDateString("en-US",{month:"long",year:"numeric"});
-            const calDays = [];
-            const startDay = new Date(monthStart);
-            startDay.setDate(startDay.getDate()-startDay.getDay());
-            for(let i=0;i<42;i++){
-              const d=new Date(startDay); d.setDate(startDay.getDate()+i); calDays.push(d);
-            }
-            const allGroupDates = getDates(8);
-            const allPrivDates = getPrivateDates(8);
-            const DAY_LABELS=["S","M","T","W","T","F","S"];
-            const blockedCount=(blocked||[]).length;
+              const allSessions=[
+                ...(bookings||[]).filter(b=>b.status!=="cancelled"&&b.status!=="removed").map(b=>({...b,_type:"group",_collection:"bookings",_time:b.sessTime})),
+                ...(inquiries||[]).filter(i=>i.status!=="cancelled"&&i.status!=="removed").map(i=>({...i,_type:"1on1",_collection:"inquiries",_time:i.slotTime})),
+              ];
+              function sessOnDate(dk){return allSessions.filter(s=>s.dateKey===dk);}
 
-            async function blockEntireDay(d){
-              const isGroup=COACH_DAYS.includes(d.getDay());
-              const isPriv=[3,6].includes(d.getDay());
-              if(isGroup){ for(const s of DAY_SCHEDULE[d.getDay()].sessions) await blockSession(dKey(d),s.id,`${fmtDate(d)} ${s.time}`); }
-              if(isPriv){ for(const s of PRIVATE_SCHEDULE[d.getDay()].slots) await blockSession(dKey(d),s.id,`${fmtDate(d)} ${s.time}`); }
-            }
-            async function blockWeekOf(d){
-              const sunday=new Date(d); sunday.setDate(d.getDate()-d.getDay());
-              for(let i=0;i<7;i++){
-                const day=new Date(sunday); day.setDate(sunday.getDate()+i);
-                if(COACH_DAYS.includes(day.getDay())||[3,6].includes(day.getDay())) await blockEntireDay(day);
+              const firstDay=new Date(calYear,calMonth,1).getDay();
+              const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+              const calDays=[];
+              for(let i=0;i<firstDay;i++) calDays.push(null);
+              for(let d=1;d<=daysInMonth;d++) calDays.push(new Date(calYear,calMonth,d));
+              while(calDays.length%7!==0) calDays.push(null);
+
+              function SessionChip({session}){
+                const is1on1=session._type==="1on1";
+                const color=is1on1?C.gold:C.red;
+                const confirmed=session.status==="confirmed";
+                return(
+                  <div
+                    draggable
+                    onDragStart={e=>{setDragItem(session);e.dataTransfer.effectAllowed="move";}}
+                    onClick={e=>{e.stopPropagation();setCalNoteId(calNoteId===session.id?null:session.id);setCalNoteText(session.coachNote||"");}}
+                    title={`${session.name} · click for note · drag to move`}
+                    style={{background:is1on1?"rgba(196,168,76,0.13)":"rgba(204,34,34,0.13)",border:`1px solid ${color}33`,borderLeft:`2px solid ${color}`,borderRadius:4,padding:"2px 5px",cursor:"grab",marginBottom:1,opacity:movingId===session.id?0.3:1,display:"flex",alignItems:"center",justifyContent:"space-between",gap:3}}
+                  >
+                    <span style={{fontSize:8,color:C.white,fontFamily:D.display,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"75%"}}>{session.name}</span>
+                    <div style={{display:"flex",gap:2,flexShrink:0}}>
+                      {session.coachNote&&<span style={{fontSize:6,color:C.gold}}>📝</span>}
+                      {session.requestType&&<span style={{fontSize:6,color:C.silver}}>⚠</span>}
+                      <div style={{width:4,height:4,borderRadius:"50%",background:confirmed?C.green:C.gold,marginTop:1}}/>
+                    </div>
+                  </div>
+                );
               }
-            }
-            async function blockByType(skill){
-              for(const d of allGroupDates){ if(DAY_SCHEDULE[d.getDay()]?.skill===skill){ for(const s of DAY_SCHEDULE[d.getDay()].sessions) await blockSession(dKey(d),s.id,`${fmtDate(d)} ${s.time}`); } }
-            }
-            async function blockAllPrivate(){
-              for(const d of allPrivDates){ for(const s of PRIVATE_SCHEDULE[d.getDay()].slots) await blockSession(dKey(d),s.id,`${fmtDate(d)} ${s.time}`); }
-            }
-            async function unblockAll(){
-              if(!window.confirm("Unblock all sessions?")) return;
-              for(const b of (blocked||[])) await blockSession(b.dateKey,b.sessId,"");
-            }
 
-            return(
-              <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"20px 18px",marginTop:12,animation:"fadeUp 0.3s ease"}}>
-                <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-
-                  {/* LEFT — Quick actions */}
-                  <div style={{width:180,flexShrink:0,display:"flex",flexDirection:"column",gap:8}}>
-                    <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",marginBottom:4,fontFamily:D.body}}>Quick Actions</div>
-
-                    {[
-                      {label:"Block The Furnace", action:()=>blockByType("The Furnace"), color:C.red},
-                      ,
-                      {label:"Block All 1-on-1s",   action:()=>blockAllPrivate(),             color:C.silverDim},
-                    ].map((item,i)=>(
-                      <button key={i} onClick={item.action} style={{background:"#161310",border:`1px solid ${item.color}44`,color:item.color,borderRadius:8,padding:"9px 12px",fontSize:10,cursor:"pointer",fontFamily:D.body,textAlign:"left",lineHeight:1.4}}>
-                        🔒 {item.label}
-                      </button>
-                    ))}
-
-                    <div style={{height:1,background:C.cardBorder,margin:"4px 0"}}/>
-
-                    {blockedCount>0&&(
-                      <button onClick={unblockAll} style={{background:"#041a0c",border:`1px solid ${C.green}44`,color:C.green,borderRadius:8,padding:"9px 12px",fontSize:10,cursor:"pointer",fontFamily:D.body,textAlign:"left"}}>
-                        ✓ Unblock All ({blockedCount})
-                      </button>
-                    )}
-
-                    <div style={{height:1,background:C.cardBorder,margin:"4px 0"}}/>
-                    <div style={{fontSize:9,letterSpacing:2,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:2}}>Legend</div>
-                    {[
-                      {color:C.red, bg:"rgba(255,77,46,0.08)", label:"The Furnace"},
-                      ,
-                      {color:"#a78bfa",bg:"rgba(167,139,250,0.08)", label:"1-on-1"},
-                      {color:C.red,    bg:"#1f0a05",                label:"Blocked"},
-                    ].map((l,i)=>(
-                      <div key={i} style={{display:"flex",alignItems:"center",gap:7}}>
-                        <div style={{width:14,height:14,borderRadius:4,background:l.bg,border:`1px solid ${l.color}44`,flexShrink:0}}/>
-                        <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{l.label}</span>
+              return(<>
+                {/* Calendar nav */}
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <button onClick={()=>{if(calMonth===0){setCalMonth(11);setCalYear(y=>y-1);}else setCalMonth(m=>m-1);}} style={{background:"#0a0805",border:`1px solid ${C.cardBorder}`,borderRadius:6,padding:"4px 10px",color:C.textMid,cursor:"pointer",fontFamily:D.body,fontSize:10}}>←</button>
+                    <span style={{fontSize:15,fontWeight:600,color:C.white,fontFamily:D.display}}>{monthNames[calMonth]} {calYear}</span>
+                    <button onClick={()=>{if(calMonth===11){setCalMonth(0);setCalYear(y=>y+1);}else setCalMonth(m=>m+1);}} style={{background:"#0a0805",border:`1px solid ${C.cardBorder}`,borderRadius:6,padding:"4px 10px",color:C.textMid,cursor:"pointer",fontFamily:D.body,fontSize:10}}>→</button>
+                    <button onClick={()=>{setCalMonth(new Date().getMonth());setCalYear(new Date().getFullYear());}} style={{background:`${C.gold}12`,border:`1px solid ${C.gold}33`,borderRadius:6,padding:"4px 9px",color:C.gold,cursor:"pointer",fontFamily:D.body,fontSize:8,letterSpacing:2,textTransform:"uppercase"}}>Today</button>
+                  </div>
+                  {/* Legend */}
+                  <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                    {[{color:C.red,l:"Furnace"},{color:C.gold,l:"Tempering"},{color:C.green,l:"Confirmed"},{color:C.red,l:"Blocked",bg:true}].map((x,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:3}}>
+                        <div style={{width:6,height:6,borderRadius:1,background:x.color,opacity:x.bg?0.5:1}}/>
+                        <span style={{fontSize:7,color:C.textDim,fontFamily:D.body}}>{x.l}</span>
                       </div>
                     ))}
-
-                    <div style={{height:1,background:C.cardBorder,margin:"4px 0"}}/>
-                    <div style={{fontSize:9,color:C.textDim,fontFamily:D.body,lineHeight:1.6}}>Tap a session pill to block/unblock. Tap "Block Day" to block all sessions in a day.</div>
-                  </div>
-
-                  {/* RIGHT — Calendar */}
-                  <div style={{flex:1,minWidth:0}}>
-                    {/* Month nav */}
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                      <NB disabled={availWeek===0} onClick={()=>setAvailWeek(w=>w-1)}>← Prev</NB>
-                      <span style={{fontSize:14,color:C.white,fontFamily:D.display,fontWeight:600,letterSpacing:1}}>{monthName}</span>
-                      <NB disabled={availWeek>=4} onClick={()=>setAvailWeek(w=>w+1)}>Next →</NB>
-                    </div>
-
-                    {/* Day headers */}
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:2}}>
-                      {DAY_LABELS.map((d,i)=>(
-                        <div key={i} style={{textAlign:"center",fontSize:9,color:C.silverDark,fontFamily:D.body,padding:"3px 0"}}>{d}</div>
-                      ))}
-                    </div>
-
-                    {/* Calendar grid */}
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
-                      {calDays.map((d,i)=>{
-                        const inMonth = d.getMonth()===monthStart.getMonth();
-                        const isGroup = COACH_DAYS.includes(d.getDay());
-                        const isPriv  = [3,6].includes(d.getDay());
-                        const isCoach = isGroup||isPriv;
-                        const isPast  = d < today;
-                        const dk      = dKey(d);
-
-                        const sessions = isGroup ? DAY_SCHEDULE[d.getDay()]?.sessions||[] : isPriv ? PRIVATE_SCHEDULE[d.getDay()]?.slots||[] : [];
-                        const allBlocked = sessions.length>0 && sessions.every(s=>(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id));
-                        const anyBlocked = sessions.some(s=>(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id));
-
-                        const bg = !inMonth?"transparent": allBlocked?"#1f0a05": isGroup?"rgba(201,168,76,0.07)": isPriv?"rgba(167,139,250,0.07)": "#161310";
-                        const border = !inMonth?"1px solid transparent": allBlocked?`1px solid ${C.red}44`: anyBlocked?`1px solid ${C.red}22`: isGroup?`1px solid ${C.goldDim}22`: isPriv?`1px solid #a78bfa22`: `1px solid #1a1a1a`;
-
-                        return(
-                          <div key={i} style={{borderRadius:7,padding:"4px 3px",minHeight:58,background:bg,border,opacity:!inMonth?0.15:isPast?0.4:1,display:"flex",flexDirection:"column"}}>
-                            {inMonth&&(
-                              <>
-                                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:2}}>
-                                  <span style={{fontSize:10,fontFamily:D.display,fontWeight:600,color:allBlocked?C.red:isGroup?C.gold:isPriv?"#a78bfa":C.silverDark,paddingLeft:2}}>{d.getDate()}</span>
-                                  {isCoach&&!isPast&&(
-                                    <button onClick={()=>blockEntireDay(d)} title="Block day" style={{background:"none",border:"none",cursor:"pointer",fontSize:8,color:C.silverDark,padding:"0 2px",lineHeight:1}}>✕</button>
-                                  )}
-                                </div>
-                                {!isPast&&sessions.map(sess=>{
-                                  const isBlk=(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===sess.id);
-                                  const t=(sess.time||"").split(" – ")[0].replace(":00","").replace(" PM","p").replace(" AM","a");
-                                  const isGroup=COACH_DAYS.includes(d.getDay());
-                                  const sessBooked=isGroup
-                                    ?(bookings||[]).filter(b=>b.dateKey===dk&&b.sessId===sess.id&&b.status!=="cancelled").reduce((s,b)=>s+b.count,0)
-                                    :(inquiries||[]).filter(i=>i.dateKey===dk&&i.slotId===sess.id&&i.status!=="cancelled").length;
-                                  return(
-                                    <div key={sess.id} onClick={()=>blockSession(dk,sess.id,`${fmtDate(d)} ${sess.time}`)}
-                                      style={{fontSize:8,padding:"2px 3px",borderRadius:4,marginBottom:1,cursor:"pointer",background:isBlk?"#ff4d2e44":sessBooked>0?"rgba(201,168,76,0.12)":"rgba(255,255,255,0.06)",color:isBlk?C.red:sessBooked>0?C.gold:C.textMid,border:`1px solid ${isBlk?C.red+"55":sessBooked>0?C.gold+"33":"transparent"}`,transition:"all 0.15s",textAlign:"center",fontFamily:D.body}}>
-                                      {isBlk?"🔒":sessBooked>0?`${sessBooked}/1`:""}{isBlk?"":t}
-                                    </div>
-                                  );
-                                })}
-                                {!isPast&&isCoach&&sessions.length>1&&(
-                                  <button onClick={()=>blockWeekOf(d)} title="Block week" style={{marginTop:"auto",fontSize:7,background:"none",border:"none",color:C.silverDark,cursor:"pointer",fontFamily:D.body,textAlign:"center",padding:"1px 0",letterSpacing:0.5}}>wk</button>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <span style={{fontSize:7,color:C.textDim,fontFamily:D.body}}>🔒 tap slot · drag to move</span>
                   </div>
                 </div>
-              </div>
-            );
-          })()}
 
-        {/* ── CALENDAR ── */}
-        {(()=>{
-          const monthNames=["January","February","March","April","May","June","July","August","September","October","November","December"];
-          const dayNames=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-          const todayD = new Date(); todayD.setHours(0,0,0,0);
-          const todayKey = dKey(todayD);
-
-          const allSessions=[
-            ...(bookings||[]).filter(b=>b.status!=="cancelled"&&b.status!=="removed").map(b=>({...b,_type:"group",_collection:"bookings",_time:b.sessTime})),
-            ...(inquiries||[]).filter(i=>i.status!=="cancelled"&&i.status!=="removed").map(i=>({...i,_type:"1on1",_collection:"inquiries",_time:i.slotTime})),
-          ];
-
-          function sessionsOnDate(dk){ return allSessions.filter(s=>s.dateKey===dk); }
-
-          function parseTime(t){
-            if(!t) return null;
-            try{
-              const s=t.split("–")[0].trim();
-              const [tm,mer]=s.split(" ");
-              let [h,m]=tm.split(":").map(Number);
-              if(mer==="PM"&&h!==12)h+=12;
-              if(mer==="AM"&&h===12)h=0;
-              return{hours:h,minutes:m||0};
-            }catch(e){return null;}
-          }
-
-          // Month grid
-          const firstDay=new Date(calYear,calMonth,1).getDay();
-          const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
-          const calDays=[];
-          for(let i=0;i<firstDay;i++) calDays.push(null);
-          for(let d=1;d<=daysInMonth;d++) calDays.push(new Date(calYear,calMonth,d));
-          while(calDays.length%7!==0) calDays.push(null);
-
-          // Week days
-          const startOfWeek=new Date(todayD);
-          startOfWeek.setDate(todayD.getDate()-todayD.getDay());
-          const weekDays=Array.from({length:7},(_,i)=>{const d=new Date(startOfWeek);d.setDate(startOfWeek.getDate()+i);return d;});
-
-          async function doCalDrop(){
-            if(!dropModal||!dropSess) return;
-            const{booking:b,targetDate}=dropModal;
-            const newDK=dKey(targetDate);
-            const newDL=fmtDate(targetDate);
-            setMovingId(b.id);
-            try{
-              if(b._type==="1on1"){
-                await updateDoc(doc(db,"inquiries",b.id),{dateKey:newDK,dateLabel:newDL,slotId:dropSess.id,slotTime:dropSess.time,requestType:null,requestNote:null,movedAt:new Date().toISOString()});
-              }else{
-                const sched=DAY_SCHEDULE[targetDate.getDay()]||{};
-                await updateDoc(doc(db,"bookings",b.id),{dateKey:newDK,dateLabel:newDL,sessId:dropSess.id,sessTime:dropSess.time,ageGroup:dropSess.ageGroup,ageTag:dropSess.ageTag,skill:sched.skill||b.skill,skillIcon:sched.skillIcon||b.skillIcon,requestType:null,requestNote:null,movedAt:new Date().toISOString()});
-              }
-              try{await callEmailAPI({...b,dateLabel:newDL,sessTime:dropSess.time},"reschedule");}catch(e){}
-            }finally{setMovingId(null);setDropModal(null);setDropSess(null);}
-          }
-
-          async function saveCalNote(){
-            if(!calNoteId) return;
-            const s=allSessions.find(x=>x.id===calNoteId);
-            if(!s) return;
-            await updateDoc(doc(db,s._collection,s.id),{coachNote:calNoteText,coachNoteUpdated:new Date().toISOString()});
-            setCalNoteId(null);setCalNoteText("");
-          }
-
-          function SessionChip({session,compact=false}){
-            const is1on1=session._type==="1on1";
-            const color=is1on1?C.gold:C.red;
-            return(
-              <div
-                draggable
-                onDragStart={e=>{setDragItem(session);e.dataTransfer.effectAllowed="move";}}
-                onClick={e=>{e.stopPropagation();setCalNoteId(calNoteId===session.id?null:session.id);setCalNoteText(session.coachNote||"");}}
-                style={{background:is1on1?"rgba(196,168,76,0.12)":"rgba(204,34,34,0.12)",border:`1px solid ${color}33`,borderLeft:`2px solid ${color}`,borderRadius:5,padding:compact?"2px 5px":"5px 7px",cursor:"grab",marginBottom:2,opacity:movingId===session.id?0.4:1,transition:"opacity 0.15s"}}
-                title={`${session.name} — click for note, drag to move`}
-              >
-                <div style={{display:"flex",alignItems:"center",gap:3,justifyContent:"space-between"}}>
-                  <span style={{fontSize:compact?8:9,color:C.white,fontFamily:D.display,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"80%"}}>{session.name}</span>
-                  <div style={{display:"flex",gap:2,flexShrink:0}}>
-                    {session.coachNote&&<span style={{fontSize:7,color:C.gold}}>📝</span>}
-                    {session.requestType&&<span style={{fontSize:7,color:C.silver}}>⚠</span>}
-                    <div style={{width:4,height:4,borderRadius:"50%",background:session.status==="confirmed"?C.green:C.gold}}/>
-                  </div>
-                </div>
-                {!compact&&<div style={{fontSize:7,color:"rgba(255,255,255,0.35)",fontFamily:D.body}}>{session._time?.split("–")[0]?.trim()}</div>}
-              </div>
-            );
-          }
-
-          return(<>
-            {/* Calendar header */}
-            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"16px 20px",marginBottom:8}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
-                <div style={{display:"flex",alignItems:"center",gap:12}}>
-                  <button onClick={()=>{if(calMonth===0){setCalMonth(11);setCalYear(y=>y-1);}else setCalMonth(m=>m-1);}} style={{background:C.black,border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"5px 10px",color:C.textMid,cursor:"pointer",fontFamily:D.body,fontSize:11}}>←</button>
-                  <div style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display}}>{monthNames[calMonth]} {calYear}</div>
-                  <button onClick={()=>{if(calMonth===11){setCalMonth(0);setCalYear(y=>y+1);}else setCalMonth(m=>m+1);}} style={{background:C.black,border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"5px 10px",color:C.textMid,cursor:"pointer",fontFamily:D.body,fontSize:11}}>→</button>
-                  <button onClick={()=>{setCalMonth(new Date().getMonth());setCalYear(new Date().getFullYear());}} style={{background:`${C.gold}15`,border:`1px solid ${C.gold}33`,borderRadius:7,padding:"5px 10px",color:C.gold,cursor:"pointer",fontFamily:D.body,fontSize:9,letterSpacing:2,textTransform:"uppercase"}}>Today</button>
-                </div>
-                <div style={{display:"flex",gap:6}}>
-                  {[["month","Month"],["week","Week"]].map(([v,l])=>(
-                    <button key={v} onClick={()=>setCalView(v)} style={{background:calView===v?`${C.gold}15`:C.black,border:`1px solid ${calView===v?C.gold+"44":C.cardBorder}`,color:calView===v?C.gold:C.textDim,borderRadius:7,padding:"5px 12px",fontSize:10,letterSpacing:1,cursor:"pointer",fontFamily:D.body}}>{l}</button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Legend */}
-              <div style={{display:"flex",gap:14,flexWrap:"wrap",marginBottom:14}}>
-                {[{color:C.red,label:"The Furnace"},{color:C.gold,label:"The Tempering"},{color:C.green,label:"Confirmed"},{color:C.gold,label:"Pending",dot:true}].map((item,i)=>(
-                  <div key={i} style={{display:"flex",alignItems:"center",gap:4}}>
-                    <div style={{width:7,height:7,borderRadius:item.dot?"50%":2,background:item.color}}/>
-                    <span style={{fontSize:8,color:C.textDim,fontFamily:D.body,letterSpacing:1}}>{item.label}</span>
-                  </div>
-                ))}
-                <span style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>⋮ Drag to reschedule · Click for note</span>
-              </div>
-
-              {calView==="month"&&(<>
                 {/* Day headers */}
-                <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:3}}>
-                  {dayNames.map(d=><div key={d} style={{textAlign:"center",fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,padding:"3px 0"}}>{d}</div>)}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:2}}>
+                  {dayNames.map(d=><div key={d} style={{textAlign:"center",fontSize:7,letterSpacing:1,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,padding:"2px 0"}}>{d}</div>)}
                 </div>
+
                 {/* Calendar grid */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
                   {calDays.map((d,i)=>{
-                    if(!d) return <div key={i} style={{minHeight:80}}/>;
+                    if(!d) return <div key={i} style={{minHeight:90}}/>;
                     const dk=dKey(d);
-                    const daySess=sessionsOnDate(dk);
                     const isToday=dk===todayKey;
-                    const isPast=dk<todayKey;
+                    const isPast=d<todayD;
                     const isDragOver=dragOver===dk;
+                    const isGroupDay=COACH_DAYS.includes(d.getDay());
+                    const isPrivDay=[3,6].includes(d.getDay());
+                    const isCoachDay=isGroupDay||isPrivDay;
+                    const sessions=isGroupDay?(DAY_SCHEDULE[d.getDay()]?.sessions||[]):isPrivDay?(PRIVATE_SCHEDULE[d.getDay()]?.slots||[]):[];
+                    const allBlocked=sessions.length>0&&sessions.every(s=>(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id));
+                    const anyBlocked=sessions.some(s=>(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id));
+
                     return(
                       <div key={i}
                         onDragOver={e=>{e.preventDefault();setDragOver(dk);}}
                         onDragLeave={()=>setDragOver(null)}
                         onDrop={e=>{e.preventDefault();setDragOver(null);if(dragItem&&dKey(d)!==dragItem.dateKey){setDropModal({booking:dragItem,targetDate:d});setDropSess(null);setDragItem(null);}}}
-                        style={{background:isDragOver?"rgba(196,168,76,0.08)":isToday?"rgba(196,168,76,0.04)":"#0a0805",border:isDragOver?`1px solid ${C.gold}`:`1px solid ${isToday?C.gold+"44":"#1a1510"}`,borderRadius:7,padding:"5px",minHeight:80,transition:"all 0.12s",opacity:isPast&&!daySess.length?0.35:1}}
+                        style={{
+                          background:isDragOver?"rgba(196,168,76,0.08)":allBlocked?"#180603":isToday?"rgba(196,168,76,0.05)":isCoachDay?"#0a0805":"#060402",
+                          border:isDragOver?`1px solid ${C.gold}`:allBlocked?`1px solid ${C.red}55`:anyBlocked?`1px solid ${C.red}22`:isToday?`1px solid ${C.gold}44`:isCoachDay?`1px solid #181210`:`1px solid #0e0c0a`,
+                          borderRadius:6,padding:"4px",minHeight:90,transition:"all 0.1s",
+                          opacity:isPast&&!sessOnDate(dk).length&&!isCoachDay?0.2:1,
+                        }}
                       >
+                        {/* Date + block day */}
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
-                          <div style={{fontSize:11,fontWeight:isToday?700:400,color:isToday?C.gold:C.silverDim,fontFamily:D.display,width:18,height:18,borderRadius:isToday?"50%":"3px",background:isToday?`${C.gold}22`:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>{d.getDate()}</div>
-                          {daySess.length>0&&<div style={{fontSize:7,color:C.textDim,fontFamily:D.body}}>{daySess.length}</div>}
+                          <div style={{fontSize:10,fontWeight:isToday?700:400,color:isToday?C.gold:isCoachDay?C.silverBright:C.textDim,fontFamily:D.display,width:16,height:16,borderRadius:isToday?"50%":"2px",background:isToday?`${C.gold}22`:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>{d.getDate()}</div>
+                          {isCoachDay&&!isPast&&(
+                            <button
+                              onClick={e=>{e.stopPropagation();
+                                if(allBlocked){sessions.forEach(s=>blockSession(dk,s.id,""));}
+                                else{sessions.forEach(s=>{if(!(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id))blockSession(dk,s.id,`${fmtDate(d)} ${s.time}`);});}
+                              }}
+                              title={allBlocked?"Unblock day":"Block entire day"}
+                              style={{background:allBlocked?`${C.red}15`:"transparent",border:`1px solid ${allBlocked?C.red+"44":C.cardBorder}`,borderRadius:3,padding:"0 4px",color:allBlocked?C.red:C.textDim,fontSize:7,cursor:"pointer",fontFamily:D.body,lineHeight:"14px"}}
+                            >{allBlocked?"🔓":"🔒"}</button>
+                          )}
                         </div>
-                        {daySess.slice(0,4).map((s,si)=><SessionChip key={si} session={s} compact={true}/>)}
-                        {daySess.length>4&&<div style={{fontSize:7,color:C.textDim,textAlign:"center",fontFamily:D.body}}>+{daySess.length-4}</div>}
-                        {isDragOver&&<div style={{fontSize:7,color:C.gold,textAlign:"center",fontFamily:D.body,marginTop:2}}>Drop</div>}
+
+                        {/* Session slots */}
+                        {isCoachDay&&sessions.map(sess=>{
+                          const isBlk=(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===sess.id);
+                          const slotSess=sessOnDate(dk).filter(s=>isGroupDay?(s.sessId===sess.id):(s.slotId===sess.id||s.slotTime===sess.time));
+                          const maxSpots=isGroupDay?MAX_PLAYERS:1;
+                          const tShort=(sess.time||"").split("–")[0].trim().replace(":00","").replace(" PM","p").replace(" AM","a");
+                          return(
+                            <div key={sess.id} style={{marginBottom:2}}>
+                              <div
+                                onClick={e=>{e.stopPropagation();blockSession(dk,sess.id,isBlk?"":(`${fmtDate(d)} ${sess.time}`));}}
+                                title={isBlk?"Unblock slot":"Block slot"}
+                                style={{fontSize:6,padding:"1px 3px",borderRadius:2,cursor:"pointer",display:"flex",justifyContent:"space-between",background:isBlk?"rgba(204,34,34,0.2)":"rgba(255,255,255,0.04)",border:`1px solid ${isBlk?C.red+"44":"rgba(255,255,255,0.05)"}`,marginBottom:slotSess.length?1:0}}
+                              >
+                                <span style={{color:isBlk?C.red:isGroupDay?"#cc5555":"#b89a3e",fontFamily:D.body}}>{isBlk?"🔒":isGroupDay?"🔥":"⚒️"} {tShort}</span>
+                                <span style={{color:isBlk?C.red:slotSess.length>0?C.gold:"#333",fontFamily:D.body}}>{isBlk?"blk":`${slotSess.length}/${maxSpots}`}</span>
+                              </div>
+                              {!isBlk&&!isPast&&slotSess.map((s,si)=><SessionChip key={si} session={s}/>)}
+                            </div>
+                          );
+                        })}
+
+                        {isDragOver&&<div style={{fontSize:6,color:C.gold,textAlign:"center",fontFamily:D.body,marginTop:2}}>drop</div>}
                       </div>
                     );
                   })}
                 </div>
-              </>)}
+              </>);
+            })()}
+          </div>
 
-              {calView==="week"&&(()=>{
-                const timeSlots=["8:00 AM","9:00 AM","10:00 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM"];
-                return(
-                  <div style={{overflowX:"auto"}}>
-                    <div style={{display:"grid",gridTemplateColumns:"56px repeat(7,1fr)",gap:2,minWidth:600}}>
-                      <div/>
-                      {weekDays.map((d,i)=>{
-                        const isToday=dKey(d)===todayKey;
-                        return(
-                          <div key={i} style={{textAlign:"center",padding:"5px 3px",background:isToday?`${C.gold}10`:"#0a0805",border:`1px solid ${isToday?C.gold+"44":"#1a1510"}`,borderRadius:6}}>
-                            <div style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>{dayNames[d.getDay()]}</div>
-                            <div style={{fontSize:13,fontWeight:isToday?700:400,color:isToday?C.gold:C.white,fontFamily:D.display}}>{d.getDate()}</div>
-                          </div>
-                        );
-                      })}
-                      {timeSlots.map((slot,ti)=>{
-                        const isPM=slot.includes("PM");
-                        const h=parseInt(slot);
-                        const slotH=isPM&&h!==12?h+12:(!isPM&&h===12?0:h);
-                        return(<>
-                          <div key={`t${ti}`} style={{fontSize:7,color:C.textDim,fontFamily:D.body,textAlign:"right",paddingRight:5,paddingTop:5,lineHeight:1.2}}>{slot}</div>
-                          {weekDays.map((d,di)=>{
-                            const dk=dKey(d);
-                            const slotSess=sessionsOnDate(dk).filter(s=>{const t=parseTime(s._time);return t&&t.hours===slotH;});
-                            return(
-                              <div key={`c${ti}${di}`}
-                                onDragOver={e=>{e.preventDefault();setDragOver(dk);}}
-                                onDragLeave={()=>setDragOver(null)}
-                                onDrop={e=>{e.preventDefault();setDragOver(null);if(dragItem&&dKey(d)!==dragItem.dateKey){setDropModal({booking:dragItem,targetDate:d});setDropSess(null);setDragItem(null);}}}
-                                style={{background:dragOver===dk?"rgba(196,168,76,0.05)":"#0a0805",border:`1px solid ${dragOver===dk?C.gold+"22":"#151210"}`,borderRadius:3,padding:2,minHeight:42,transition:"all 0.12s"}}
-                              >
-                                {slotSess.map((s,si)=><SessionChip key={si} session={s} compact={true}/>)}
-                              </div>
-                            );
-                          })}
-                        </>);
-                      })}
-                    </div>
+          {/* ── SIDE PANEL ── */}
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+
+            {/* Pending / Holding Area */}
+            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,overflow:"hidden"}}>
+              <div style={{background:`linear-gradient(135deg,#1a1308,#0f0c05)`,padding:"10px 14px",borderBottom:`1px solid ${C.cardBorder}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontSize:8,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:2}}>Holding Area</div>
+                  <div style={{fontSize:11,color:C.white,fontFamily:D.display}}>Working Out a Time</div>
+                </div>
+                <button onClick={()=>setShowAddPending(v=>!v)} style={{background:`${C.gold}15`,border:`1px solid ${C.gold}33`,borderRadius:6,padding:"4px 8px",color:C.gold,fontSize:9,cursor:"pointer",fontFamily:D.body}}>+ Add</button>
+              </div>
+
+              {/* Add pending form */}
+              {showAddPending&&(
+                <div style={{padding:"10px 12px",borderBottom:`1px solid ${C.cardBorder}`,background:"#0a0805"}}>
+                  <input placeholder="Client name *" value={pendingForm.name} onChange={e=>setPendingForm(p=>({...p,name:e.target.value}))} style={{...IS,fontSize:11,marginBottom:6,width:"100%"}}/>
+                  <input placeholder="Phone or email" value={pendingForm.contact} onChange={e=>setPendingForm(p=>({...p,contact:e.target.value}))} style={{...IS,fontSize:11,marginBottom:6,width:"100%"}}/>
+                  <input placeholder="Note (e.g. wants Thursday eve)" value={pendingForm.note} onChange={e=>setPendingForm(p=>({...p,note:e.target.value}))} style={{...IS,fontSize:11,marginBottom:8,width:"100%"}}/>
+                  <div style={{display:"flex",gap:6}}>
+                    <button onClick={async()=>{
+                      if(!pendingForm.name.trim()) return;
+                      await addDoc(collection(db,"pending"),{...pendingForm,createdAt:new Date().toISOString(),status:"pending"});
+                      setPendingForm({name:"",contact:"",note:""});setShowAddPending(false);
+                    }} style={{flex:1,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:6,padding:"7px",color:"#0a0a0a",fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save</button>
+                    <button onClick={()=>{setShowAddPending(false);setPendingForm({name:"",contact:"",note:""}); }} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:6,padding:"7px 10px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
                   </div>
-                );
-              })()}
+                </div>
+              )}
+
+              {/* Pending clients list */}
+              <div style={{padding:"8px",maxHeight:280,overflowY:"auto"}}>
+                {(pendingClients||[]).length===0?(
+                  <div style={{textAlign:"center",padding:"20px 10px",color:C.textDim,fontSize:10,fontFamily:D.body,lineHeight:1.6}}>No one in the queue.<br/>Add clients you're working out a time with.</div>
+                ):(pendingClients||[]).map((p,i)=>(
+                  <div key={i}
+                    draggable
+                    onDragStart={e=>{setDragItem({...p,_type:"pending",_collection:"pending",name:p.name,dateKey:"pending"});e.dataTransfer.effectAllowed="move";}}
+                    style={{background:"#0a0805",border:`1px solid ${C.gold}22`,borderRadius:8,padding:"8px 10px",marginBottom:6,cursor:"grab"}}
+                    title="Drag onto calendar to schedule"
+                  >
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:11,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:2}}>{p.name}</div>
+                        {p.contact&&<div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{p.contact}</div>}
+                        {p.note&&<div style={{fontSize:9,color:C.gold,fontFamily:D.body,marginTop:2,fontStyle:"italic"}}>{p.note}</div>}
+                      </div>
+                      <button onClick={async()=>{await updateDoc(doc(db,"pending",p.id),{status:"scheduled"});}} style={{background:"transparent",border:"none",color:C.textDim,fontSize:10,cursor:"pointer",padding:"0 0 0 6px",flexShrink:0}} title="Mark done">✓</button>
+                    </div>
+                    <div style={{fontSize:7,color:C.textDim,fontFamily:D.body,marginTop:4}}>⋮ drag to calendar to schedule</div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Today's roster below calendar */}
-            <div style={{marginBottom:20}}>
+            {/* Quick stats */}
+            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"12px 14px"}}>
+              <div style={{fontSize:8,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>This Week</div>
+              {[
+                {label:"Sessions",value:weekSessions.length,color:C.green},
+                {label:"Revenue",value:`$${weekRevenue}`,color:C.gold},
+                {label:"Pending Pay",value:pendingCount,color:C.red},
+              ].map((s,i)=>(
+                <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:i<2?`1px solid ${C.cardBorder}`:"none"}}>
+                  <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{s.label}</span>
+                  <span style={{fontSize:13,fontWeight:700,color:s.color,fontFamily:D.display}}>{s.value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Reschedule requests */}
+            {requestCount>0&&(
+              <div style={{background:C.card,border:`1px solid ${C.silver}22`,borderRadius:14,padding:"12px 14px"}}>
+                <div style={{fontSize:8,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>⚠ Reschedule Requests</div>
+                {[...(bookings||[]),...(inquiries||[])].filter(x=>x.requestType).map((x,i)=>(
+                  <div key={i} style={{background:"#0a0805",borderRadius:7,padding:"7px 10px",marginBottom:5,border:`1px solid ${C.silver}22`}}>
+                    <div style={{fontSize:11,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:2}}>{x.name}</div>
+                    <div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{x.dateLabel} · {x.sessTime||x.slotTime}</div>
+                    {x.requestedNewDate&&<div style={{fontSize:9,color:C.gold,fontFamily:D.body,marginTop:2}}>→ wants {x.requestedNewDate}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── TODAY'S ROSTER ── */}
+        {(()=>{
+          const todayD=new Date(); todayD.setHours(0,0,0,0);
+          const tk=dKey(todayD);
+          const allSessions=[
+            ...(bookings||[]).filter(b=>b.status!=="cancelled"&&b.status!=="removed"&&b.dateKey===tk).map(b=>({...b,_type:"group",_time:b.sessTime})),
+            ...(inquiries||[]).filter(i=>i.status!=="cancelled"&&i.status!=="removed"&&i.dateKey===tk).map(i=>({...i,_type:"1on1",_time:i.slotTime})),
+          ];
+
+          return(
+            <div>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,paddingBottom:8,borderBottom:`1px solid ${C.cardBorder}`}}>
                 <div style={{width:7,height:7,borderRadius:"50%",background:C.green,animation:"pulse 1.5s infinite",flexShrink:0}}/>
-                <span style={{fontSize:10,letterSpacing:3,color:C.green,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Today</span>
-                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</span>
-                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>· {sessionsOnDate(todayKey).length} player{sessionsOnDate(todayKey).length!==1?"s":""}</span>
+                <span style={{fontSize:10,letterSpacing:3,color:C.green,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Today's Roster</span>
+                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} · {allSessions.length} player{allSessions.length!==1?"s":""}</span>
               </div>
-              {sessionsOnDate(todayKey).length===0?(
-                <div style={{textAlign:"center",padding:"28px 20px",background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,color:C.textDim,fontSize:12,fontFamily:D.body}}>No sessions today</div>
+
+              {allSessions.length===0?(
+                <div style={{textAlign:"center",padding:"24px",background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,color:C.textDim,fontSize:11,fontFamily:D.body}}>No sessions today</div>
               ):(()=>{
                 const groups={};
-                sessionsOnDate(todayKey).forEach(s=>{
+                allSessions.forEach(s=>{
                   const k=s._time||"x";
                   if(!groups[k]) groups[k]={time:s._time,type:s._type,players:[]};
                   groups[k].players.push(s);
                 });
-                return Object.values(groups).map((group,gi)=>(
-                  <div key={gi} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,marginBottom:10,overflow:"hidden"}}>
-                    <div style={{background:group.type==="1on1"?`linear-gradient(135deg,#1a1308,#0f0c05)`:`linear-gradient(135deg,${C.redDark},#150804)`,padding:"9px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:7}}>
-                        <span style={{fontSize:15}}>{group.type==="1on1"?"⚒️":"🔥"}</span>
-                        <div>
-                          <div style={{fontSize:12,fontWeight:600,color:C.white,fontFamily:D.display}}>{group.type==="1on1"?"The Tempering":"The Furnace"}</div>
-                          <div style={{fontSize:10,color:group.type==="1on1"?C.gold:C.red,fontFamily:D.body}}>{group.time}</div>
-                        </div>
-                      </div>
-                      <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{group.players.length} player{group.players.length!==1?"s":""}</div>
-                    </div>
-                    <div style={{padding:"8px 12px",display:"grid",gap:5}}>
-                      {group.players.map((s,si)=>(
-                        <div key={si} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 10px",background:"#080603",borderRadius:7,border:`1px solid ${s.status==="confirmed"?C.green+"22":C.cardBorder}`,borderLeft:`2px solid ${s.status==="confirmed"?C.green:C.gold}`}}>
-                          <div>
-                            <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:2}}>{s.name}</div>
-                            <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
-                              {s.ageGroup&&<span style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>👤 {s.ageGroup}</span>}
-                              {s.position&&<span style={{fontSize:9,color:C.gold,fontFamily:D.body}}>⚽ {s.position}</span>}
-                              {s.phone&&<span style={{fontSize:9,color:C.silverDim,fontFamily:D.body}}>{s.phone}</span>}
+                return(
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10}}>
+                    {Object.values(groups).map((group,gi)=>(
+                      <div key={gi} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,overflow:"hidden"}}>
+                        <div style={{background:group.type==="1on1"?`linear-gradient(135deg,#1a1308,#0f0c05)`:`linear-gradient(135deg,${C.redDark},#150804)`,padding:"8px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{fontSize:14}}>{group.type==="1on1"?"⚒️":"🔥"}</span>
+                            <div>
+                              <div style={{fontSize:11,fontWeight:600,color:C.white,fontFamily:D.display}}>{group.type==="1on1"?"The Tempering":"The Furnace"}</div>
+                              <div style={{fontSize:9,color:group.type==="1on1"?C.gold:C.red,fontFamily:D.body}}>{group.time}</div>
                             </div>
-                            {s.coachNote&&<div style={{fontSize:9,color:C.gold,marginTop:3,fontFamily:D.body,background:`${C.gold}08`,borderRadius:4,padding:"2px 6px",display:"inline-block"}}>📝 {s.coachNote}</div>}
                           </div>
-                          <div style={{display:"flex",gap:5,alignItems:"center"}}>
-                            <button onClick={()=>{setCalNoteId(s.id);setCalNoteText(s.coachNote||"");}} style={{background:"transparent",border:`1px solid ${s.coachNote?C.gold+"44":C.cardBorder}`,borderRadius:5,padding:"3px 7px",color:s.coachNote?C.gold:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📝</button>
-                            {s.status==="pending"&&<button onClick={()=>confirmBooking(s.id)} style={{background:`${C.green}15`,border:`1px solid ${C.green}44`,borderRadius:5,padding:"3px 7px",color:C.green,fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓</button>}
-                          </div>
+                          <div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{group.players.length} player{group.players.length!==1?"s":""}</div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                ));
-              })()}
-            </div>
-
-            {/* Drop modal */}
-            {dropModal&&(()=>{
-              const b=dropModal.booking;
-              const is1on1=b._type==="1on1";
-              const sched=is1on1?PRIVATE_SCHEDULE[dropModal.targetDate.getDay()]:DAY_SCHEDULE[dropModal.targetDate.getDay()];
-              const slots=sched?(is1on1?sched.slots:sched.sessions):[];
-              return(
-                <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>setDropModal(null)}>
-                  <div style={{background:"#111",border:`1px solid ${C.gold}44`,borderRadius:16,padding:"24px",maxWidth:440,width:"100%"}} onClick={e=>e.stopPropagation()}>
-                    <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>Moving</div>
-                    <div style={{fontSize:17,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:3}}>{b.name}</div>
-                    <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,marginBottom:16}}>→ {fmtDate(dropModal.targetDate)}</div>
-                    {!sched?(
-                      <div style={{fontSize:12,color:C.red,fontFamily:D.body,marginBottom:16}}>No sessions scheduled on this day. Try a coaching day (Mon/Tue/Thu/Fri for group, Wed/Sat for 1-on-1).</div>
-                    ):(
-                      <div style={{display:"grid",gap:7,marginBottom:16}}>
-                        {slots.map(slot=>{
-                          const sel=dropSess?.id===slot.id;
-                          return(
-                            <button key={slot.id} onClick={()=>setDropSess(slot)} style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:9,padding:"11px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                              <span style={{fontSize:12,fontWeight:600,color:sel?C.gold:C.white,fontFamily:D.display}}>{slot.time}</span>
-                              {!is1on1&&<span style={{fontSize:10,color:sel?C.gold:C.textDim,fontFamily:D.body}}>{slot.ageGroup}</span>}
-                              {sel&&<span style={{fontSize:10,color:C.gold}}>✓</span>}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                    <div style={{display:"flex",gap:8}}>
-                      <button disabled={!dropSess||!!movingId||!sched} onClick={doCalDrop} style={{flex:1,background:dropSess&&sched?`linear-gradient(135deg,${C.gold},${C.goldDim})`:"#1a1a1a",border:"none",borderRadius:9,padding:"12px",color:dropSess&&sched?"#0a0a0a":C.silverDark,fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:dropSess&&sched?"pointer":"not-allowed",fontFamily:D.body,fontWeight:700}}>
-                        {movingId?"Moving…":"Confirm Move"}
-                      </button>
-                      <button onClick={()=>setDropModal(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:9,padding:"12px 14px",color:C.textDim,fontSize:11,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Note modal from calendar */}
-            {calNoteId&&(()=>{
-              const s=allSessions.find(x=>x.id===calNoteId);
-              if(!s) return null;
-              return(
-                <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>setCalNoteId(null)}>
-                  <div style={{background:"#111",border:`1px solid ${C.gold}44`,borderRadius:16,padding:"24px",maxWidth:440,width:"100%"}} onClick={e=>e.stopPropagation()}>
-                    <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>Coach Note</div>
-                    <div style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:3}}>{s.name}</div>
-                    <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,marginBottom:14}}>{s.dateLabel} · {s._time}</div>
-                    <textarea value={calNoteText} onChange={e=>setCalNoteText(e.target.value)} placeholder="Session notes, changes, anything you need to remember..." rows={4} style={{...IS,width:"100%",marginBottom:12,fontSize:12,resize:"vertical"}} autoFocus/>
-                    <div style={{display:"flex",gap:8}}>
-                      <button onClick={saveCalNote} style={{flex:1,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:9,padding:"12px",color:"#0a0a0a",fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save Note</button>
-                      {s.coachNote&&<button onClick={async()=>{await updateDoc(doc(db,s._collection,s.id),{coachNote:"",coachNoteUpdated:new Date().toISOString()});setCalNoteId(null);}} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:9,padding:"12px 12px",color:C.redDim,fontSize:11,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
-                      <button onClick={()=>setCalNoteId(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:9,padding:"12px 12px",color:C.textDim,fontSize:11,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-          </>);
-        })()}
-
-        {/* ── TAB BAR ── */}
-        <div style={{display:"flex",gap:6,marginBottom:24,flexWrap:"wrap"}}>
-          {[
-            ["roster","📋 Today's Roster"],
-            ["bookings", "🔥 Group", pendingCount],
-            ["inquiries", "⚒️ 1-on-1", newInquiries],
-            ["reminders", "📧 Reminders", 0],
-            ["reviews", "⭐ Reviews", 0],
-          ].map(([key,lbl,badge])=>(
-            <button key={key} onClick={()=>setTab(key)} style={{background:tab===key?`linear-gradient(135deg,${C.goldDark},#1c0e04)`:C.card,border:tab===key?`1px solid ${C.gold}55`:`1px solid ${C.cardBorder}`,color:tab===key?C.gold:C.textDim,borderRadius:10,padding:"9px 18px",fontSize:11,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:tab===key?600:400,transition:"all 0.2s",display:"flex",alignItems:"center",gap:6}}>
-              {lbl}
-              {badge>0&&<span style={{background:C.red,color:C.white,borderRadius:10,fontSize:9,padding:"1px 6px",fontWeight:700,fontFamily:D.body}}>{badge}</span>}
-            </button>
-          ))}
-        </div>
-
-        {/* ── ROSTER TAB ── */}
-        {tab==="roster"&&(()=>{
-          const today = new Date();
-          const todayKey = dKey(today);
-          const todayBookings = (bookings||[]).filter(b=>b.dateKey===todayKey&&b.status!=="cancelled"&&b.status!=="removed");
-          const todayInquiries = (inquiries||[]).filter(i=>i.dateKey===todayKey&&i.status!=="cancelled"&&i.status!=="removed");
-
-          // Group by session time
-          const groups = {};
-          todayBookings.forEach(b=>{
-            const key = b.sessTime||b.sessId||"group";
-            if(!groups[key]) groups[key]={time:b.sessTime,skill:b.skill,skillIcon:b.skillIcon,ageGroup:b.ageGroup,players:[],type:"group"};
-            groups[key].players.push(b);
-          });
-          todayInquiries.forEach(i=>{
-            const key = i.slotTime||"1on1";
-            if(!groups[key]) groups[key]={time:i.slotTime,skill:"The Tempering",skillIcon:"⚒️",players:[],type:"1on1"};
-            groups[key].players.push(i);
-          });
-
-          const sortedGroups = Object.values(groups).sort((a,b)=>(a.time||"")>(b.time||"")?1:-1);
-
-          if(sortedGroups.length===0) return(
-            <div style={{textAlign:"center",padding:"60px 20px",background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14}}>
-              <div style={{fontSize:32,marginBottom:12}}>📋</div>
-              <div style={{fontSize:14,color:C.textDim,fontFamily:D.body}}>No sessions today.</div>
-            </div>
-          );
-
-          return(
-            <div>
-              {/* Date header */}
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-                <div>
-                  <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>Today's Roster</div>
-                  <div style={{fontSize:20,fontWeight:600,color:C.white,fontFamily:D.display}}>{today.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</div>
-                </div>
-                <div style={{background:`${C.gold}15`,border:`1px solid ${C.gold}33`,borderRadius:10,padding:"8px 16px",textAlign:"center"}}>
-                  <div style={{fontSize:22,fontWeight:700,color:C.gold,fontFamily:D.display}}>{todayBookings.length+todayInquiries.length}</div>
-                  <div style={{fontSize:9,color:C.goldDim,fontFamily:D.body,letterSpacing:1}}>PLAYERS</div>
-                </div>
-              </div>
-
-              {/* Session groups */}
-              {sortedGroups.map((group,gi)=>(
-                <div key={gi} style={{marginBottom:20}}>
-                  {/* Session header */}
-                  <div style={{background:group.type==="1on1"?`linear-gradient(135deg,#1a1308,#0f0c05)`:`linear-gradient(135deg,${C.goldDark},#150c04)`,border:`1px solid ${group.type==="1on1"?C.gold+"33":C.gold+"22"}`,borderRadius:12,padding:"12px 16px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:10}}>
-                      <span style={{fontSize:20}}>{group.skillIcon}</span>
-                      <div>
-                        <div style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display}}>{group.skill}</div>
-                        <div style={{fontSize:11,color:C.gold,fontFamily:D.body}}>{group.time}</div>
-                      </div>
-                    </div>
-                    <div style={{background:`${C.gold}15`,borderRadius:8,padding:"4px 12px"}}>
-                      <span style={{fontSize:13,fontWeight:700,color:C.gold,fontFamily:D.display}}>{group.players.length}</span>
-                      <span style={{fontSize:10,color:C.goldDim,fontFamily:D.body}}> player{group.players.length!==1?"s":""}</span>
-                    </div>
-                  </div>
-
-                  {/* Player cards */}
-                  <div style={{display:"grid",gap:8,paddingLeft:8,borderLeft:`2px solid ${C.gold}22`}}>
-                    {group.players.map((p,pi)=>(
-                      <div key={pi} style={{background:C.card,border:`1px solid ${p.status==="confirmed"?C.green+"22":C.cardBorder}`,borderLeft:`3px solid ${p.status==="confirmed"?C.green:C.gold}`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
-                        <div>
-                          <div style={{fontSize:15,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:4}}>{p.name}</div>
-                          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                            {p.ageGroup&&<span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>👤 {p.ageGroup}</span>}
-                            {p.position&&<span style={{fontSize:10,color:C.gold,fontFamily:D.body}}>⚽ {p.position}</span>}
-                            {p.count>1&&<span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>👥 {p.count} players</span>}
-                            {p.notes&&<span style={{fontSize:10,color:C.silverDim,fontFamily:D.body,fontStyle:"italic"}}>{p.notes.split("|")[0]}</span>}
-                          </div>
-                        </div>
-                        <div style={{textAlign:"right",flexShrink:0}}>
-                          <div style={{fontSize:8,padding:"2px 7px",borderRadius:6,background:p.status==="confirmed"?`${C.green}18`:`${C.gold}18`,color:p.status==="confirmed"?C.green:C.gold,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>{p.status==="confirmed"?"✓ Confirmed":"⏳ Pending"}</div>
-                          {p.phone&&<div style={{fontSize:10,color:C.silverDark,fontFamily:D.body,marginTop:4}}>{p.phone}</div>}
+                        <div style={{padding:"6px 10px",display:"grid",gap:4}}>
+                          {group.players.map((s,si)=>(
+                            <div key={si} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 8px",background:"#080603",borderRadius:6,border:`1px solid ${s.status==="confirmed"?C.green+"22":C.cardBorder}`,borderLeft:`2px solid ${s.status==="confirmed"?C.green:C.gold}`}}>
+                              <div>
+                                <div style={{fontSize:12,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:1}}>{s.name}</div>
+                                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                                  {s.ageGroup&&<span style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>👤 {s.ageGroup}</span>}
+                                  {s.position&&<span style={{fontSize:8,color:C.gold,fontFamily:D.body}}>⚽ {s.position}</span>}
+                                  {s.phone&&<span style={{fontSize:8,color:C.silverDim,fontFamily:D.body}}>{s.phone}</span>}
+                                </div>
+                                {s.coachNote&&<div style={{fontSize:8,color:C.gold,marginTop:2,fontFamily:D.body}}>📝 {s.coachNote}</div>}
+                              </div>
+                              <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                                <button onClick={()=>{setCalNoteId(s.id);setCalNoteText(s.coachNote||"");}} style={{background:"transparent",border:`1px solid ${s.coachNote?C.gold+"44":C.cardBorder}`,borderRadius:4,padding:"2px 6px",color:s.coachNote?C.gold:C.textDim,fontSize:8,cursor:"pointer",fontFamily:D.body}}>📝</button>
+                                {s.status==="pending"&&<button onClick={()=>confirmBooking(s.id)} style={{background:`${C.green}15`,border:`1px solid ${C.green}44`,borderRadius:4,padding:"2px 6px",color:C.green,fontSize:8,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓</button>}
+                                <div style={{fontSize:7,padding:"1px 5px",borderRadius:3,background:s.status==="confirmed"?`${C.green}18`:`${C.gold}18`,color:s.status==="confirmed"?C.green:C.gold,fontFamily:D.body}}>{s.status==="confirmed"?"✓":"⏳"}</div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              ))}
-            </div>
-          );
-        })()}
-
-        {tab==="bookings"&&(()=>{
-          const allB = [...bookings].sort((a,b)=>a.dateKey>b.dateKey?1:-1);
-          const todayB    = allB.filter(b=>b.dateKey===todayStr0);
-          const upcomingB = allB.filter(b=>b.dateKey>todayStr0);
-          const pastB     = allB.filter(b=>b.dateKey<todayStr0);
-
-          function renderBookings(grpBookings){
-            // group by date+session
-            const groups={};
-            grpBookings.forEach(b=>{
-              const k=`${b.dateKey}_${b.sessId||b.dateKey}`;
-              if(!groups[k]) groups[k]={dateLabel:b.dateLabel,sessTime:b.sessTime,ageGroup:b.ageGroup,skill:b.skill,skillIcon:b.skillIcon,bookings:[]};
-              groups[k].bookings.push(b);
-            });
-            return Object.entries(groups).sort((a,b)=>a[0]>b[0]?1:-1).map(([key,group])=>(
-              <div key={key} style={{marginBottom:24}}>
-                <div style={{background:`linear-gradient(135deg,${C.goldDark},#150c04)`,border:`1px solid ${C.gold}22`,borderRadius:12,padding:"12px 16px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
-                  <div style={{display:"flex",alignItems:"center",gap:12}}>
-                    <div style={{width:36,height:36,borderRadius:8,background:`${C.gold}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🔥</div>
-                    <div>
-                      <div style={{fontSize:15,color:C.white,fontFamily:D.display,fontWeight:600}}>{group.dateLabel}</div>
-                      <div style={{fontSize:11,color:C.gold,fontFamily:D.body}}>{group.sessTime}</div>
-                    </div>
-                  </div>
-                  <div style={{background:`${C.gold}15`,border:`1px solid ${C.gold}22`,borderRadius:8,padding:"4px 12px"}}>
-                    <span style={{fontSize:12,fontWeight:600,color:C.gold,fontFamily:D.display}}>{group.bookings.length}</span>
-                    <span style={{fontSize:10,color:C.goldDim,fontFamily:D.body}}>/{MAX_PLAYERS} players</span>
-                  </div>
-                </div>
-                <div style={{display:"grid",gap:8,paddingLeft:8,borderLeft:`2px solid ${C.gold}22`}}>
-                  {group.bookings.map(b=>(
-                    <div key={b.id} style={{background:b.requestType?`${C.silver}08`:C.card,border:`1px solid ${b.requestType?C.silver+"33":b.status==="confirmed"?C.green+"22":C.cardBorder}`,borderLeft:`3px solid ${b.requestType?C.silver:b.status==="confirmed"?C.green:C.gold}`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                      <div style={{flex:1,minWidth:160}}>
-                        {/* Name row */}
-                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5,flexWrap:"wrap"}}>
-                          <span style={{fontSize:15,fontWeight:600,color:C.white,fontFamily:D.display}}>{b.name}</span>
-                          {b.parentName&&b.parentName!==b.name&&<span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>· parent: {b.parentName}</span>}
-                          <span style={{fontSize:8,padding:"2px 7px",borderRadius:8,letterSpacing:1,textTransform:"uppercase",fontFamily:D.body,background:b.status==="confirmed"?`${C.green}18`:`${C.gold}18`,color:b.status==="confirmed"?C.green:C.gold}}>{b.status==="confirmed"?"✓ Confirmed":"⏳ Pending"}</span>
-                          {b.packageBooking&&<span style={{fontSize:8,padding:"2px 6px",borderRadius:8,background:`${C.gold}15`,color:C.gold,fontFamily:D.body}}>📦 Pack</span>}
-                          {b.returning&&<span style={{fontSize:8,padding:"2px 6px",borderRadius:8,background:`${C.green}15`,color:C.green,fontFamily:D.body}}>↩ Return</span>}
-                          {b.requestType&&<span style={{fontSize:8,padding:"2px 7px",borderRadius:8,background:`${C.silver}15`,color:C.silver,fontFamily:D.body}}>⚠ {b.requestType==="cancel"?"Cancel Req":"Reschedule Req"}</span>}
-                        </div>
-                        {/* Details row */}
-                        <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-                          <span style={{fontSize:11,color:C.gold,fontFamily:D.body,fontWeight:600}}>${b.total}</span>
-                          <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>· {b.count} player{b.count>1?"s":""}</span>
-                          {b.phone&&<span style={{fontSize:11,color:C.silverDim,fontFamily:D.body}}>· {b.phone}</span>}
-                          <span style={{fontSize:10,color:C.silverDark,fontFamily:D.body}}>{b.email}</span>
-                        </div>
-                        {b.notes&&<div style={{fontSize:10,color:C.silverDim,marginTop:4,fontStyle:"italic",fontFamily:D.body,lineHeight:1.5}}>{b.notes}</div>}
-                        {b.requestType&&b.requestNote&&<div style={{fontSize:10,color:C.silver,marginTop:5,fontFamily:D.body,background:`${C.silver}08`,borderRadius:6,padding:"4px 8px"}}>📩 {b.requestNote}</div>}
-                        {b.coachNote&&coachNoteId!==b.id&&<div style={{fontSize:10,color:C.gold,marginTop:6,fontFamily:D.body,background:`${C.gold}08`,border:`1px solid ${C.gold}22`,borderRadius:6,padding:"5px 10px"}}>📝 {b.coachNote}</div>}
-                      </div>
-                      {/* Action buttons */}
-                      <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
-                        {b.status==="pending"&&<button onClick={()=>confirmBooking(b.id)} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:8,padding:"8px 14px",color:C.white,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,whiteSpace:"nowrap"}}>✓ Confirm</button>}
-                        {b.requestType&&<button onClick={()=>updateDoc(doc(db,"bookings",b.id),{requestType:null,requestNote:null})} style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:8,padding:"6px 10px",color:C.silver,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>Clear</button>}
-                        <button onClick={()=>{
-                          if(coachNoteId===b.id){setCoachNoteId(null);}
-                          else{setCoachNoteId(b.id);setCoachNoteText(b.coachNote||"");}
-                        }} style={{background:coachNoteId===b.id?`${C.gold}22`:(b.coachNote?"#141008":"transparent"),border:`1px solid ${b.coachNote?C.gold+"44":C.cardBorder}`,borderRadius:8,padding:"6px 10px",color:b.coachNote?C.gold:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>
-                          📝{b.coachNote?" Note":""}
-                        </button>
-                        <button onClick={()=>{setMoveId(moveId===b.id?null:b.id);setMoveDate(null);setMoveSess(null);}} style={{background:moveId===b.id?`${C.gold}22`:"transparent",border:`1px solid ${C.gold}44`,borderRadius:8,padding:"6px 10px",color:C.gold,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>↗ Move</button>
-                        <button onClick={()=>removeBooking(b.id)} style={{width:30,height:30,background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:8,color:C.redDim,fontSize:12,cursor:"pointer",fontFamily:D.body,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
-                      </div>
-
-                      {/* Inline Coach Notes */}
-                      {coachNoteId===b.id&&(
-                        <div style={{width:"100%",marginTop:12,paddingTop:12,borderTop:`1px solid ${C.cardBorder}`}}>
-                          <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Coach Notes — only you can see this</div>
-                          <textarea
-                            value={coachNoteText}
-                            onChange={e=>setCoachNoteText(e.target.value)}
-                            placeholder="Schedule change, player notes, anything you need to remember..."
-                            rows={3}
-                            style={{...IS,width:"100%",marginBottom:10,fontSize:12,resize:"vertical"}}
-                          />
-                          <div style={{display:"flex",gap:8}}>
-                            <button onClick={async()=>{
-                              await updateDoc(doc(db,"bookings",b.id),{coachNote:coachNoteText,coachNoteUpdated:new Date().toISOString()});
-                              setCoachNoteId(null);
-                            }} style={{background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:8,padding:"9px 18px",color:"#0a0a0a",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>
-                              Save Note
-                            </button>
-                            {b.coachNote&&<button onClick={async()=>{
-                              await updateDoc(doc(db,"bookings",b.id),{coachNote:"",coachNoteUpdated:new Date().toISOString()});
-                              setCoachNoteText("");
-                              setCoachNoteId(null);
-                            }} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:8,padding:"9px 14px",color:C.redDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>
-                              Clear
-                            </button>}
-                            <button onClick={()=>setCoachNoteId(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"9px 14px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                      {/* Inline Move Picker */}
-                      {moveId===b.id&&(
-                        <div style={{width:"100%",marginTop:12,paddingTop:12,borderTop:`1px solid ${C.cardBorder}`}}>
-                          <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Select New Date</div>
-                          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:10}}>
-                            {getDates().map((d,i)=>{
-                              const sel=moveDate&&dKey(d)===dKey(moveDate);
-                              const sched=DAY_SCHEDULE[d.getDay()];
-                              if(!sched) return null;
-                              const sp=sched.sessions.reduce((s,sess)=>s+spotsLeft(d,sess.id),0);
-                              return(
-                                <button key={i} onClick={()=>{setMoveDate(d);setMoveSess(null);}}
-                                  style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:8,padding:"8px 4px",cursor:"pointer",textAlign:"center",color:C.white}}>
-                                  <div style={{fontSize:8,color:sel?C.gold:C.silverDim,fontFamily:D.body}}>{DAY_ABBR[d.getDay()]}</div>
-                                  <div style={{fontSize:15,fontWeight:700,fontFamily:D.display}}>{d.getDate()}</div>
-                                  <div style={{fontSize:8,color:sel?C.gold:C.silverDim,fontFamily:D.body}}>{d.toLocaleDateString("en-US",{month:"short"})}</div>
-                                  <div style={{fontSize:8,color:sp===0?"#555":sp<=2?C.red:C.silverDim,marginTop:2,fontFamily:D.body}}>{sp===0?"FULL":`${sp} left`}</div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                          {moveDate&&(()=>{
-                            const sched=DAY_SCHEDULE[moveDate.getDay()];
-                            if(!sched) return null;
-                            return(
-                              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:10}}>
-                                {sched.sessions.map(sess=>{
-                                  const sp=spotsLeft(moveDate,sess.id);
-                                  const sel=moveSess?.id===sess.id;
-                                  return(
-                                    <button key={sess.id} disabled={sp===0} onClick={()=>setMoveSess(sess)}
-                                      style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:8,padding:"10px 10px",cursor:sp===0?"not-allowed":"pointer",textAlign:"left",opacity:sp===0?0.4:1}}>
-                                      <div style={{fontSize:11,fontWeight:600,color:sel?C.gold:C.white,fontFamily:D.display}}>{sess.time}</div>
-                                      <div style={{fontSize:10,color:sel?C.gold:C.textDim,fontFamily:D.body}}>{sess.ageGroup}</div>
-                                      <div style={{fontSize:9,color:sp===0?"#555":sp<=2?C.red:C.silverDim,marginTop:2,fontFamily:D.body}}>{sp===0?"FULL":`${sp}/${MAX_PLAYERS} open`}</div>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            );
-                          })()}
-                          {moveDate&&moveSess?(
-                            <button onClick={async()=>{
-                              const sched=DAY_SCHEDULE[moveDate.getDay()];
-                              await updateDoc(doc(db,"bookings",b.id),{
-                                dateKey:dKey(moveDate),dateLabel:fmtDate(moveDate),
-                                sessId:moveSess.id,sessTime:moveSess.time,
-                                ageGroup:moveSess.ageGroup,ageTag:moveSess.ageTag,
-                                skill:sched.skill,skillIcon:sched.skillIcon,
-                                requestType:null,requestNote:null,
-                                movedAt:new Date().toISOString(),
-                              });
-                              try{await callEmailAPI({...b,dateLabel:fmtDate(moveDate),sessTime:moveSess.time},"reschedule");}catch(e){}
-                              setMoveId(null);setMoveDate(null);setMoveSess(null);
-                            }} style={{width:"100%",background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:8,padding:"11px",color:"#0a0a0a",fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>
-                              ✓ Confirm → {fmtDate(moveDate)} · {moveSess.time}
-                            </button>
-                          ):(
-                            <div style={{fontSize:10,color:"#444",fontFamily:D.body,textAlign:"center",padding:"6px 0"}}>
-                              {!moveDate?"↑ Pick a date":"↑ Now pick a session time"}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ));
-          }
-
-          return(<>
-            {/* TODAY */}
-            {todayB.length>0&&(
-              <div style={{marginBottom:28}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,paddingBottom:8,borderBottom:`1px solid ${C.cardBorder}`}}>
-                  <div style={{width:8,height:8,borderRadius:"50%",background:C.green,animation:"pulse 1.5s infinite",flexShrink:0}}/>
-                  <span style={{fontSize:10,letterSpacing:3,color:C.green,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Today</span>
-                  <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {todayB.length} booking{todayB.length!==1?"s":""}</span>
-                </div>
-                {renderBookings(todayB)}
-              </div>
-            )}
-
-            {/* UPCOMING */}
-            <div style={{marginBottom:28}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,paddingBottom:8,borderBottom:`1px solid ${C.cardBorder}`}}>
-                <span style={{fontSize:10,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Upcoming</span>
-                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {upcomingB.length} booking{upcomingB.length!==1?"s":""}</span>
-              </div>
-              {upcomingB.length===0?(
-                <div style={{textAlign:"center",padding:"40px 20px",color:C.textDim,fontSize:13,fontFamily:D.body,background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12}}>No upcoming bookings.</div>
-              ):renderBookings(upcomingB)}
-            </div>
-
-            {/* PAST */}
-            <div>
-              <button onClick={()=>setShowPast(p=>!p)} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",marginBottom:showPast?12:0,padding:"0 0 8px 0",borderBottom:`1px solid ${C.cardBorder}`,width:"100%"}}>
-                <span style={{fontSize:10,letterSpacing:3,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body}}>Past Sessions</span>
-                <span style={{fontSize:10,color:C.silverDim,fontFamily:D.body}}>— {pastB.length}</span>
-                <span style={{color:C.silverDim,fontSize:10,marginLeft:"auto"}}>{showPast?"▲":"▼"}</span>
-              </button>
-              {showPast&&(
-                pastB.length===0?(
-                  <div style={{textAlign:"center",padding:"40px 20px",color:C.textDim,fontSize:13,fontFamily:D.body,background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12}}>No past bookings.</div>
-                ):renderBookings(pastB)
-              )}
-            </div>
-          </>);
-        })()}
-
-        {tab==="inquiries"&&(()=>{
-          const allI = [...inquiries].sort((a,b)=>a.dateKey>b.dateKey?1:-1);
-          const todayI    = allI.filter(i=>i.dateKey===todayStr0);
-          const upcomingI = allI.filter(i=>i.dateKey>todayStr0);
-          const pastI     = allI.filter(i=>i.dateKey<todayStr0);
-
-          function renderInqCard(inq){
-            const posColor = C.gold;
-            return(
-              <div key={inq.id} style={{background:inq.requestType?`${C.silver}08`:C.card,border:`1px solid ${inq.requestType?C.silver+"33":inq.status==="confirmed"?C.green+"22":C.cardBorder}`,borderLeft:`3px solid ${inq.requestType?C.silver:inq.status==="confirmed"?C.green:C.gold}`,borderRadius:12,padding:"14px 18px",transition:"all 0.2s"}}>
-
-                {/* Top row — name + status + actions */}
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:10}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                    <span style={{fontSize:16,fontWeight:700,color:C.white,fontFamily:D.display}}>{inq.name}</span>
-                    <span style={{fontSize:8,padding:"2px 7px",borderRadius:8,letterSpacing:1,textTransform:"uppercase",fontFamily:D.body,background:inq.status==="confirmed"?`${C.green}18`:`${C.gold}18`,color:inq.status==="confirmed"?C.green:C.gold}}>{inq.status==="confirmed"?"✓ Confirmed":"⏳ Pending"}</span>
-                    {inq.requestType&&<span style={{fontSize:8,padding:"2px 7px",borderRadius:8,background:`${C.silver}15`,color:C.silver,fontFamily:D.body}}>⚠ {inq.requestType==="cancel"?"Cancel Req":"Reschedule Req"}</span>}
-                  </div>
-                  <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
-                    {inq.status==="pending"&&<button onClick={()=>confirmBooking(inq.id,"inquiries")} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:8,padding:"7px 14px",color:C.white,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,whiteSpace:"nowrap"}}>✓ Confirm</button>}
-                    {inq.requestType&&<button onClick={()=>updateDoc(doc(db,"inquiries",inq.id),{requestType:null,requestNote:null})} style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:8,padding:"6px 10px",color:C.silver,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
-                    <button onClick={()=>{
-                      if(coachNoteId===inq.id){setCoachNoteId(null);}
-                      else{setCoachNoteId(inq.id);setCoachNoteText(inq.coachNote||"");}
-                    }} style={{background:coachNoteId===inq.id?`${C.gold}22`:(inq.coachNote?"#141008":"transparent"),border:`1px solid ${inq.coachNote?C.gold+"44":C.cardBorder}`,borderRadius:8,padding:"6px 10px",color:inq.coachNote?C.gold:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>
-                      📝{inq.coachNote?" Note":""}
-                    </button>
-                    <button onClick={()=>setMoveId(moveId===inq.id?null:inq.id)} style={{background:moveId===inq.id?`${C.gold}22`:"transparent",border:`1px solid ${C.gold}44`,borderRadius:8,padding:"6px 10px",color:C.gold,fontSize:10,cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>↗ Move</button>
-                    <button onClick={()=>removeInquiry(inq.id)} style={{width:28,height:28,background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:7,color:C.redDim,fontSize:12,cursor:"pointer",fontFamily:D.body,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
-                  </div>
-                </div>
-                {/* Inline Move Picker for 1-on-1 */}
-                {moveId===inq.id&&(
-                  <div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${C.cardBorder}`}}>
-                    <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Select New Date</div>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:10}}>
-                      {getPrivateDates().map((d,i)=>{
-                        const sel=moveDate&&dKey(d)===dKey(moveDate);
-                        const sched=PRIVATE_SCHEDULE[d.getDay()];
-                        if(!sched) return null;
-                        const avail=sched.slots.filter(sl=>!(blocked||[]).some(x=>x.dateKey===dKey(d)&&x.sessId===sl.id)&&!(inquiries||[]).some(x=>x.dateKey===dKey(d)&&x.slotId===sl.id&&x.status!=="cancelled")).length;
-                        return(
-                          <button key={i} onClick={()=>{setMoveDate(d);setMoveSess(null);}}
-                            style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:8,padding:"8px 4px",cursor:"pointer",textAlign:"center",color:C.white}}>
-                            <div style={{fontSize:8,color:sel?C.gold:C.silverDim,fontFamily:D.body}}>{d.toLocaleDateString("en-US",{weekday:"short"}).slice(0,3).toUpperCase()}</div>
-                            <div style={{fontSize:15,fontWeight:700,fontFamily:D.display}}>{d.getDate()}</div>
-                            <div style={{fontSize:8,color:sel?C.gold:C.silverDim,fontFamily:D.body}}>{d.toLocaleDateString("en-US",{month:"short"})}</div>
-                            <div style={{fontSize:8,color:avail===0?"#555":avail===1?C.red:C.silverDim,marginTop:2,fontFamily:D.body}}>{avail===0?"FULL":`${avail} open`}</div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {moveDate&&(()=>{
-                      const sched=PRIVATE_SCHEDULE[moveDate.getDay()];
-                      if(!sched) return null;
-                      return(
-                        <div style={{display:"grid",gap:6,marginBottom:10}}>
-                          {sched.slots.map(slot=>{
-                            const taken=(blocked||[]).some(x=>x.dateKey===dKey(moveDate)&&x.sessId===slot.id)||(inquiries||[]).some(x=>x.dateKey===dKey(moveDate)&&x.slotId===slot.id&&x.status!=="cancelled");
-                            const sel=moveSess?.id===slot.id;
-                            return(
-                              <button key={slot.id} disabled={taken} onClick={()=>setMoveSess(slot)}
-                                style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:8,padding:"10px 14px",cursor:taken?"not-allowed":"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",opacity:taken?0.4:1}}>
-                                <span style={{fontSize:12,fontWeight:600,color:sel?C.gold:C.white,fontFamily:D.display}}>{slot.time}</span>
-                                <span style={{fontSize:10,color:taken?"#555":sel?C.gold:C.silverDim,fontFamily:D.body}}>{taken?"BOOKED":"OPEN"}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()}
-                    {moveDate&&moveSess?(
-                      <button onClick={async()=>{
-                        await updateDoc(doc(db,"inquiries",inq.id),{
-                          dateKey:dKey(moveDate),dateLabel:fmtDate(moveDate),
-                          slotId:moveSess.id,slotTime:moveSess.time,
-                          requestType:null,requestNote:null,
-                          movedAt:new Date().toISOString(),
-                        });
-                        try{await callEmailAPI({...inq,dateLabel:fmtDate(moveDate),sessTime:moveSess.time},"reschedule");}catch(e){}
-                        setMoveId(null);setMoveDate(null);setMoveSess(null);
-                      }} style={{width:"100%",background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:8,padding:"11px",color:"#0a0a0a",fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>
-                        ✓ Confirm → {fmtDate(moveDate)} · {moveSess.time}
-                      </button>
-                    ):(
-                      <div style={{fontSize:10,color:"#444",fontFamily:D.body,textAlign:"center",padding:"6px 0"}}>
-                        {!moveDate?"↑ Pick a date":"↑ Now pick a slot"}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Session info row */}
-                <div style={{display:"grid",gridTemplateColumns:"auto auto auto 1fr",gap:10,alignItems:"center",marginBottom:inq.goals||inq.requestNote?10:0,flexWrap:"wrap"}}>
-                  <div style={{background:`${C.gold}12`,border:`1px solid ${C.gold}33`,borderRadius:8,padding:"5px 12px",textAlign:"center"}}>
-                    <div style={{fontSize:9,color:C.goldDim,fontFamily:D.body,letterSpacing:1,marginBottom:1}}>⚒️ SESSION</div>
-                    <div style={{fontSize:11,color:C.gold,fontFamily:D.body,fontWeight:600,whiteSpace:"nowrap"}}>{inq.dateLabel}</div>
-                    <div style={{fontSize:10,color:C.goldDim,fontFamily:D.body}}>{inq.slotTime}</div>
-                  </div>
-                  {inq.position&&(
-                    <div style={{background:`${C.red}10`,border:`1px solid ${C.red}33`,borderRadius:8,padding:"5px 12px",textAlign:"center"}}>
-                      <div style={{fontSize:9,color:C.redDim,fontFamily:D.body,letterSpacing:1,marginBottom:1}}>POSITION</div>
-                      <div style={{fontSize:11,color:C.white,fontFamily:D.body,fontWeight:600}}>{inq.position}</div>
-                    </div>
-                  )}
-                  {inq.age&&(
-                    <div style={{background:`${C.silver}08`,border:`1px solid ${C.silver}22`,borderRadius:8,padding:"5px 12px",textAlign:"center"}}>
-                      <div style={{fontSize:9,color:C.silverDim,fontFamily:D.body,letterSpacing:1,marginBottom:1}}>AGE</div>
-                      <div style={{fontSize:11,color:C.silver,fontFamily:D.body,fontWeight:600}}>{inq.age}</div>
-                    </div>
-                  )}
-                  <div style={{display:"flex",flexDirection:"column",gap:2,paddingLeft:4}}>
-                    <span style={{fontSize:11,color:C.gold,fontFamily:D.body,fontWeight:600}}>${inq.price||inq.total}</span>
-                    {inq.phone&&<span style={{fontSize:10,color:C.silverDim,fontFamily:D.body}}>{inq.phone}</span>}
-                    <span style={{fontSize:10,color:C.silverDark,fontFamily:D.body}}>{inq.email}</span>
-                  </div>
-                </div>
-
-                {/* Goals */}
-                {inq.goals&&(
-                  <div style={{background:`${C.gold}08`,border:`1px solid ${C.gold}22`,borderRadius:8,padding:"8px 12px",marginTop:2}}>
-                    <div style={{fontSize:9,letterSpacing:2,color:C.goldDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>Goals / Focus</div>
-                    <div style={{fontSize:11,color:C.textMid,fontFamily:D.body,lineHeight:1.6}}>{inq.goals}</div>
-                  </div>
-                )}
-
-                {/* Request note */}
-                {inq.requestType&&inq.requestNote&&(
-                  <div style={{background:`${C.silver}08`,borderRadius:8,padding:"8px 12px",marginTop:8}}>
-                    <div style={{fontSize:10,color:C.silver,fontFamily:D.body}}>📩 {inq.requestNote}</div>
-                  </div>
-                )}
-
-                {/* Inline Coach Notes for 1-on-1 */}
-                {coachNoteId===inq.id&&(
-                  <div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${C.cardBorder}`}}>
-                    <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Coach Notes — only you can see this</div>
-                    <textarea
-                      value={coachNoteText}
-                      onChange={e=>setCoachNoteText(e.target.value)}
-                      placeholder="Session focus, player notes, anything you need to remember..."
-                      rows={3}
-                      style={{...IS,width:"100%",marginBottom:10,fontSize:12,resize:"vertical"}}
-                    />
-                    <div style={{display:"flex",gap:8}}>
-                      <button onClick={async()=>{
-                        await updateDoc(doc(db,"inquiries",inq.id),{coachNote:coachNoteText,coachNoteUpdated:new Date().toISOString()});
-                        setCoachNoteId(null);
-                      }} style={{background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:8,padding:"9px 18px",color:"#0a0a0a",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>
-                        Save Note
-                      </button>
-                      {inq.coachNote&&<button onClick={async()=>{
-                        await updateDoc(doc(db,"inquiries",inq.id),{coachNote:"",coachNoteUpdated:new Date().toISOString()});
-                        setCoachNoteText("");setCoachNoteId(null);
-                      }} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:8,padding:"9px 14px",color:C.redDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
-                      <button onClick={()=>setCoachNoteId(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"9px 14px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          }
-
-          return(<>
-            {/* TODAY */}
-            {todayI.length>0&&(
-              <div style={{marginBottom:28}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,paddingBottom:8,borderBottom:`1px solid ${C.cardBorder}`}}>
-                  <div style={{width:8,height:8,borderRadius:"50%",background:C.green,animation:"pulse 1.5s infinite",flexShrink:0}}/>
-                  <span style={{fontSize:10,letterSpacing:3,color:C.green,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Today</span>
-                  <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {todayI.length} session{todayI.length!==1?"s":""}</span>
-                </div>
-                <div style={{display:"grid",gap:8}}>{todayI.map(i=>renderInqCard(i))}</div>
-              </div>
-            )}
-
-            {/* UPCOMING */}
-            <div style={{marginBottom:28}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,paddingBottom:8,borderBottom:`1px solid ${C.cardBorder}`}}>
-                <span style={{fontSize:10,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Upcoming</span>
-                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {upcomingI.length} request{upcomingI.length!==1?"s":""}</span>
-              </div>
-              {upcomingI.length===0?(
-                <div style={{textAlign:"center",padding:"40px 20px",color:C.textDim,fontSize:13,fontFamily:D.body,background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12}}>No upcoming 1-on-1 requests.</div>
-              ):<div style={{display:"grid",gap:8}}>{upcomingI.map(i=>renderInqCard(i))}</div>}
-            </div>
-
-            {/* PAST */}
-            <div>
-              <button onClick={()=>setShowPastI(p=>!p)} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",marginBottom:showPastI?12:0,padding:"0 0 8px 0",borderBottom:`1px solid ${C.cardBorder}`,width:"100%"}}>
-                <span style={{fontSize:10,letterSpacing:3,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body}}>Past Sessions</span>
-                <span style={{fontSize:10,color:C.silverDim,fontFamily:D.body}}>— {pastI.length}</span>
-                <span style={{color:C.silverDim,fontSize:10,marginLeft:"auto"}}>{showPastI?"▲":"▼"}</span>
-              </button>
-              {showPastI&&(
-                pastI.length===0?(
-                  <div style={{textAlign:"center",padding:"40px 20px",color:C.textDim,fontSize:13,fontFamily:D.body,background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12}}>No past requests.</div>
-                ):<div style={{display:"grid",gap:8}}>{pastI.map(i=>renderInqCard(i))}</div>
-              )}
-            </div>
-          </>);
-        })()}
-
-        {tab==="reminders"&&(()=>{
-          // Build upcoming sessions grouped by date — include confirmed AND pending
-          const today = new Date(); today.setHours(0,0,0,0);
-          const upcoming = {};
-
-          // Group bookings (confirmed + pending) by date
-          bookings.filter(b=>["confirmed","pending"].includes(b.status)&&new Date(b.dateKey+"T00:00:00")>=today)
-            .forEach(b=>{
-              const k = b.dateKey+"_"+b.sessId;
-              if(!upcoming[k]) upcoming[k]={dateKey:b.dateKey,dateLabel:b.dateLabel,sessTime:b.sessTime,ageGroup:b.ageGroup,skill:b.skill,skillIcon:b.skillIcon,type:"group",clients:[]};
-              upcoming[k].clients.push({name:b.name,email:b.email,status:b.status,total:b.total});
-            });
-
-          // Group inquiries (confirmed + pending) by date
-          inquiries.filter(i=>["confirmed","pending"].includes(i.status)&&new Date(i.dateKey+"T00:00:00")>=today)
-            .forEach(inq=>{
-              const k = inq.dateKey+"_"+(inq.slotId||"1on1");
-              if(!upcoming[k]) upcoming[k]={dateKey:inq.dateKey,dateLabel:inq.dateLabel,sessTime:inq.slotTime||inq.sessTime,type:"1on1",clients:[]};
-              upcoming[k].clients.push({name:inq.name,email:inq.email,status:inq.status,total:inq.price||inq.total});
-            });
-
-          const sessions = Object.values(upcoming).sort((a,b)=>a.dateKey>b.dateKey?1:-1);
-
-          async function sendSessionReminder(session){
-            let sent=0;
-            for(const client of session.clients){
-              const emailType = client.status==="confirmed"
-                ? (session.type==="1on1"?"reminder_1on1":"reminder_group")
-                : (session.type==="1on1"?"reminder_pending_1on1":"reminder_pending_group");
-              await sendReminderEmail({
-                name:client.name, email:client.email,
-                dateLabel:session.dateLabel, sessTime:session.sessTime,
-                ageGroup:session.ageGroup||"1-on-1",
-                skill:session.skill||"The Tempering",
-                skillIcon:session.skillIcon||"⚽",
-                total:client.total,
-              }, emailType);
-              sent++;
-            }
-            alert(`Sent ${sent} reminder${sent!==1?"s":""} for ${session.dateLabel}!`);
-          }
-
-          return sessions.length===0?(
-            <div style={{textAlign:"center",padding:"80px 20px",color:C.textDim,fontSize:14,fontFamily:D.body}}>No upcoming confirmed sessions yet.</div>
-          ):(
-            <div style={{display:"grid",gap:12}}>
-              <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,marginBottom:4}}>Send reminder emails to all confirmed clients for each upcoming session.</div>
-              {sessions.map((sess,i)=>{
-                const isToday = sess.dateKey===today.toISOString().split("T")[0];
-                const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
-                const isTomorrow = sess.dateKey===tomorrow.toISOString().split("T")[0];
-                return(
-                  <div key={i} style={{background:C.card,border:`1px solid ${isTomorrow?C.gold+"44":C.cardBorder}`,borderLeft:`3px solid ${isTomorrow?C.gold:isToday?C.green:C.silverDark}`,borderRadius:12,padding:"16px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap"}}>
-                    <div style={{flex:1}}>
-                      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6,flexWrap:"wrap"}}>
-                        <span style={{fontSize:14,color:C.white,fontFamily:D.display,fontWeight:600}}>{sess.dateLabel}</span>
-                        {isTomorrow&&<span style={{fontSize:9,padding:"2px 8px",borderRadius:10,background:C.goldDark,color:C.gold,border:`1px solid ${C.silver}44`,fontFamily:D.body,letterSpacing:1}}>TOMORROW</span>}
-                        {isToday&&<span style={{fontSize:9,padding:"2px 8px",borderRadius:10,background:C.greenDark,color:C.green,border:`1px solid ${C.green}33`,fontFamily:D.body,letterSpacing:1}}>TODAY</span>}
-                      </div>
-                      <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,marginBottom:6}}>
-                        {sess.sessTime} · {sess.type==="1on1"?"1-on-1 Private":`${sess.skillIcon||""} ${sess.skill||""} · ${sess.ageGroup||""}`}
-                      </div>
-                      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                        {sess.clients.map((c,ci)=>(
-                          <span key={ci} style={{fontSize:10,padding:"3px 10px",borderRadius:20,background:"#161310",border:`1px solid ${c.status==="confirmed"?C.green+"33":C.gold+"33"}`,color:c.status==="confirmed"?C.green:C.gold,fontFamily:D.body,display:"flex",alignItems:"center",gap:5}}>
-                            {c.status==="confirmed"?"🟢":"🟡"} {c.name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    <button onClick={()=>sendSessionReminder(sess)} style={{background:`linear-gradient(135deg,${C.goldDark},#150c04)`,border:`1px solid ${C.silver}44`,color:C.gold,borderRadius:10,padding:"10px 18px",fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap",boxShadow:`0 4px 16px ${C.gold}22`}}>
-                      📧 Send Reminder
-                    </button>
-                  </div>
                 );
-              })}
+              })()}
             </div>
           );
         })()}
 
-        {tab==="reviews"&&<ReviewsModeration/>}
+        {/* ── DROP MODAL ── */}
+        {dropModal&&(()=>{
+          const b=dropModal.booking;
+          const is1on1=b._type==="1on1";
+          const sched=is1on1?PRIVATE_SCHEDULE[dropModal.targetDate.getDay()]:DAY_SCHEDULE[dropModal.targetDate.getDay()];
+          const slots=sched?(is1on1?sched.slots:sched.sessions):[];
+          return(
+            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>setDropModal(null)}>
+              <div style={{background:"#111",border:`1px solid ${C.gold}44`,borderRadius:16,padding:"22px",maxWidth:420,width:"100%"}} onClick={e=>e.stopPropagation()}>
+                <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>Moving</div>
+                <div style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:3}}>{b.name}</div>
+                <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginBottom:14}}>→ {fmtDate(dropModal.targetDate)}</div>
+                {!sched?(
+                  <div style={{fontSize:11,color:C.red,fontFamily:D.body,marginBottom:14}}>No sessions on this day. Drop onto a coaching day.</div>
+                ):(
+                  <div style={{display:"grid",gap:6,marginBottom:14}}>
+                    {slots.map(slot=>{
+                      const sel=dropSess?.id===slot.id;
+                      return(
+                        <button key={slot.id} onClick={()=>setDropSess(slot)} style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:8,padding:"10px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <span style={{fontSize:12,fontWeight:600,color:sel?C.gold:C.white,fontFamily:D.display}}>{slot.time}</span>
+                          {!is1on1&&<span style={{fontSize:9,color:sel?C.gold:C.textDim,fontFamily:D.body}}>{slot.ageGroup}</span>}
+                          {sel&&<span style={{fontSize:9,color:C.gold}}>✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <div style={{display:"flex",gap:8}}>
+                  <button disabled={!dropSess||!!movingId||!sched} onClick={async()=>{
+                    if(!dropModal||!dropSess) return;
+                    const{booking:b,targetDate}=dropModal;
+                    const newDK=dKey(targetDate);
+                    const newDL=fmtDate(targetDate);
+                    setMovingId(b.id);
+                    try{
+                      if(b._type==="1on1"){
+                        await updateDoc(doc(db,"inquiries",b.id),{dateKey:newDK,dateLabel:newDL,slotId:dropSess.id,slotTime:dropSess.time,requestType:null,requestNote:null,movedAt:new Date().toISOString()});
+                      }else{
+                        const sched2=DAY_SCHEDULE[targetDate.getDay()]||{};
+                        await updateDoc(doc(db,"bookings",b.id),{dateKey:newDK,dateLabel:newDL,sessId:dropSess.id,sessTime:dropSess.time,ageGroup:dropSess.ageGroup,ageTag:dropSess.ageTag,skill:sched2.skill||b.skill,skillIcon:sched2.skillIcon||b.skillIcon,requestType:null,requestNote:null,movedAt:new Date().toISOString()});
+                      }
+                      try{await callEmailAPI({...b,dateLabel:newDL,sessTime:dropSess.time},"reschedule");}catch(e){}
+                    }finally{setMovingId(null);setDropModal(null);setDropSess(null);}
+                  }} style={{flex:1,background:dropSess&&sched?`linear-gradient(135deg,${C.gold},${C.goldDim})`:"#1a1a1a",border:"none",borderRadius:8,padding:"11px",color:dropSess&&sched?"#0a0a0a":C.silverDark,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:dropSess&&sched?"pointer":"not-allowed",fontFamily:D.body,fontWeight:700}}>
+                    {movingId?"Moving…":"Confirm Move"}
+                  </button>
+                  <button onClick={()=>setDropModal(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"11px 12px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── NOTE MODAL ── */}
+        {calNoteId&&(()=>{
+          const allS=[...(bookings||[]).map(b=>({...b,_collection:"bookings"})),...(inquiries||[]).map(i=>({...i,_collection:"inquiries"}))];
+          const s=allS.find(x=>x.id===calNoteId);
+          if(!s) return null;
+          return(
+            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>setCalNoteId(null)}>
+              <div style={{background:"#111",border:`1px solid ${C.gold}44`,borderRadius:16,padding:"22px",maxWidth:420,width:"100%"}} onClick={e=>e.stopPropagation()}>
+                <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>Coach Note</div>
+                <div style={{fontSize:15,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:3}}>{s.name}</div>
+                <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginBottom:12}}>{s.dateLabel} · {s.sessTime||s.slotTime}</div>
+                <textarea value={calNoteText} onChange={e=>setCalNoteText(e.target.value)} placeholder="Session notes, changes, anything to remember..." rows={3} style={{...IS,width:"100%",marginBottom:10,fontSize:12,resize:"vertical"}} autoFocus/>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={async()=>{await updateDoc(doc(db,s._collection,s.id),{coachNote:calNoteText,coachNoteUpdated:new Date().toISOString()});setCalNoteId(null);}} style={{flex:1,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:8,padding:"10px",color:"#0a0a0a",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save Note</button>
+                  {s.coachNote&&<button onClick={async()=>{await updateDoc(doc(db,s._collection,s.id),{coachNote:"",coachNoteUpdated:new Date().toISOString()});setCalNoteId(null);}} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:8,padding:"10px 10px",color:C.redDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
+                  <button onClick={()=>setCalNoteId(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"10px 10px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
       </div>
     </div>
   );
