@@ -846,14 +846,20 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                 const confirmed=session.status==="confirmed";
                 return(
                   <div
-                    draggable
-                    onDragStart={e=>{setDragItem(session);e.dataTransfer.effectAllowed="move";}}
+                    draggable="true"
+                    onDragStart={e=>{
+                      e.stopPropagation();
+                      setDragItem(session);
+                      e.dataTransfer.effectAllowed="move";
+                      e.dataTransfer.setData("text/plain",session.id);
+                    }}
+                    onDragEnd={()=>setDragOver(null)}
                     onClick={e=>{e.stopPropagation();setCalNoteId(calNoteId===session.id?null:session.id);setCalNoteText(session.coachNote||"");}}
                     title={`${session.name} · click for note · drag to move`}
-                    style={{background:is1on1?"rgba(196,168,76,0.13)":"rgba(204,34,34,0.13)",border:`1px solid ${color}33`,borderLeft:`2px solid ${color}`,borderRadius:4,padding:"2px 5px",cursor:"grab",marginBottom:1,opacity:movingId===session.id?0.3:1,display:"flex",alignItems:"center",justifyContent:"space-between",gap:3}}
+                    style={{background:is1on1?"rgba(196,168,76,0.13)":"rgba(204,34,34,0.13)",border:`1px solid ${color}33`,borderLeft:`2px solid ${color}`,borderRadius:4,padding:"2px 5px",cursor:"grab",marginBottom:1,opacity:movingId===session.id?0.3:1,display:"flex",alignItems:"center",justifyContent:"space-between",gap:3,userSelect:"none"}}
                   >
-                    <span style={{fontSize:8,color:C.white,fontFamily:D.display,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"75%"}}>{session.name}</span>
-                    <div style={{display:"flex",gap:2,flexShrink:0}}>
+                    <span style={{fontSize:8,color:C.white,fontFamily:D.display,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"75%",pointerEvents:"none"}}>{session.name}</span>
+                    <div style={{display:"flex",gap:2,flexShrink:0,pointerEvents:"none"}}>
                       {session.coachNote&&<span style={{fontSize:6,color:C.gold}}>📝</span>}
                       {session.requestType&&<span style={{fontSize:6,color:C.silver}}>⚠</span>}
                       <div style={{width:4,height:4,borderRadius:"50%",background:confirmed?C.green:C.gold,marginTop:1}}/>
@@ -905,9 +911,10 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
 
                     return(
                       <div key={i}
-                        onDragOver={e=>{e.preventDefault();setDragOver(dk);}}
-                        onDragLeave={()=>setDragOver(null)}
-                        onDrop={e=>{e.preventDefault();setDragOver(null);if(dragItem&&dKey(d)!==dragItem.dateKey){setDropModal({booking:dragItem,targetDate:d});setDropSess(null);setDragItem(null);}}}
+                        onDragOver={e=>{e.preventDefault();e.stopPropagation();e.dataTransfer.dropEffect="move";setDragOver(dk);}}
+                        onDragEnter={e=>{e.preventDefault();setDragOver(dk);}}
+                        onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget))setDragOver(null);}}
+                        onDrop={e=>{e.preventDefault();e.stopPropagation();setDragOver(null);if(dragItem&&dKey(d)!==dragItem.dateKey){setDropModal({booking:dragItem,targetDate:d});setDropSess(null);setDragItem(null);}}}
                         style={{
                           background:isDragOver?"rgba(196,168,76,0.08)":allBlocked?"#180603":isToday?"rgba(196,168,76,0.05)":isCoachDay?"#0a0805":"#060402",
                           border:isDragOver?`1px solid ${C.gold}`:allBlocked?`1px solid ${C.red}55`:anyBlocked?`1px solid ${C.red}22`:isToday?`1px solid ${C.gold}44`:isCoachDay?`1px solid #181210`:`1px solid #0e0c0a`,
@@ -941,10 +948,10 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                               <div
                                 onClick={e=>{e.stopPropagation();blockSession(dk,sess.id,isBlk?"":(`${fmtDate(d)} ${sess.time}`));}}
                                 title={isBlk?"Unblock slot":"Block slot"}
-                                style={{fontSize:6,padding:"1px 3px",borderRadius:2,cursor:"pointer",display:"flex",justifyContent:"space-between",background:isBlk?"rgba(204,34,34,0.2)":"rgba(255,255,255,0.04)",border:`1px solid ${isBlk?C.red+"44":"rgba(255,255,255,0.05)"}`,marginBottom:slotSess.length?1:0}}
+                                style={{fontSize:6,padding:"1px 3px",borderRadius:2,cursor:"pointer",display:"flex",justifyContent:"space-between",background:isBlk?"rgba(204,34,34,0.2)":"rgba(255,255,255,0.04)",border:`1px solid ${isBlk?C.red+"44":"rgba(255,255,255,0.05)"}`,marginBottom:slotSess.length?1:0,userSelect:"none"}}
                               >
-                                <span style={{color:isBlk?C.red:isGroupDay?"#cc5555":"#b89a3e",fontFamily:D.body}}>{isBlk?"🔒":isGroupDay?"🔥":"⚒️"} {tShort}</span>
-                                <span style={{color:isBlk?C.red:slotSess.length>0?C.gold:"#333",fontFamily:D.body}}>{isBlk?"blk":`${slotSess.length}/${maxSpots}`}</span>
+                                <span style={{color:isBlk?C.red:isGroupDay?"#cc5555":"#b89a3e",fontFamily:D.body,pointerEvents:"none"}}>{isBlk?"🔒":isGroupDay?"🔥":"⚒️"} {tShort}</span>
+                                <span style={{color:isBlk?C.red:slotSess.length>0?C.gold:"#333",fontFamily:D.body,pointerEvents:"none"}}>{isBlk?"blk":`${slotSess.length}/${maxSpots}`}</span>
                               </div>
                               {!isBlk&&!isPast&&slotSess.map((s,si)=><SessionChip key={si} session={s}/>)}
                             </div>
@@ -996,8 +1003,14 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                   <div style={{textAlign:"center",padding:"20px 10px",color:C.textDim,fontSize:10,fontFamily:D.body,lineHeight:1.6}}>No one in the queue.<br/>Add clients you're working out a time with.</div>
                 ):(pendingClients||[]).map((p,i)=>(
                   <div key={i}
-                    draggable
-                    onDragStart={e=>{setDragItem({...p,_type:"pending",_collection:"pending",name:p.name,dateKey:"pending"});e.dataTransfer.effectAllowed="move";}}
+                    draggable="true"
+                    onDragStart={e=>{
+                      e.stopPropagation();
+                      setDragItem({...p,_type:"pending",_collection:"pending",name:p.name,dateKey:"pending"});
+                      e.dataTransfer.effectAllowed="move";
+                      e.dataTransfer.setData("text/plain",p.id||p.name);
+                    }}
+                    onDragEnd={()=>setDragOver(null)}
                     style={{background:"#0a0805",border:`1px solid ${C.gold}22`,borderRadius:8,padding:"8px 10px",marginBottom:6,cursor:"grab"}}
                     title="Drag onto calendar to schedule"
                   >
@@ -1100,7 +1113,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                               </div>
                               <div style={{display:"flex",gap:4,alignItems:"center"}}>
                                 <button onClick={()=>{setCalNoteId(s.id);setCalNoteText(s.coachNote||"");}} style={{background:"transparent",border:`1px solid ${s.coachNote?C.gold+"44":C.cardBorder}`,borderRadius:4,padding:"2px 6px",color:s.coachNote?C.gold:C.textDim,fontSize:8,cursor:"pointer",fontFamily:D.body}}>📝</button>
-                                {s.status==="pending"&&<button onClick={()=>confirmBooking(s.id)} style={{background:`${C.green}15`,border:`1px solid ${C.green}44`,borderRadius:4,padding:"2px 6px",color:C.green,fontSize:8,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓</button>}
+                                {s.status==="pending"&&<button onClick={()=>confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings")} style={{background:`${C.green}15`,border:`1px solid ${C.green}44`,borderRadius:4,padding:"2px 6px",color:C.green,fontSize:8,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓ Confirm</button>}
                                 <div style={{fontSize:7,padding:"1px 5px",borderRadius:3,background:s.status==="confirmed"?`${C.green}18`:`${C.gold}18`,color:s.status==="confirmed"?C.green:C.gold,fontFamily:D.body}}>{s.status==="confirmed"?"✓":"⏳"}</div>
                               </div>
                             </div>
@@ -1119,6 +1132,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
         {dropModal&&(()=>{
           const b=dropModal.booking;
           const is1on1=b._type==="1on1";
+          const isPending=b._type==="pending";
           const sched=is1on1?PRIVATE_SCHEDULE[dropModal.targetDate.getDay()]:DAY_SCHEDULE[dropModal.targetDate.getDay()];
           const slots=sched?(is1on1?sched.slots:sched.sessions):[];
           return(
@@ -1153,11 +1167,25 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                     try{
                       if(b._type==="1on1"){
                         await updateDoc(doc(db,"inquiries",b.id),{dateKey:newDK,dateLabel:newDL,slotId:dropSess.id,slotTime:dropSess.time,requestType:null,requestNote:null,movedAt:new Date().toISOString()});
+                        try{await callEmailAPI({...b,dateLabel:newDL,sessTime:dropSess.time},"reschedule");}catch(e){}
+                      }else if(b._type==="pending"){
+                        // Pending client - create a new booking from the holding area
+                        await addDoc(collection(db,"bookings"),{
+                          name:b.name,email:b.contact||"",phone:b.contact||"",
+                          status:"pending",dateKey:newDK,dateLabel:newDL,
+                          sessId:dropSess.id,sessTime:dropSess.time,
+                          ageGroup:dropSess.ageGroup||"",ageTag:dropSess.ageTag||"",
+                          skill:sched2.skill||"The Furnace",skillIcon:sched2.skillIcon||"🔥",
+                          count:1,total:0,notes:b.note||"",
+                          createdAt:new Date().toISOString(),fromHolding:true,
+                        });
+                        // Mark pending client as scheduled
+                        if(b.id) await updateDoc(doc(db,"pending",b.id),{status:"scheduled"});
                       }else{
                         const sched2=DAY_SCHEDULE[targetDate.getDay()]||{};
                         await updateDoc(doc(db,"bookings",b.id),{dateKey:newDK,dateLabel:newDL,sessId:dropSess.id,sessTime:dropSess.time,ageGroup:dropSess.ageGroup,ageTag:dropSess.ageTag,skill:sched2.skill||b.skill,skillIcon:sched2.skillIcon||b.skillIcon,requestType:null,requestNote:null,movedAt:new Date().toISOString()});
+                        try{await callEmailAPI({...b,dateLabel:newDL,sessTime:dropSess.time},"reschedule");}catch(e){}
                       }
-                      try{await callEmailAPI({...b,dateLabel:newDL,sessTime:dropSess.time},"reschedule");}catch(e){}
                     }finally{setMovingId(null);setDropModal(null);setDropSess(null);}
                   }} style={{flex:1,background:dropSess&&sched?`linear-gradient(135deg,${C.gold},${C.goldDim})`:"#1a1a1a",border:"none",borderRadius:8,padding:"11px",color:dropSess&&sched?"#0a0a0a":C.silverDark,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:dropSess&&sched?"pointer":"not-allowed",fontFamily:D.body,fontWeight:700}}>
                     {movingId?"Moving…":"Confirm Move"}
@@ -1186,6 +1214,72 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                   {s.coachNote&&<button onClick={async()=>{await updateDoc(doc(db,s._collection,s.id),{coachNote:"",coachNoteUpdated:new Date().toISOString()});setCalNoteId(null);}} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:8,padding:"10px 10px",color:C.redDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
                   <button onClick={()=>setCalNoteId(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"10px 10px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
                 </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── UPCOMING SESSIONS MANAGEMENT ── */}
+        {(()=>{
+          const allUpcoming = [
+            ...(bookings||[]).filter(b=>b.dateKey>=dKey(new Date())&&b.status!=="cancelled"&&b.status!=="removed").map(b=>({...b,_type:"group",_collection:"bookings",_time:b.sessTime})),
+            ...(inquiries||[]).filter(i=>i.dateKey>=dKey(new Date())&&i.status!=="cancelled"&&i.status!=="removed").map(i=>({...i,_type:"1on1",_collection:"inquiries",_time:i.slotTime})),
+          ].sort((a,b)=>a.dateKey>b.dateKey?1:-1);
+
+          if(allUpcoming.length===0) return null;
+
+          return(
+            <div style={{marginTop:20}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,paddingBottom:8,borderBottom:`1px solid ${C.cardBorder}`}}>
+                <span style={{fontSize:10,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>All Upcoming Sessions</span>
+                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {allUpcoming.length} total</span>
+              </div>
+              <div style={{display:"grid",gap:6}}>
+                {allUpcoming.map((s,i)=>{
+                  const is1on1=s._type==="1on1";
+                  const confirmed=s.status==="confirmed";
+                  const noteOpen=coachNoteId===s.id;
+                  return(
+                    <div key={i} style={{background:C.card,border:`1px solid ${s.requestType?C.silver+"33":confirmed?C.green+"18":C.cardBorder}`,borderLeft:`3px solid ${s.requestType?C.silver:confirmed?C.green:C.gold}`,borderRadius:10,padding:"10px 14px"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                        <div style={{flex:1,minWidth:180}}>
+                          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,flexWrap:"wrap"}}>
+                            <span style={{fontSize:14,fontWeight:700,color:C.white,fontFamily:D.display}}>{s.name}</span>
+                            <span style={{fontSize:8,padding:"1px 6px",borderRadius:4,background:confirmed?`${C.green}18`:`${C.gold}18`,color:confirmed?C.green:C.gold,fontFamily:D.body}}>{confirmed?"✓ Confirmed":"⏳ Pending"}</span>
+                            {is1on1&&<span style={{fontSize:8,padding:"1px 6px",borderRadius:4,background:`${C.gold}12`,color:C.gold,fontFamily:D.body}}>⚒️ 1-on-1</span>}
+                            {s.packageBooking&&<span style={{fontSize:8,padding:"1px 6px",borderRadius:4,background:`${C.gold}12`,color:C.gold,fontFamily:D.body}}>📦 Pack</span>}
+                            {s.requestType&&<span style={{fontSize:8,padding:"1px 6px",borderRadius:4,background:`${C.silver}12`,color:C.silver,fontFamily:D.body}}>⚠ {s.requestType==="cancel"?"Cancel Req":"Reschedule Req"}</span>}
+                          </div>
+                          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                            <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>📅 {s.dateLabel}</span>
+                            <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>🕐 {s._time}</span>
+                            <span style={{fontSize:11,color:C.gold,fontFamily:D.body,fontWeight:600}}>${s.total||s.price||0}</span>
+                            {s.phone&&<span style={{fontSize:11,color:C.silverDim,fontFamily:D.body}}>{s.phone}</span>}
+                          </div>
+                          {s.requestedNewDate&&<div style={{fontSize:10,color:C.gold,fontFamily:D.body,marginTop:3}}>→ Wants: {s.requestedNewDate}</div>}
+                          {s.coachNote&&!noteOpen&&<div style={{fontSize:9,color:C.gold,fontFamily:D.body,marginTop:3,background:`${C.gold}08`,borderRadius:4,padding:"2px 6px",display:"inline-block"}}>📝 {s.coachNote}</div>}
+                        </div>
+                        <div style={{display:"flex",gap:5,flexShrink:0,alignItems:"center"}}>
+                          {!confirmed&&<button onClick={()=>confirmBooking(s.id,is1on1?"inquiries":"bookings")} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:7,padding:"6px 12px",color:C.white,fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓ Confirm</button>}
+                          {s.requestType&&<button onClick={()=>updateDoc(doc(db,s._collection,s.id),{requestType:null,requestNote:null})} style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:7,padding:"6px 8px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
+                          <button onClick={()=>{setCoachNoteId(noteOpen?null:s.id);setCoachNoteText(s.coachNote||"");}} style={{background:noteOpen?`${C.gold}15`:"transparent",border:`1px solid ${s.coachNote?C.gold+"44":C.cardBorder}`,borderRadius:7,padding:"6px 8px",color:s.coachNote?C.gold:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📝</button>
+                          <button onClick={()=>s._type==="1on1"?removeInquiry(s.id):removeBooking(s.id)} style={{width:26,height:26,background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:7,color:C.redDim,fontSize:11,cursor:"pointer",fontFamily:D.body,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                        </div>
+                      </div>
+                      {/* Inline note editor */}
+                      {noteOpen&&(
+                        <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${C.cardBorder}`}}>
+                          <textarea value={coachNoteText} onChange={e=>setCoachNoteText(e.target.value)} placeholder="Session notes, changes, player focus..." rows={2} style={{...IS,width:"100%",marginBottom:8,fontSize:12,resize:"vertical"}}/>
+                          <div style={{display:"flex",gap:6}}>
+                            <button onClick={async()=>{await updateDoc(doc(db,s._collection,s.id),{coachNote:coachNoteText,coachNoteUpdated:new Date().toISOString()});setCoachNoteId(null);}} style={{background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:7,padding:"8px 16px",color:"#0a0a0a",fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save</button>
+                            {s.coachNote&&<button onClick={async()=>{await updateDoc(doc(db,s._collection,s.id),{coachNote:"",coachNoteUpdated:new Date().toISOString()});setCoachNoteId(null);}} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:7,padding:"8px 10px",color:C.redDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
+                            <button onClick={()=>setCoachNoteId(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"8px 10px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
