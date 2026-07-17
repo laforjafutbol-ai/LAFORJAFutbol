@@ -79,7 +79,7 @@ export function AuthPage({setPage,authChecked,user}){
   }
 
   return(
-    <div style={{maxWidth:440,margin:"0 auto",padding:"120px 24px 80px",animation:"fadeUp 0.5s ease"}}>
+    <div style={{maxWidth:440,margin:"0 auto",padding:"120px 24px 80px",animation:"none"}}>
       <div style={{textAlign:"center",marginBottom:28}}>
         <Crest size={52}/>
         <div style={{fontSize:10,letterSpacing:4,color:C.silverDim,textTransform:"uppercase",marginTop:14,marginBottom:5,fontFamily:D.body}}>
@@ -232,7 +232,7 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
   const allSessions = [
     ...myBookings.map(b=>({...b, type:"group", _time:b.sessTime, _date:b.dateKey, _collection:"bookings"})),
     ...myInquiries.map(i=>({...i, type:"1on1", _time:i.slotTime||i.sessTime, _date:i.dateKey, total:i.price||i.total, _collection:"inquiries"})),
-  ].sort((a,b)=>a._date>b._date?-1:1);
+  ].sort((a,b)=>a._date>b._date?1:-1);
 
   const today = new Date(); today.setHours(0,0,0,0);
   const todayStr = today.toISOString().split("T")[0];
@@ -246,6 +246,12 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
   const packRemaining = Math.max(0, packTotal - packUsed);
   const hasPack = packTotal > 0;
   const statusLabel = {confirmed:"Confirmed", pending:"Pending Payment", cancelled:"Cancelled", removed:"Cancelled", scheduled:"Confirmed", change_requested:"Change Requested"};
+
+  const statusColor = {
+    confirmed:C.green, pending:C.gold, scheduled:C.green,
+    cancelled:C.red, removed:C.red, change_requested:C.silver,
+    tentative:C.gold,
+  };
 
   async function handleSignOut(){
     await signOut(auth);
@@ -275,7 +281,7 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
   }
 
   return(
-    <div style={{maxWidth:760,margin:"0 auto",padding:"110px 24px 80px",animation:"fadeUp 0.5s ease"}}>
+    <div style={{maxWidth:760,margin:"0 auto",padding:"110px 24px 80px"}}>
 
       {/* Header */}
       <div style={{background:`linear-gradient(135deg,#1c130a,#120d06)`,border:`1px solid ${C.gold}22`,borderRadius:16,padding:"22px 24px",marginBottom:22,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:16}}>
@@ -357,13 +363,18 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
                         {s.requestType==="cancel"?"Cancel Requested":"Reschedule Requested"}
                       </span>
                     )}
+                    {s.status==="tentative"&&(
+                      <span style={{fontSize:9,padding:"2px 9px",borderRadius:10,letterSpacing:1,textTransform:"uppercase",fontFamily:D.body,background:`${C.gold}15`,color:C.gold,border:`1px solid ${C.gold}33`}}>
+                        ⏰ Time TBD
+                      </span>
+                    )}
                   </div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:"4px 14px",marginBottom:s.location?5:0}}>
                     <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>🕐 {s._time}</span>
                     {s.type==="group"?(
                       <>
                         <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>🔥 {s.skill||"The Furnace"}</span>
-                        <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>👥 {s.count} player{s.count>1?"s":""}</span>
+                        <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>👥 {s.count||1} player{(s.count||1)>1?"s":""}</span>
                       </>
                     ):(
                       <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>⚒️ The Tempering{s.position?` · ${s.position}`:""}</span>
@@ -372,7 +383,7 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
                   {s.location&&<div style={{fontSize:11,color:C.silverDim,fontFamily:D.body,marginTop:4}}>📍 {s.location}</div>}
                 </div>
                 <div style={{textAlign:"right",flexShrink:0}}>
-                  <div style={{fontSize:18,fontWeight:700,color:C.gold,fontFamily:D.display}}>${s.total}</div>
+                  <div style={{fontSize:18,fontWeight:700,color:C.gold,fontFamily:D.display}}>${s.total||s.price||0}</div>
                 </div>
               </div>
               {tab==="upcoming"&&!s.requestType&&(
@@ -432,7 +443,7 @@ export function RequestModal({session,action,onClose,onSubmit,getDates,getPrivat
   }
 
   return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:999,padding:20}} onClick={onClose}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}} onClick={onClose}>
       <div onClick={e=>e.stopPropagation()} style={{background:"#111",border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"24px",maxWidth:480,width:"100%",maxHeight:"85vh",overflowY:"auto"}}>
 
         {/* Header */}
@@ -714,7 +725,7 @@ export function ContactForm({user}){
 // ── CONTACT PAGE (standalone) ────────────────────────────
 export function ContactPage({setPage,user}){
   return(
-    <div style={{maxWidth:560,margin:"0 auto",padding:"110px 24px 80px",animation:"fadeUp 0.5s ease"}}>
+    <div style={{maxWidth:560,margin:"0 auto",padding:"110px 24px 80px",animation:"none"}}>
       <SH eyebrow="Get in Touch" title="Questions & Comments"/>
       <p style={{fontSize:13,color:C.textDim,fontFamily:D.body,lineHeight:1.8,marginBottom:24}}>
         Have a question about sessions, scheduling, pricing, or anything else? Send a message below and Coach Carlos will get back to you by email — usually within a day.
@@ -774,7 +785,7 @@ export function ReviewsPage({setPage,user}){
   const avgRating = approved.length ? (approved.reduce((s,r)=>s+r.rating,0)/approved.length).toFixed(1) : null;
 
   return(
-    <div style={{maxWidth:680,margin:"0 auto",padding:"110px 24px 80px",animation:"fadeUp 0.5s ease"}}>
+    <div style={{maxWidth:680,margin:"0 auto",padding:"110px 24px 80px",animation:"none"}}>
       <SH eyebrow="Client Feedback" title="Reviews & Feedback"/>
 
       {avgRating&&(
