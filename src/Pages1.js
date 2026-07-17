@@ -995,9 +995,9 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
             </div>
 
             {/* Calendar grid */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4}}>
               {calDays.map((d,i)=>{
-                if(!d) return <div key={i} style={{minHeight:120}}/>;
+                if(!d) return <div key={i} style={{minHeight:130}}/>;
                 const dk=dKey(d);
                 const isToday=dk===todayKey;
                 const isPast=d<today;
@@ -1007,98 +1007,78 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                 const isCoachDay=isGroupDay||isPrivDay;
                 const sessions=isGroupDay?(DAY_SCHEDULE[d.getDay()]?.sessions||[]):isPrivDay?(PRIVATE_SCHEDULE[d.getDay()]?.slots||[]):[];
                 const allBlocked=sessions.length>0&&sessions.every(s=>(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id));
-                const anyBlocked=sessions.some(s=>(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id));
-                const dayItems=itemsOnDate(dk);
-
-                // Tentative items on this day (no slot assigned)
+                const dayBookings=allItems.filter(s=>s.dateKey===dk&&s._type!=="pending"&&s.status!=="tentative");
                 const tentativeItems=allItems.filter(s=>s.dateKey===dk&&s.status==="tentative");
+
+                let bg,brd;
+                if(isDragOver){bg="rgba(196,168,76,0.1)";brd=C.gold;}
+                else if(allBlocked){bg="#0f0d0b";brd="#28221a";}
+                else if(isPast){bg="#07060500";brd="#141008";}
+                else if(isToday){bg="rgba(196,168,76,0.07)";brd=`${C.gold}55`;}
+                else if(isGroupDay){bg="#100c08";brd="#241a10";}
+                else if(isPrivDay){bg="#0e0c08";brd="#201c10";}
+                else{bg="#090807";brd="#120f0c";}
 
                 return(
                   <div key={i}
                     onDragOver={e=>onDayCellDragOver(e,dk)}
-                    onDragLeave={e=>{if(e.currentTarget===e.target||!e.currentTarget.contains(e.relatedTarget)){setDragOver(null);}}}
+                    onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget))setDragOver(null);}}
                     onDrop={e=>onDayCellDrop(e,d)}
-                    style={{
-                      background:isDragOver?"rgba(196,168,76,0.1)":isPast?"#050403":allBlocked?"#0e0e10":isToday?"rgba(196,168,76,0.06)":isCoachDay?"#0d0a07":"#080604",
-                      border:isDragOver?`2px solid ${C.gold}`:isPast?`1px solid #0d0b09`:allBlocked?`1px solid #2a2840`:isToday?`1px solid ${C.gold}55`:isCoachDay?`1px solid #201810`:`1px solid #0e0c0a`,
-                      borderRadius:8,padding:"6px",minHeight:120,transition:"background 0.1s, border 0.1s",
-                      position:"relative",cursor:"default",
-                      opacity:isPast?0.45:1,
-                    }}
+                    style={{background:bg,border:`1px solid ${brd}`,borderRadius:8,padding:"6px 5px",minHeight:130,position:"relative",opacity:isPast?0.45:1}}
                   >
-                    {/* Date number + block button */}
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                      <div style={{
-                        fontSize:12,fontWeight:isToday?700:500,
-                        color:isPast?C.textDim:isToday?C.gold:isCoachDay?C.white:C.textDim,
-                        fontFamily:D.display,
-                        width:22,height:22,borderRadius:"50%",
-                        background:isToday?`${C.gold}25`:"transparent",
-                        display:"flex",alignItems:"center",justifyContent:"center",
-                        textDecoration:isPast?"line-through":"none",
-                      }}>{d.getDate()}</div>
+                    {/* Date + lock */}
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+                      <div style={{fontSize:13,fontWeight:isToday?700:400,color:isPast?"#2e2820":allBlocked?"#44405a":isToday?C.gold:isCoachDay?"#c8bca8":"#3a3428",fontFamily:D.display,width:22,height:22,borderRadius:"50%",background:isToday?`${C.gold}22`:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>{d.getDate()}</div>
                       {isCoachDay&&!isPast&&(
-                        <button
-                          onClick={e=>{e.stopPropagation();
-                            if(allBlocked){sessions.forEach(s=>blockSession(dk,s.id,""));}
-                            else{sessions.forEach(s=>{if(!(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id))blockSession(dk,s.id,`${fmtDate(d)} ${s.time}`);});}
-                          }}
-                          style={{background:allBlocked?"rgba(80,70,140,0.2)":"transparent",border:`1px solid ${allBlocked?"#6060aa":"#333"}`,borderRadius:4,width:18,height:18,color:allBlocked?"#9090cc":C.textDim,fontSize:9,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}
-                          title={allBlocked?"Unblock day":"Block day"}
-                        >{allBlocked?"🔓":"🔒"}</button>
+                        <button onClick={e=>{e.stopPropagation();
+                          if(allBlocked){sessions.forEach(s=>blockSession(dk,s.id,""));}
+                          else{sessions.forEach(s=>{if(!(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id))blockSession(dk,s.id,fmtDate(d));});}
+                        }} style={{background:"transparent",border:"none",color:allBlocked?"#6060a0":"#2e2820",fontSize:10,cursor:"pointer",padding:0,lineHeight:1}} title={allBlocked?"Unblock":"Block day"}>
+                          {allBlocked?"🔓":"🔒"}
+                        </button>
                       )}
                     </div>
 
-                    {/* Session slots — visible even when empty */}
-                    {isCoachDay&&sessions.map(sess=>{
+                    {/* Session slots */}
+                    {isCoachDay&&!isPast&&!allBlocked&&sessions.map(sess=>{
                       const isBlk=(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===sess.id);
-                      const slotItems=dayItems.filter(s=>s.status!=="tentative"&&(isGroupDay?(s.sessId===sess.id):(s.slotId===sess.id||s.slotTime===sess.time)));
+                      const slotItems=dayBookings.filter(s=>
+                        isGroupDay
+                          ?(s.sessId===sess.id||(s.sessId==="custom"&&s.sessTime===sess.time))
+                          :(s.slotId===sess.id||s.slotTime===sess.time||(s.sessId==="custom"&&s.sessTime===sess.time))
+                      );
+                      const filled=slotItems.length;
                       const maxSpots=isGroupDay?MAX_PLAYERS:1;
                       const tShort=(sess.time||"").split("–")[0].trim().replace(":00","").replace(" PM","p").replace(" AM","a");
+                      const slotCol=isGroupDay?"#b85050":"#b89a3e";
+
+                      if(isBlk) return(
+                        <div key={sess.id} onClick={e=>{e.stopPropagation();blockSession(dk,sess.id,"");}}
+                          style={{fontSize:7,padding:"2px 4px",borderRadius:3,marginBottom:3,background:"rgba(50,45,80,0.2)",border:"1px solid #40408055",color:"#60609a",cursor:"pointer",userSelect:"none"}}>
+                          <span style={{pointerEvents:"none"}}>🔒 {tShort} off</span>
+                        </div>
+                      );
+
                       return(
                         <div key={sess.id} style={{marginBottom:3}}>
-                          {/* Slot header — tap to block/unblock */}
-                          <div
-                            onClick={e=>{e.stopPropagation();blockSession(dk,sess.id,isBlk?"":(`${fmtDate(d)} ${sess.time}`));}}
-                            style={{
-                              fontSize:7,padding:"2px 5px",borderRadius:3,cursor:"pointer",
-                              display:"flex",justifyContent:"space-between",alignItems:"center",
-                              background:isBlk?"rgba(60,55,100,0.25)":isGroupDay?"rgba(204,34,34,0.06)":"rgba(196,168,76,0.06)",
-                              border:`1px solid ${isBlk?"#5050aa44":isGroupDay?"rgba(204,34,34,0.15)":"rgba(196,168,76,0.15)"}`,
-                              marginBottom:slotItems.length?2:0,userSelect:"none",
-                            }}
-                          >
-                            <span style={{color:isBlk?"#8080bb":isGroupDay?"#e06060":"#c4a84c",pointerEvents:"none"}}>
-                              {isBlk?"🔒 off":isGroupDay?`🔥 ${tShort}`:`⚒️ ${tShort}`}
-                            </span>
-                            <span style={{color:isBlk?C.red:slotItems.length>0?C.white:"#444",pointerEvents:"none",fontWeight:slotItems.length>0?600:400}}>
-                              {isBlk?"":``}  {slotItems.length}/{maxSpots}
-                            </span>
+                          <div onClick={e=>{e.stopPropagation();blockSession(dk,sess.id,fmtDate(d));}}
+                            style={{fontSize:7,padding:"2px 4px",borderRadius:3,marginBottom:filled?2:0,background:filled?`${slotCol}18`:"rgba(255,255,255,0.025)",border:`1px solid ${filled?slotCol+"44":"rgba(255,255,255,0.05)"}`,color:filled?slotCol:"#2e2418",cursor:"pointer",userSelect:"none",display:"flex",justifyContent:"space-between"}}>
+                            <span style={{pointerEvents:"none"}}>{isGroupDay?"🔥":"⚒️"} {tShort}</span>
+                            <span style={{pointerEvents:"none",fontWeight:filled?700:400}}>{filled}/{maxSpots}</span>
                           </div>
-                          {/* Player chips */}
-                          {!isBlk&&slotItems.map((item,si)=>(
-                            <div
-                              key={si}
-                              draggable="true"
+                          {slotItems.map((item,si)=>(
+                            <div key={si} draggable="true"
                               onDragStart={e=>onChipDragStart(e,item)}
                               onDragEnd={onChipDragEnd}
-                              style={{
-                                background:item._type==="1on1"?"rgba(196,168,76,0.14)":"rgba(204,34,34,0.14)",
-                                border:`1px solid ${item._type==="1on1"?C.gold+"33":C.red+"33"}`,
-                                borderLeft:`2px solid ${item._type==="1on1"?C.gold:C.red}`,
-                                borderRadius:4,padding:"2px 5px",marginBottom:1,
-                                cursor:"grab",userSelect:"none",
-                                opacity:dragId===item.id?0.4:1,
-                                display:"flex",alignItems:"center",justifyContent:"space-between",gap:3,
-                              }}
                               onClick={e=>{e.stopPropagation();setNoteId(item.id);setNoteText(item.coachNote||"");setNoteColl(item._coll);}}
-                              title="Click for note · drag to move"
+                              style={{background:item._type==="1on1"?"#241c06":"#220808",border:`1px solid ${item._type==="1on1"?"#c4a84c44":"#c8505033"}`,borderLeft:`2px solid ${item._type==="1on1"?"#c4a84c":"#c85050"}`,borderRadius:4,padding:"3px 5px",marginBottom:1,cursor:"grab",userSelect:"none",opacity:dragId===item.id?0.35:1,display:"flex",alignItems:"center",justifyContent:"space-between",gap:2}}
+                              title="Click note · drag to move"
                             >
-                              <span style={{fontSize:8,color:C.white,fontFamily:D.display,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"70%",pointerEvents:"none"}}>{item.name}</span>
-                              <div style={{display:"flex",gap:2,flexShrink:0,pointerEvents:"none"}}>
-                                {item.coachNote&&<span style={{fontSize:6}}>📝</span>}
-                                {item.requestType&&<span style={{fontSize:6,color:C.silver}}>⚠</span>}
-                                <div style={{width:4,height:4,borderRadius:"50%",background:item.status==="confirmed"?C.green:C.gold,marginTop:1}}/>
+                              <span style={{fontSize:9,color:"#e0d0b8",fontFamily:D.display,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"72%",pointerEvents:"none"}}>{item.name}</span>
+                              <div style={{display:"flex",gap:2,flexShrink:0,pointerEvents:"none",alignItems:"center"}}>
+                                {item.coachNote&&<span style={{fontSize:6,color:"#c4a84c"}}>📝</span>}
+                                {item.requestType&&<span style={{fontSize:6,color:"#909090"}}>⚠</span>}
+                                <div style={{width:5,height:5,borderRadius:"50%",background:item.status==="confirmed"?"#4db870":"#c4a84c"}}/>
                               </div>
                             </div>
                           ))}
@@ -1106,38 +1086,39 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                       );
                     })}
 
-                    {/* Tentative chips — no slot assigned yet */}
-                    {tentativeItems.map((item,ti)=>(
-                      <div
-                        key={`t${ti}`}
-                        draggable="true"
+                    {/* Custom-time sessions (not matched to preset slot) */}
+                    {!isPast&&!allBlocked&&(()=>{
+                      const customItems=dayBookings.filter(s=>
+                        (s.sessId==="custom"||(!s.sessId&&s.sessTime&&s.sessTime!=="Time TBD"))&&
+                        !sessions.some(sess=>s.sessTime===sess.time)
+                      );
+                      return customItems.map((item,ci)=>(
+                        <div key={`c${ci}`} draggable="true"
+                          onDragStart={e=>onChipDragStart(e,item)}
+                          onDragEnd={onChipDragEnd}
+                          onClick={e=>{e.stopPropagation();setNoteId(item.id);setNoteText(item.coachNote||"");setNoteColl(item._coll);}}
+                          style={{background:"#1e1a08",border:"1px solid #c4a84c33",borderLeft:"2px solid #c4a84c",borderRadius:4,padding:"3px 5px",marginBottom:2,cursor:"grab",userSelect:"none",opacity:dragId===item.id?0.35:1}}
+                        >
+                          <div style={{fontSize:7,color:"#c4a84c88",fontFamily:D.body,pointerEvents:"none"}}>{item._time||item.sessTime}</div>
+                          <div style={{fontSize:9,color:"#e0d0b8",fontFamily:D.display,fontWeight:600,pointerEvents:"none"}}>{item.name}</div>
+                        </div>
+                      ));
+                    })()}
+
+                    {/* Tentative */}
+                    {!isPast&&tentativeItems.map((item,ti)=>(
+                      <div key={`t${ti}`} draggable="true"
                         onDragStart={e=>onChipDragStart(e,item)}
                         onDragEnd={onChipDragEnd}
                         onClick={e=>{e.stopPropagation();setNoteId(item.id);setNoteText(item.coachNote||"");setNoteColl(item._coll||"bookings");}}
-                        title="Tentative — time TBD · drag to assign slot"
-                        style={{
-                          background:"rgba(196,168,76,0.08)",
-                          border:`1px dashed ${C.gold}66`,
-                          borderRadius:4,padding:"2px 5px",marginBottom:1,marginTop:2,
-                          cursor:"grab",userSelect:"none",
-                          opacity:dragId===item.id?0.4:1,
-                          display:"flex",alignItems:"center",gap:3,
-                        }}
+                        style={{background:"rgba(196,168,76,0.05)",border:"1px dashed #c4a84c44",borderRadius:4,padding:"3px 5px",marginBottom:1,marginTop:2,cursor:"grab",userSelect:"none",opacity:dragId===item.id?0.35:1,display:"flex",alignItems:"center",gap:3}}
                       >
-                        <span style={{fontSize:7,color:C.gold,pointerEvents:"none"}}>⏰</span>
-                        <span style={{fontSize:8,color:C.gold,fontFamily:D.display,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"75%",pointerEvents:"none"}}>{item.name}</span>
-                        <div style={{marginLeft:"auto",display:"flex",gap:2,flexShrink:0,pointerEvents:"none"}}>
-                          {item.coachNote&&<span style={{fontSize:6}}>📝</span>}
-                          <div style={{width:4,height:4,borderRadius:"50%",background:C.gold,marginTop:1}}/>
-                        </div>
+                        <span style={{fontSize:8,color:"#c4a84c",pointerEvents:"none"}}>⏰</span>
+                        <span style={{fontSize:9,color:"#c4a84c",fontFamily:D.display,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",pointerEvents:"none"}}>{item.name}</span>
                       </div>
                     ))}
 
-                    {isDragOver&&(
-                      <div style={{position:"absolute",inset:0,border:`2px dashed ${C.gold}`,borderRadius:8,pointerEvents:"none",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        <span style={{fontSize:9,color:C.gold,fontFamily:D.body,background:"rgba(0,0,0,0.7)",padding:"2px 6px",borderRadius:4}}>Drop here</span>
-                      </div>
-                    )}
+                    {isDragOver&&<div style={{position:"absolute",inset:2,border:"2px dashed #c4a84c88",borderRadius:6,pointerEvents:"none",background:"rgba(196,168,76,0.04)"}}/>}
                   </div>
                 );
               })}
