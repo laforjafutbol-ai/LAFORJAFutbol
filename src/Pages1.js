@@ -826,26 +826,99 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
     const{item:b,date:targetDate}=dropTarget;
     const newDK=dKey(targetDate);
     const newDL=fmtDate(targetDate);
+    const newType=dropSess._slotType; // "group" or "1on1" based on which slot was picked
     setMoving(true);
     try{
-      if(b._type==="1on1"){
-        await updateDoc(doc(db,"inquiries",b.id),{dateKey:newDK,dateLabel:newDL,slotId:dropSess.id,slotTime:dropSess.time,requestType:null,requestNote:null,movedAt:new Date().toISOString()});
-        try{await callEmailAPI({...b,dateLabel:newDL,sessTime:dropSess.time},"reschedule");}catch(e){}
-      }else if(b._type==="pending"){
-        const sched=DAY_SCHEDULE[targetDate.getDay()]||{};
-        await addDoc(collection(db,"bookings"),{
-          name:b.name,email:b.contact||"",phone:b.contact||"",
-          status:"pending",dateKey:newDK,dateLabel:newDL,
-          sessId:dropSess.id,sessTime:dropSess.time,
-          ageGroup:dropSess.ageGroup||"",ageTag:dropSess.ageTag||"",
-          skill:sched.skill||"The Furnace",skillIcon:sched.skillIcon||"🔥",
-          count:1,total:0,notes:b.note||"",createdAt:new Date().toISOString(),fromHolding:true,
-        });
+      if(b._type==="pending"){
+        // Create new booking from holding area
+        const isNewPriv=newType==="1on1";
+        if(isNewPriv){
+          await addDoc(collection(db,"inquiries"),{
+            name:b.name,email:b.contact||"",phone:b.contact||"",
+            status:"pending",dateKey:newDK,dateLabel:newDL,
+            slotId:dropSess.id,slotTime:dropSess.time,
+            price:65,notes:b.note||"",
+            createdAt:new Date().toISOString(),fromHolding:true,
+          });
+        } else {
+          const sched=DAY_SCHEDULE[targetDate.getDay()]||{};
+          await addDoc(collection(db,"bookings"),{
+            name:b.name,email:b.contact||"",phone:b.contact||"",
+            status:"pending",dateKey:newDK,dateLabel:newDL,
+            sessId:dropSess.id,sessTime:dropSess.time,
+            ageGroup:dropSess.ageGroup||"",ageTag:dropSess.ageTag||"",
+            skill:sched.skill||"The Furnace",skillIcon:sched.skillIcon||"🔥",
+            count:1,total:55,notes:b.note||"",
+            createdAt:new Date().toISOString(),fromHolding:true,
+          });
+        }
         if(b.id) await updateDoc(doc(db,"pending",b.id),{status:"scheduled"});
-      }else{
-        const sched=DAY_SCHEDULE[targetDate.getDay()]||{};
-        await updateDoc(doc(db,"bookings",b.id),{dateKey:newDK,dateLabel:newDL,sessId:dropSess.id,sessTime:dropSess.time,ageGroup:dropSess.ageGroup,ageTag:dropSess.ageTag,skill:sched.skill||b.skill,skillIcon:sched.skillIcon||b.skillIcon,requestType:null,requestNote:null,movedAt:new Date().toISOString()});
-        try{await callEmailAPI({...b,dateLabel:newDL,sessTime:dropSess.time},"reschedule");}catch(e){}
+      } else {
+        // Move existing booking — any type to any slot
+        const isMovingToPriv=newType==="1on1";
+        const sourceColl=b._coll||b._type==="1on1"?"inquiries":"bookings";
+        const targetColl=isMovingToPriv?"inquiries":"bookings";
+
+        if(sourceColl===targetColl){
+          // Same collection — just update fields
+          const updateData={
+            dateKey:newDK,dateLabel:newDL,
+            requestType:null,requestNote:null,
+            movedAt:new Date().toISOString(),
+          };
+          if(isMovingToPriv){
+            updateData.slotId=dropSess.id;
+            updateData.slotTime=dropSess.time;
+          } else {
+            const sched=DAY_SCHEDULE[targetDate.getDay()]||{};
+            updateData.sessId=dropSess.id;
+            updateData.sessTime=dropSess.time;
+            updateData.ageGroup=dropSess.ageGroup||b.ageGroup||"";
+            updateData.ageTag=dropSess.ageTag||b.ageTag||"";
+            updateData.skill=sched.skill||b.skill||"The Furnace";
+            updateData.skillIcon=sched.skillIcon||b.skillIcon||"🔥";
+          }
+          await updateDoc(doc(db,sourceColl,b.id),updateData);
+        } else {
+          // Cross-type move — create in new collection, delete from old
+          const sched=DAY_SCHEDULE[targetDate.getDay()]||{};
+          if(isMovingToPriv){
+            await addDoc(collection(db,"inquiries"),{
+              name:b.name,email:b.email||"",phone:b.phone||"",
+              status:b.status||"pending",dateKey:newDK,dateLabel:newDL,
+              slotId:dropSess.id,slotTime:dropSess.time,
+              price:65,notes:b.notes||"",
+              coachNote:b.coachNote||"",
+              createdAt:b.createdAt||new Date().toISOString(),
+              movedAt:new Date().toISOString(),
+            });
+          } else {
+            await addDoc(collection(db,"bookings"),{
+              name:b.name,email:b.email||"",phone:b.phone||"",
+              status:b.status||"pending",dateKey:newDK,dateLabel:newDL,
+              sessId:dropSess.id,sessTime:dropSess.time,
+              ageGroup:dropSess.ageGroup||"",ageTag:dropSess.ageTag||"",
+              skill:sched.skill||"The Furnace",skillIcon:sched.skillIcon||"🔥",
+              count:b.count||1,total:b.total||55,notes:b.notes||"",
+              coachNote:b.coachNote||"",
+              createdAt:b.createdAt||new Date().toISOString(),
+              movedAt:new Date().toISOString(),
+            });
+          }
+          // Remove from old collection
+          await deleteDoc(doc(db,sourceColl,b.id));
+        }
+
+        // Fire reschedule email
+        try{
+          await callEmailAPI({
+            ...b,
+            dateLabel:newDL,
+            sessTime:dropSess.time,
+            skill:isMovingToPriv?"The Tempering":(DAY_SCHEDULE[targetDate.getDay()]?.skill||"The Furnace"),
+            skillIcon:isMovingToPriv?"⚒️":(DAY_SCHEDULE[targetDate.getDay()]?.skillIcon||"🔥"),
+          },"reschedule");
+        }catch(e){}
       }
     }finally{setMoving(false);setDropTarget(null);setDropSess(null);}
   }
@@ -1248,35 +1321,57 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
         {dropTarget&&(()=>{
           const b=dropTarget.item;
           const targetDate=dropTarget.date;
-          const is1on1=b._type==="1on1";
           const isPending=b._type==="pending";
-          const usePrivate=is1on1||(!isPending&&false);
-          const sched=is1on1?PRIVATE_SCHEDULE[targetDate.getDay()]:DAY_SCHEDULE[targetDate.getDay()];
-          const slots=sched?(is1on1?sched.slots:sched.sessions):[];
+          const dayOfWeek=targetDate.getDay();
+
+          // Build ALL available slots on this day — group + 1on1
+          const allSlots=[];
+          const groupSched=DAY_SCHEDULE[dayOfWeek];
+          const privSched=PRIVATE_SCHEDULE[dayOfWeek];
+          if(groupSched?.sessions) groupSched.sessions.forEach(s=>allSlots.push({...s,_slotType:"group",label:`🔥 ${s.time}`,sub:s.ageGroup||"Group"}));
+          if(privSched?.slots)     privSched.slots.forEach(s=>allSlots.push({...s,_slotType:"1on1",label:`⚒️ ${s.time}`,sub:"The Tempering"}));
+
+          const hasSlots=allSlots.length>0;
+
           return(
             <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>setDropTarget(null)}>
-              <div style={{background:"#111",border:`1px solid ${C.gold}44`,borderRadius:16,padding:"24px",maxWidth:420,width:"100%"}} onClick={e=>e.stopPropagation()}>
+              <div style={{background:"#111",border:`1px solid ${C.gold}44`,borderRadius:16,padding:"24px",maxWidth:440,width:"100%"}} onClick={e=>e.stopPropagation()}>
                 <div style={{fontSize:8,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>{isPending?"Schedule Client":"Move Session"}</div>
-                <div style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:3}}>{b.name}</div>
-                <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginBottom:16}}>→ {fmtDate(targetDate)}</div>
-                {!sched?(
-                  <div style={{fontSize:11,color:C.red,fontFamily:D.body,marginBottom:14}}>No coaching sessions on this day. Drop onto Mon, Tue, Thu, Fri for group or Wed, Sat for 1-on-1.</div>
-                ):(
-                  <div style={{display:"grid",gap:6,marginBottom:16}}>
-                    {slots.map(slot=>{
-                      const sel=dropSess?.id===slot.id;
-                      return(
-                        <button key={slot.id} onClick={()=>setDropSess(slot)} style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:9,padding:"11px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                          <span style={{fontSize:12,fontWeight:600,color:sel?C.gold:C.white,fontFamily:D.display}}>{slot.time}</span>
-                          {!is1on1&&<span style={{fontSize:9,color:sel?C.gold:C.textDim,fontFamily:D.body}}>{slot.ageGroup}</span>}
-                          {sel&&<span style={{color:C.gold}}>✓</span>}
-                        </button>
-                      );
-                    })}
+                <div style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:2}}>{b.name}</div>
+                <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginBottom:isPending?4:12}}>→ {fmtDate(targetDate)}</div>
+                {isPending&&b.note&&<div style={{fontSize:9,color:C.gold,fontFamily:D.body,marginBottom:12,fontStyle:"italic"}}>{b.note}</div>}
+
+                {!hasSlots?(
+                  <div style={{background:`${C.red}10`,border:`1px solid ${C.red}22`,borderRadius:8,padding:"12px 14px",marginBottom:14}}>
+                    <div style={{fontSize:11,color:C.red,fontFamily:D.body}}>No sessions on {targetDate.toLocaleDateString("en-US",{weekday:"long"})}.</div>
+                    <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginTop:4}}>Group: Mon · Tue · Thu · Fri&nbsp;&nbsp;|&nbsp;&nbsp;1-on-1: Wed · Sat</div>
                   </div>
+                ):(
+                  <>
+                    <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Select Session</div>
+                    <div style={{display:"grid",gap:6,marginBottom:16}}>
+                      {allSlots.map((slot,si)=>{
+                        const sel=dropSess?.id===slot.id&&dropSess?._slotType===slot._slotType;
+                        const isGroup=slot._slotType==="group";
+                        const color=isGroup?C.red:C.gold;
+                        return(
+                          <button key={si} onClick={()=>setDropSess(slot)}
+                            style={{background:sel?isGroup?"rgba(204,34,34,0.12)":"rgba(196,168,76,0.12)":"#0d0d0d",border:sel?`1px solid ${color}`:`1px solid #222`,borderRadius:9,padding:"11px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.15s"}}>
+                            <div>
+                              <div style={{fontSize:12,fontWeight:600,color:sel?color:C.white,fontFamily:D.display}}>{slot.label}</div>
+                              <div style={{fontSize:9,color:sel?color:C.textDim,fontFamily:D.body,marginTop:1}}>{slot.sub}</div>
+                            </div>
+                            {sel&&<span style={{color,fontSize:14}}>✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
+
                 <div style={{display:"flex",gap:8}}>
-                  <button disabled={!dropSess||moving||!sched} onClick={confirmDrop} style={{flex:1,background:dropSess&&sched?`linear-gradient(135deg,${C.gold},${C.goldDim})`:"#1a1a1a",border:"none",borderRadius:9,padding:"12px",color:dropSess&&sched?"#0a0a0a":C.silverDark,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:dropSess&&sched?"pointer":"not-allowed",fontFamily:D.body,fontWeight:700}}>
+                  <button disabled={!dropSess||moving||!hasSlots} onClick={confirmDrop}
+                    style={{flex:1,background:dropSess&&hasSlots?`linear-gradient(135deg,${C.gold},${C.goldDim})`:"#1a1a1a",border:"none",borderRadius:9,padding:"12px",color:dropSess&&hasSlots?"#0a0a0a":C.silverDark,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:dropSess&&hasSlots?"pointer":"not-allowed",fontFamily:D.body,fontWeight:700}}>
                     {moving?"Moving…":isPending?"Schedule":"Confirm Move"}
                   </button>
                   <button onClick={()=>setDropTarget(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:9,padding:"12px 14px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
