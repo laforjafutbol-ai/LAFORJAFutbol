@@ -184,6 +184,24 @@ module.exports = async function handler(req, res) {
       '<div style="font-size:11px;color:#444;margin-top:10px;">@carlos-cepeda-41 · Include your name in the note</div></div>'
     );
 
+  } else if (type === "reminder") {
+    // Generic reminder — auto-detect group vs 1on1 from booking data
+    const is1on1 = !booking.sessId || booking.slotTime || booking._type === "1on1";
+    subject = "⏰ Reminder — Your La Forja Session";
+    html = wrap(
+      '<h1 style="text-align:center;font-size:24px;font-weight:normal;color:#c9a84c;letter-spacing:2px;margin-bottom:20px;">' +
+      (is1on1 ? "⚒️ Your Tempering Session" : "🔥 Your Furnace Session") + '</h1>' +
+      '<div style="background:#141414;border:1px solid #222;border-radius:14px;padding:24px;margin-bottom:20px;">' +
+      '<p style="margin:0 0 16px;font-size:14px;color:#999;line-height:1.8;">Hi <strong style="color:#f0f0f0;">' + (booking.name||"") + '</strong>,</p>' +
+      (booking.message ? '<p style="margin:0 0 16px;font-size:13px;color:#bbb;line-height:1.8;">' + booking.message + '</p>' : '') +
+      '<div style="border-top:1px solid #222;padding-top:14px;margin-top:8px;">' +
+      row("Date", booking.dateLabel) +
+      row("Time", booking.sessTime || booking.slotTime || "") +
+      row("Location", booking.locationDetail || "Bayview Park · James Island") +
+      '</div></div>' +
+      '<p style="font-size:12px;color:#555;text-align:center;">Reply to this email with any questions.</p>'
+    );
+
   } else if (type === "reschedule") {
     subject = "📅 Your La Forja Session Has Been Moved";
     html = wrap(
