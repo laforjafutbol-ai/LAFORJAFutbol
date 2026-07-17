@@ -716,8 +716,9 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
   const [calYear,setCalYear]   = useState(new Date().getFullYear());
   const [dragId,setDragId]     = useState(null); // id of item being dragged
   const [dragOver,setDragOver] = useState(null); // dateKey being hovered
-  const [dropTarget,setDropTarget] = useState(null); // {item, date}
+  const [dropTarget,setDropTarget] = useState(null);
   const [dropSess,setDropSess]     = useState(null);
+  const [dropCustomTime,setDropCustomTime] = useState("");
   const [moving,setMoving]         = useState(false);
   const [noteId,setNoteId]         = useState(null);
   const [noteText,setNoteText]     = useState("");
@@ -1355,61 +1356,123 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
           const targetDate=dropTarget.date;
           const isPending=b._type==="pending";
           const dayOfWeek=targetDate.getDay();
-
-          // Build ALL available slots on this day — group + 1on1
-          const allSlots=[];
           const groupSched=DAY_SCHEDULE[dayOfWeek];
           const privSched=PRIVATE_SCHEDULE[dayOfWeek];
-          if(groupSched?.sessions) groupSched.sessions.forEach(s=>allSlots.push({...s,_slotType:"group",label:`🔥 ${s.time}`,sub:s.ageGroup||"Group"}));
-          if(privSched?.slots)     privSched.slots.forEach(s=>allSlots.push({...s,_slotType:"1on1",label:`⚒️ ${s.time}`,sub:"The Tempering"}));
-
-          const hasSlots=allSlots.length>0;
+          const presetSlots=[];
+          if(groupSched?.sessions) groupSched.sessions.forEach(s=>presetSlots.push({...s,_slotType:"group",label:`🔥 ${s.time}`,sub:s.ageGroup||"Group"}));
+          if(privSched?.slots)     privSched.slots.forEach(s=>presetSlots.push({...s,_slotType:"1on1",label:`⚒️ ${s.time}`,sub:"The Tempering"}));
 
           return(
             <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>setDropTarget(null)}>
-              <div style={{background:"#111",border:`1px solid ${C.gold}44`,borderRadius:16,padding:"24px",maxWidth:440,width:"100%"}} onClick={e=>e.stopPropagation()}>
+              <div style={{background:"#111",border:`1px solid ${C.gold}44`,borderRadius:16,padding:"24px",maxWidth:440,width:"100%",maxHeight:"85vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+
+                {/* Header */}
                 <div style={{fontSize:8,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>{isPending?"Schedule Client":"Move Session"}</div>
                 <div style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:2}}>{b.name}</div>
-                <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginBottom:isPending?4:12}}>→ {fmtDate(targetDate)}</div>
-                {isPending&&b.note&&<div style={{fontSize:9,color:C.gold,fontFamily:D.body,marginBottom:12,fontStyle:"italic"}}>{b.note}</div>}
+                <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginBottom:isPending&&b.note?4:14}}>→ {fmtDate(targetDate)} · {targetDate.toLocaleDateString("en-US",{weekday:"long"})}</div>
+                {isPending&&b.note&&<div style={{fontSize:9,color:C.gold,fontFamily:D.body,marginBottom:14,fontStyle:"italic"}}>Note: {b.note}</div>}
 
-                {!hasSlots?(
-                  <div style={{background:`${C.red}10`,border:`1px solid ${C.red}22`,borderRadius:8,padding:"12px 14px",marginBottom:14}}>
-                    <div style={{fontSize:11,color:C.red,fontFamily:D.body}}>No sessions on {targetDate.toLocaleDateString("en-US",{weekday:"long"})}.</div>
-                    <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginTop:4}}>Group: Mon · Tue · Thu · Fri&nbsp;&nbsp;|&nbsp;&nbsp;1-on-1: Wed · Sat</div>
+                {/* Custom time input — always shown first */}
+                <div style={{marginBottom:16}}>
+                  <div style={{fontSize:8,letterSpacing:2,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:7}}>Type the confirmed time</div>
+                  <input
+                    placeholder="e.g. 4:30 PM – 5:45 PM"
+                    value={dropCustomTime||""}
+                    onChange={e=>{setDropCustomTime(e.target.value);setDropSess(null);}}
+                    style={{...IS,width:"100%",fontSize:13,letterSpacing:0.5}}
+                    autoFocus
+                  />
+                  {dropCustomTime&&dropCustomTime.trim().length>2&&(
+                    <div style={{marginTop:6,fontSize:9,color:C.green,fontFamily:D.body}}>✓ Will be scheduled at: {dropCustomTime}</div>
+                  )}
+                </div>
+
+                {/* OR divider */}
+                {presetSlots.length>0&&(
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                    <div style={{flex:1,height:1,background:C.cardBorder}}/>
+                    <span style={{fontSize:9,color:C.textDim,fontFamily:D.body,letterSpacing:2,textTransform:"uppercase"}}>or pick a preset slot</span>
+                    <div style={{flex:1,height:1,background:C.cardBorder}}/>
                   </div>
-                ):(
-                  <>
-                    <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Select Session</div>
-                    <div style={{display:"grid",gap:6,marginBottom:16}}>
-                      {allSlots.map((slot,si)=>{
-                        const sel=dropSess?.id===slot.id&&dropSess?._slotType===slot._slotType;
-                        const isGroup=slot._slotType==="group";
-                        const color=isGroup?C.red:C.gold;
-                        return(
-                          <button key={si} onClick={()=>setDropSess(slot)}
-                            style={{background:sel?isGroup?"rgba(204,34,34,0.12)":"rgba(196,168,76,0.12)":"#0d0d0d",border:sel?`1px solid ${color}`:`1px solid #222`,borderRadius:9,padding:"11px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.15s"}}>
-                            <div>
-                              <div style={{fontSize:12,fontWeight:600,color:sel?color:C.white,fontFamily:D.display}}>{slot.label}</div>
-                              <div style={{fontSize:9,color:sel?color:C.textDim,fontFamily:D.body,marginTop:1}}>{slot.sub}</div>
-                            </div>
-                            {sel&&<span style={{color,fontSize:14}}>✓</span>}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
                 )}
 
-                <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  <div style={{display:"flex",gap:8}}>
-                    <button disabled={!dropSess||moving} onClick={confirmDrop}
-                      style={{flex:1,background:dropSess?`linear-gradient(135deg,${C.gold},${C.goldDim})`:"#1a1a1a",border:"none",borderRadius:9,padding:"12px",color:dropSess?"#0a0a0a":C.silverDark,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:dropSess?"pointer":"not-allowed",fontFamily:D.body,fontWeight:700}}>
-                      {moving?"Moving…":isPending?"Schedule":"Confirm Move"}
-                    </button>
-                    <button onClick={()=>setDropTarget(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:9,padding:"12px 14px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+                {/* Preset slots */}
+                {presetSlots.length>0&&(
+                  <div style={{display:"grid",gap:6,marginBottom:16}}>
+                    {presetSlots.map((slot,si)=>{
+                      const sel=dropSess?.id===slot.id&&dropSess?._slotType===slot._slotType;
+                      const isGroup=slot._slotType==="group";
+                      const color=isGroup?C.red:C.gold;
+                      return(
+                        <button key={si} onClick={()=>{setDropSess(slot);setDropCustomTime("");}}
+                          style={{background:sel?isGroup?"rgba(204,34,34,0.12)":"rgba(196,168,76,0.12)":"#0d0d0d",border:sel?`1px solid ${color}`:`1px solid #222`,borderRadius:9,padding:"10px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.15s"}}>
+                          <div>
+                            <div style={{fontSize:12,fontWeight:600,color:sel?color:C.white,fontFamily:D.display}}>{slot.label}</div>
+                            <div style={{fontSize:9,color:sel?color:C.textDim,fontFamily:D.body,marginTop:1}}>{slot.sub}</div>
+                          </div>
+                          {sel&&<span style={{color,fontSize:14}}>✓</span>}
+                        </button>
+                      );
+                    })}
                   </div>
-                  {/* Place as tentative — holds the date, no slot taken */}
+                )}
+
+                {/* Action buttons */}
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {/* Confirm with time */}
+                  <div style={{display:"flex",gap:8}}>
+                    <button
+                      disabled={(!dropSess&&(!dropCustomTime||!dropCustomTime.trim()))||moving}
+                      onClick={async()=>{
+                        if(!dropTarget) return;
+                        const{item:b,date:targetDate}=dropTarget;
+                        const newDK=dKey(targetDate);
+                        const newDL=fmtDate(targetDate);
+                        const timeToUse=dropCustomTime?.trim()||dropSess?.time||"";
+                        const slotType=dropSess?._slotType||(dropCustomTime?"custom":"group");
+                        setMoving(true);
+                        try{
+                          const sched=DAY_SCHEDULE[targetDate.getDay()]||{};
+                          if(b._type==="pending"){
+                            await addDoc(collection(db,"bookings"),{
+                              name:b.name,email:b.contact||"",phone:b.contact||"",
+                              status:"pending",dateKey:newDK,dateLabel:newDL,
+                              sessId:dropSess?.id||"custom",sessTime:timeToUse,
+                              ageGroup:dropSess?.ageGroup||"",ageTag:dropSess?.ageTag||"",
+                              skill:slotType==="1on1"?"The Tempering":(sched.skill||"The Furnace"),
+                              skillIcon:slotType==="1on1"?"⚒️":(sched.skillIcon||"🔥"),
+                              count:1,total:slotType==="1on1"?65:55,
+                              notes:b.note||"",createdAt:new Date().toISOString(),fromHolding:true,
+                            });
+                            if(b.id) await updateDoc(doc(db,"pending",b.id),{status:"scheduled"});
+                          } else if(b._type==="1on1"){
+                            await updateDoc(doc(db,"inquiries",b.id),{
+                              dateKey:newDK,dateLabel:newDL,
+                              slotId:dropSess?.id||"custom",slotTime:timeToUse,
+                              requestType:null,requestNote:null,movedAt:new Date().toISOString(),
+                            });
+                          } else {
+                            await updateDoc(doc(db,"bookings",b.id),{
+                              dateKey:newDK,dateLabel:newDL,
+                              sessId:dropSess?.id||"custom",sessTime:timeToUse,
+                              ageGroup:dropSess?.ageGroup||b.ageGroup||"",
+                              ageTag:dropSess?.ageTag||b.ageTag||"",
+                              skill:dropSess?._slotType==="1on1"?"The Tempering":(sched.skill||b.skill||"The Furnace"),
+                              skillIcon:dropSess?._slotType==="1on1"?"⚒️":(sched.skillIcon||b.skillIcon||"🔥"),
+                              requestType:null,requestNote:null,movedAt:new Date().toISOString(),
+                            });
+                          }
+                          try{await callEmailAPI({...b,dateLabel:newDL,sessTime:timeToUse,skill:slotType==="1on1"?"The Tempering":(sched.skill||"La Forja"),skillIcon:slotType==="1on1"?"⚒️":"🔥"},"reschedule");}catch(e){}
+                        }finally{setMoving(false);setDropTarget(null);setDropSess(null);setDropCustomTime("");}
+                      }}
+                      style={{flex:1,background:(dropSess||(dropCustomTime?.trim().length>2))?`linear-gradient(135deg,${C.gold},${C.goldDim})`:"#1a1a1a",border:"none",borderRadius:9,padding:"12px",color:(dropSess||(dropCustomTime?.trim().length>2))?"#0a0a0a":C.silverDark,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:(dropSess||(dropCustomTime?.trim().length>2))?"pointer":"not-allowed",fontFamily:D.body,fontWeight:700}}
+                    >
+                      {moving?"Scheduling…":"Confirm & Schedule"}
+                    </button>
+                    <button onClick={()=>{setDropTarget(null);setDropCustomTime("");}} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:9,padding:"12px 14px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+                  </div>
+
+                  {/* Place as tentative */}
                   <button disabled={moving} onClick={async()=>{
                     if(!dropTarget) return;
                     const{item:b,date:targetDate}=dropTarget;
@@ -1434,9 +1497,9 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                           movedAt:new Date().toISOString(),
                         });
                       }
-                    }finally{setMoving(false);setDropTarget(null);setDropSess(null);}
-                  }} style={{background:"transparent",border:`1px dashed ${C.gold}44`,borderRadius:9,padding:"10px",color:C.gold,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,textAlign:"center"}}>
-                    ⏰ Place as Tentative — Time TBD
+                    }finally{setMoving(false);setDropTarget(null);setDropSess(null);setDropCustomTime("");}
+                  }} style={{background:"transparent",border:`1px dashed ${C.gold}33`,borderRadius:9,padding:"9px",color:C.textDim,fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,textAlign:"center"}}>
+                    ⏰ Place as Tentative — work out time later
                   </button>
                 </div>
               </div>
