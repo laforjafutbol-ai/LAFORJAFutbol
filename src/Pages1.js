@@ -955,7 +955,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
             {label:"Today",value:todayItems.length,icon:"🔥",color:C.gold},
             {label:"Week Sessions",value:weekSessions.length,icon:"✓",color:C.green},
             {label:"Week Revenue",value:`$${weekRevenue}`,icon:"$",color:C.silverBright},
-            {label:"Pending",value:pendingCount+newInquiries,icon:"⏳",color:C.red},
+            {label:"Total Sessions",value:(bookings||[]).filter(b=>b.status!=="cancelled"&&b.status!=="removed").length+(inquiries||[]).filter(i=>i.status!=="cancelled"&&i.status!=="removed").length,icon:"📋",color:C.gold},
           ].map((s,i)=>(
             <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
               <div style={{width:30,height:30,borderRadius:7,background:`${s.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>{s.icon}</div>
@@ -967,10 +967,8 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
           ))}
         </div>
 
-        {/* ── MAIN: Calendar + Side Panel ── */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 240px",gap:12,marginBottom:14,alignItems:"start"}}>
-
-          {/* ── CALENDAR ── */}
+        {/* ── MAIN: Full-width Calendar ── */}
+        <div style={{marginBottom:14}}>
           <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"16px"}}>
 
             {/* Calendar nav + legend */}
@@ -997,7 +995,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
             {/* Calendar grid */}
             <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4}}>
               {calDays.map((d,i)=>{
-                if(!d) return <div key={i} style={{minHeight:130}}/>;
+                if(!d) return <div key={i} style={{minHeight:160}}/>;
                 const dk=dKey(d);
                 const isToday=dk===todayKey;
                 const isPast=d<today;
@@ -1013,7 +1011,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                 let bg,brd;
                 if(isDragOver){bg="rgba(196,168,76,0.1)";brd=C.gold;}
                 else if(allBlocked){bg="#0f0d0b";brd="#28221a";}
-                else if(isPast){bg="#07060500";brd="#141008";}
+                else if(isPast){bg="#080705";brd="#141008";}
                 else if(isToday){bg="rgba(196,168,76,0.07)";brd=`${C.gold}55`;}
                 else if(isGroupDay){bg="#100c08";brd="#241a10";}
                 else if(isPrivDay){bg="#0e0c08";brd="#201c10";}
@@ -1024,7 +1022,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                     onDragOver={e=>onDayCellDragOver(e,dk)}
                     onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget))setDragOver(null);}}
                     onDrop={e=>onDayCellDrop(e,d)}
-                    style={{background:bg,border:`1px solid ${brd}`,borderRadius:8,padding:"6px 5px",minHeight:130,position:"relative",opacity:isPast?0.45:1}}
+                    style={{background:bg,border:`1px solid ${brd}`,borderRadius:8,padding:"6px 5px",minHeight:160,position:"relative",opacity:isPast?0.55:1}}
                   >
                     {/* Date + lock */}
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
@@ -1118,95 +1116,23 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                       </div>
                     ))}
 
+                    {/* Pending confirm buttons */}
+                    {!isPast&&dayBookings.filter(s=>s.status==="pending").length>0&&(
+                      <div style={{marginTop:3,borderTop:"1px solid rgba(255,255,255,0.04)",paddingTop:3}}>
+                        {dayBookings.filter(s=>s.status==="pending").map((s,pi)=>(
+                          <button key={pi} onClick={e=>{e.stopPropagation();confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings");}}
+                            style={{display:"block",width:"100%",background:`${C.green}15`,border:`1px solid ${C.green}33`,borderRadius:3,padding:"2px 4px",color:C.green,fontSize:7,cursor:"pointer",fontFamily:D.body,marginBottom:1,textAlign:"left",userSelect:"none"}}>
+                            ✓ confirm {s.name?.split(" ")[0]}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
                     {isDragOver&&<div style={{position:"absolute",inset:2,border:"2px dashed #c4a84c88",borderRadius:6,pointerEvents:"none",background:"rgba(196,168,76,0.04)"}}/>}
                   </div>
                 );
               })}
             </div>
-          </div>
-
-          {/* ── SIDE PANEL ── */}
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-
-            {/* Holding Area */}
-            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,overflow:"hidden"}}>
-              <div style={{background:`linear-gradient(135deg,#1a1308,#0f0c05)`,padding:"10px 14px",borderBottom:`1px solid ${C.cardBorder}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div>
-                  <div style={{fontSize:7,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:1}}>Holding Area</div>
-                  <div style={{fontSize:11,color:C.white,fontFamily:D.display}}>Working Out a Time</div>
-                </div>
-                <button onClick={()=>setShowAddPending(v=>!v)} style={{background:`${C.gold}15`,border:`1px solid ${C.gold}33`,borderRadius:6,padding:"4px 8px",color:C.gold,fontSize:8,cursor:"pointer",fontFamily:D.body}}>+ Add</button>
-              </div>
-              {showAddPending&&(
-                <div style={{padding:"10px",borderBottom:`1px solid ${C.cardBorder}`,background:"#0a0805"}}>
-                  {[{k:"name",ph:"Name *"},{k:"contact",ph:"Phone or email"},{k:"note",ph:"Note (e.g. wants Thu eve)"}].map(f=>(
-                    <input key={f.k} placeholder={f.ph} value={pendingForm[f.k]} onChange={e=>setPendingForm(p=>({...p,[f.k]:e.target.value}))} style={{...IS,fontSize:10,marginBottom:5,width:"100%"}}/>
-                  ))}
-                  <div style={{display:"flex",gap:5}}>
-                    <button onClick={async()=>{
-                      if(!pendingForm.name.trim()) return;
-                      await addDoc(collection(db,"pending"),{...pendingForm,createdAt:new Date().toISOString(),status:"pending"});
-                      setPendingForm({name:"",contact:"",note:""});setShowAddPending(false);
-                    }} style={{flex:1,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:6,padding:"7px",color:"#0a0a0a",fontSize:8,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save</button>
-                    <button onClick={()=>{setShowAddPending(false);setPendingForm({name:"",contact:"",note:""}); }} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:6,padding:"7px 8px",color:C.textDim,fontSize:8,cursor:"pointer",fontFamily:D.body}}>✕</button>
-                  </div>
-                </div>
-              )}
-              <div style={{padding:"8px",maxHeight:260,overflowY:"auto"}}>
-                {pendingClients.length===0?(
-                  <div style={{textAlign:"center",padding:"16px 8px",color:C.textDim,fontSize:9,fontFamily:D.body,lineHeight:1.6}}>No one waiting.<br/>Add clients you're coordinating with.</div>
-                ):pendingClients.map((p,i)=>(
-                  <div key={i}
-                    draggable="true"
-                    onDragStart={e=>onChipDragStart(e,{...p,_type:"pending",_coll:"pending"})}
-                    onDragEnd={onChipDragEnd}
-                    style={{background:"#0a0805",border:`1px solid ${C.gold}22`,borderRadius:8,padding:"8px 10px",marginBottom:5,cursor:"grab",userSelect:"none"}}
-                  >
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:11,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:1}}>{p.name}</div>
-                        {p.contact&&<div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{p.contact}</div>}
-                        {p.note&&<div style={{fontSize:9,color:C.gold,fontFamily:D.body,marginTop:2,fontStyle:"italic"}}>{p.note}</div>}
-                      </div>
-                      <button onClick={async()=>await updateDoc(doc(db,"pending",p.id),{status:"scheduled"})} style={{background:"transparent",border:"none",color:C.green,fontSize:12,cursor:"pointer",padding:"0 0 0 4px",flexShrink:0}} title="Mark done">✓</button>
-                    </div>
-                    <div style={{fontSize:7,color:C.textDim,fontFamily:D.body,marginTop:3}}>drag to calendar to schedule</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Quick stats */}
-            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"12px 14px"}}>
-              <div style={{fontSize:7,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>This Week</div>
-              {[{label:"Sessions",value:weekSessions.length,color:C.green},{label:"Revenue",value:`$${weekRevenue}`,color:C.gold},{label:"Pending Pay",value:pendingCount,color:C.red}].map((s,i)=>(
-                <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:i<2?`1px solid ${C.cardBorder}`:"none"}}>
-                  <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{s.label}</span>
-                  <span style={{fontSize:13,fontWeight:700,color:s.color,fontFamily:D.display}}>{s.value}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Group reminder button */}
-            <button onClick={()=>setReminderModal("group")} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"11px 14px",cursor:"pointer",textAlign:"left",width:"100%"}}>
-              <div style={{fontSize:7,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:2}}>Send Reminder</div>
-              <div style={{fontSize:11,color:C.white,fontFamily:D.display}}>📧 Group Reminder</div>
-              <div style={{fontSize:9,color:C.textDim,fontFamily:D.body,marginTop:2}}>Send to all confirmed sessions</div>
-            </button>
-
-            {/* Reschedule requests */}
-            {requestCount>0&&(
-              <div style={{background:C.card,border:`1px solid ${C.silver}22`,borderRadius:12,padding:"10px 12px"}}>
-                <div style={{fontSize:7,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>⚠ Requests</div>
-                {[...(bookings||[]),...(inquiries||[])].filter(x=>x.requestType).map((x,i)=>(
-                  <div key={i} style={{background:"#0a0805",borderRadius:6,padding:"6px 8px",marginBottom:4,border:`1px solid ${C.silver}22`}}>
-                    <div style={{fontSize:10,fontWeight:600,color:C.white,fontFamily:D.display}}>{x.name}</div>
-                    <div style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>{x.dateLabel}</div>
-                    {x.requestedNewDate&&<div style={{fontSize:8,color:C.gold,fontFamily:D.body}}>→ {x.requestedNewDate}</div>}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
 
@@ -1217,6 +1143,18 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
               <div style={{width:7,height:7,borderRadius:"50%",background:C.green,animation:"pulse 1.5s infinite",flexShrink:0}}/>
               <span style={{fontSize:10,letterSpacing:3,color:C.green,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Today's Roster</span>
               <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} · {todayItems.length} player{todayItems.length!==1?"s":""}</span>
+            </div>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              {todayItems.length>0&&(
+                <button onClick={()=>setReminderModal({group:true,players:todayItems,time:"Today"})}
+                  style={{background:`${C.gold}12`,border:`1px solid ${C.gold}33`,borderRadius:8,padding:"5px 12px",color:C.gold,fontSize:9,cursor:"pointer",fontFamily:D.body,letterSpacing:1}}>
+                  📧 Send All Reminders
+                </button>
+              )}
+              <button onClick={()=>setReminderModal("group")}
+                style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"5px 12px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body,letterSpacing:1}}>
+                📧 Group
+              </button>
             </div>
           </div>
           {todayItems.length===0?(
@@ -1267,69 +1205,6 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
             );
           })()}
         </div>
-
-        {/* ── ALL UPCOMING ── */}
-        {(()=>{
-          const upcoming=[
-            ...(bookings||[]).filter(b=>b.dateKey>=todayKey&&b.status!=="cancelled"&&b.status!=="removed").map(b=>({...b,_type:"group",_coll:"bookings",_time:b.sessTime})),
-            ...(inquiries||[]).filter(i=>i.dateKey>=todayKey&&i.status!=="cancelled"&&i.status!=="removed").map(i=>({...i,_type:"1on1",_coll:"inquiries",_time:i.slotTime})),
-          ].sort((a,b)=>a.dateKey>b.dateKey?1:-1);
-          if(!upcoming.length) return null;
-          return(
-            <div>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,paddingBottom:8,borderBottom:`1px solid ${C.cardBorder}`}}>
-                <span style={{fontSize:10,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>All Upcoming</span>
-                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {upcoming.length} sessions</span>
-              </div>
-              <div style={{display:"grid",gap:5}}>
-                {upcoming.map((s,i)=>{
-                  const confirmed=s.status==="confirmed";
-                  const noteOpen=coachNoteId===s.id;
-                  return(
-                    <div key={i} style={{background:C.card,border:`1px solid ${s.requestType?C.silver+"33":confirmed?C.green+"18":C.cardBorder}`,borderLeft:`3px solid ${s.requestType?C.silver:confirmed?C.green:C.gold}`,borderRadius:10,padding:"10px 14px"}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                        <div style={{flex:1,minWidth:180}}>
-                          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,flexWrap:"wrap"}}>
-                            <span style={{fontSize:13,fontWeight:700,color:C.white,fontFamily:D.display}}>{s.name}</span>
-                            <span style={{fontSize:7,padding:"1px 6px",borderRadius:4,background:confirmed?`${C.green}18`:`${C.gold}18`,color:confirmed?C.green:C.gold,fontFamily:D.body}}>{confirmed?"✓ Confirmed":"⏳ Pending"}</span>
-                            {s._type==="1on1"&&<span style={{fontSize:7,padding:"1px 6px",borderRadius:4,background:`${C.gold}12`,color:C.gold,fontFamily:D.body}}>⚒️ 1-on-1</span>}
-                            {s.packageBooking&&<span style={{fontSize:7,padding:"1px 6px",borderRadius:4,background:`${C.gold}12`,color:C.gold,fontFamily:D.body}}>📦 Pack</span>}
-                            {s.requestType&&<span style={{fontSize:7,padding:"1px 6px",borderRadius:4,background:`${C.silver}12`,color:C.silver,fontFamily:D.body}}>⚠ {s.requestType==="cancel"?"Cancel":"Reschedule"} Req</span>}
-                          </div>
-                          <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-                            <span style={{fontSize:10,color:C.textMid,fontFamily:D.body}}>📅 {s.dateLabel}</span>
-                            <span style={{fontSize:10,color:C.textMid,fontFamily:D.body}}>🕐 {s._time}</span>
-                            <span style={{fontSize:10,color:C.gold,fontFamily:D.body,fontWeight:600}}>${s.total||s.price||0}</span>
-                            {s.phone&&<span style={{fontSize:10,color:C.silverDim,fontFamily:D.body}}>{s.phone}</span>}
-                          </div>
-                          {s.requestedNewDate&&<div style={{fontSize:9,color:C.gold,fontFamily:D.body,marginTop:2}}>→ Wants: {s.requestedNewDate}</div>}
-                          {s.coachNote&&!noteOpen&&<div style={{fontSize:8,color:C.gold,fontFamily:D.body,marginTop:3,background:`${C.gold}08`,borderRadius:4,padding:"2px 6px",display:"inline-block"}}>📝 {s.coachNote}</div>}
-                        </div>
-                        <div style={{display:"flex",gap:5,flexShrink:0,alignItems:"center"}}>
-                          {!confirmed&&<button onClick={()=>confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings")} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:7,padding:"6px 12px",color:C.white,fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓ Confirm</button>}
-                          <button onClick={()=>setReminderModal(s)} style={{background:`${C.gold}10`,border:`1px solid ${C.gold}22`,borderRadius:7,padding:"6px 8px",color:C.gold,fontSize:9,cursor:"pointer",fontFamily:D.body}} title="Send reminder">📧</button>
-                          {s.requestType&&<button onClick={()=>updateDoc(doc(db,s._coll,s.id),{requestType:null,requestNote:null})} style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:7,padding:"6px 8px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
-                          <button onClick={()=>{setCoachNoteId(noteOpen?null:s.id);setCoachNoteText(s.coachNote||"");}} style={{background:noteOpen?`${C.gold}15`:"transparent",border:`1px solid ${s.coachNote?C.gold+"44":C.cardBorder}`,borderRadius:7,padding:"6px 8px",color:s.coachNote?C.gold:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📝</button>
-                          <button onClick={()=>s._type==="1on1"?removeInquiry(s.id):removeBooking(s.id)} style={{width:26,height:26,background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:7,color:C.redDim,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
-                        </div>
-                      </div>
-                      {noteOpen&&(
-                        <div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${C.cardBorder}`}}>
-                          <textarea value={coachNoteText} onChange={e=>setCoachNoteText(e.target.value)} placeholder="Session notes, changes, focus areas..." rows={2} style={{...IS,width:"100%",marginBottom:7,fontSize:11,resize:"vertical"}}/>
-                          <div style={{display:"flex",gap:5}}>
-                            <button onClick={async()=>{await updateDoc(doc(db,s._coll,s.id),{coachNote:coachNoteText,coachNoteUpdated:new Date().toISOString()});setCoachNoteId(null);}} style={{background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:6,padding:"7px 14px",color:"#0a0a0a",fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save</button>
-                            {s.coachNote&&<button onClick={async()=>{await updateDoc(doc(db,s._coll,s.id),{coachNote:"",coachNoteUpdated:new Date().toISOString()});setCoachNoteId(null);}} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:6,padding:"7px 8px",color:C.redDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
-                            <button onClick={()=>setCoachNoteId(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:6,padding:"7px 8px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })()}
 
         {/* ── DROP MODAL ── */}
         {dropTarget&&(()=>{
