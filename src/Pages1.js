@@ -747,8 +747,8 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
   const todayKey = dKey(today);
 
   const allItems = [
-    ...(bookings||[]).filter(b=>b.status!=="cancelled"&&b.status!=="removed").map(b=>({...b,_type:"group",_coll:"bookings",_time:b.sessTime})),
-    ...(inquiries||[]).filter(i=>i.status!=="cancelled"&&i.status!=="removed").map(i=>({...i,_type:"1on1",_coll:"inquiries",_time:i.slotTime})),
+    ...(bookings||[]).filter(b=>b.status!=="cancelled"&&b.status!=="removed").map(b=>({...b,_type:b.status==="tentative"?"tentative":"group",_coll:"bookings",_time:b.sessTime})),
+    ...(inquiries||[]).filter(i=>i.status!=="cancelled"&&i.status!=="removed").map(i=>({...i,_type:i.status==="tentative"?"tentative":"1on1",_coll:"inquiries",_time:i.slotTime})),
     ...pendingClients.map(p=>({...p,_type:"pending",_coll:"pending",_time:"",dateKey:"pending"})),
   ];
 
@@ -1009,27 +1009,32 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                 const anyBlocked=sessions.some(s=>(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id));
                 const dayItems=itemsOnDate(dk);
 
+                // Tentative items on this day (no slot assigned)
+                const tentativeItems=allItems.filter(s=>s.dateKey===dk&&s.status==="tentative");
+
                 return(
                   <div key={i}
                     onDragOver={e=>onDayCellDragOver(e,dk)}
                     onDragLeave={e=>{if(e.currentTarget===e.target||!e.currentTarget.contains(e.relatedTarget)){setDragOver(null);}}}
                     onDrop={e=>onDayCellDrop(e,d)}
                     style={{
-                      background:isDragOver?"rgba(196,168,76,0.1)":allBlocked?"#180603":isToday?"rgba(196,168,76,0.06)":isCoachDay?"#0d0a07":"#080604",
-                      border:isDragOver?`2px solid ${C.gold}`:allBlocked?`1px solid ${C.red}55`:isToday?`1px solid ${C.gold}55`:isCoachDay?`1px solid #201810`:`1px solid #0e0c0a`,
+                      background:isDragOver?"rgba(196,168,76,0.1)":isPast?"#050403":allBlocked?"#0e0e10":isToday?"rgba(196,168,76,0.06)":isCoachDay?"#0d0a07":"#080604",
+                      border:isDragOver?`2px solid ${C.gold}`:isPast?`1px solid #0d0b09`:allBlocked?`1px solid #2a2840`:isToday?`1px solid ${C.gold}55`:isCoachDay?`1px solid #201810`:`1px solid #0e0c0a`,
                       borderRadius:8,padding:"6px",minHeight:120,transition:"background 0.1s, border 0.1s",
                       position:"relative",cursor:"default",
+                      opacity:isPast?0.45:1,
                     }}
                   >
                     {/* Date number + block button */}
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
                       <div style={{
                         fontSize:12,fontWeight:isToday?700:500,
-                        color:isToday?C.gold:isCoachDay?C.white:C.textDim,
+                        color:isPast?C.textDim:isToday?C.gold:isCoachDay?C.white:C.textDim,
                         fontFamily:D.display,
                         width:22,height:22,borderRadius:"50%",
                         background:isToday?`${C.gold}25`:"transparent",
                         display:"flex",alignItems:"center",justifyContent:"center",
+                        textDecoration:isPast?"line-through":"none",
                       }}>{d.getDate()}</div>
                       {isCoachDay&&!isPast&&(
                         <button
@@ -1037,7 +1042,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                             if(allBlocked){sessions.forEach(s=>blockSession(dk,s.id,""));}
                             else{sessions.forEach(s=>{if(!(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id))blockSession(dk,s.id,`${fmtDate(d)} ${s.time}`);});}
                           }}
-                          style={{background:allBlocked?`${C.red}15`:"transparent",border:`1px solid ${allBlocked?C.red+"55":C.cardBorder}`,borderRadius:4,width:18,height:18,color:allBlocked?C.red:C.textDim,fontSize:9,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}
+                          style={{background:allBlocked?"rgba(80,70,140,0.2)":"transparent",border:`1px solid ${allBlocked?"#6060aa":"#333"}`,borderRadius:4,width:18,height:18,color:allBlocked?"#9090cc":C.textDim,fontSize:9,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}
                           title={allBlocked?"Unblock day":"Block day"}
                         >{allBlocked?"🔓":"🔒"}</button>
                       )}
@@ -1046,7 +1051,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                     {/* Session slots — visible even when empty */}
                     {isCoachDay&&sessions.map(sess=>{
                       const isBlk=(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===sess.id);
-                      const slotItems=dayItems.filter(s=>isGroupDay?(s.sessId===sess.id):(s.slotId===sess.id||s.slotTime===sess.time));
+                      const slotItems=dayItems.filter(s=>s.status!=="tentative"&&(isGroupDay?(s.sessId===sess.id):(s.slotId===sess.id||s.slotTime===sess.time)));
                       const maxSpots=isGroupDay?MAX_PLAYERS:1;
                       const tShort=(sess.time||"").split("–")[0].trim().replace(":00","").replace(" PM","p").replace(" AM","a");
                       return(
@@ -1057,13 +1062,13 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                             style={{
                               fontSize:7,padding:"2px 5px",borderRadius:3,cursor:"pointer",
                               display:"flex",justifyContent:"space-between",alignItems:"center",
-                              background:isBlk?"rgba(204,34,34,0.18)":isGroupDay?"rgba(204,34,34,0.06)":"rgba(196,168,76,0.06)",
-                              border:`1px solid ${isBlk?C.red+"44":isGroupDay?"rgba(204,34,34,0.15)":"rgba(196,168,76,0.15)"}`,
+                              background:isBlk?"rgba(60,55,100,0.25)":isGroupDay?"rgba(204,34,34,0.06)":"rgba(196,168,76,0.06)",
+                              border:`1px solid ${isBlk?"#5050aa44":isGroupDay?"rgba(204,34,34,0.15)":"rgba(196,168,76,0.15)"}`,
                               marginBottom:slotItems.length?2:0,userSelect:"none",
                             }}
                           >
-                            <span style={{color:isBlk?C.red:isGroupDay?"#e06060":"#c4a84c",pointerEvents:"none"}}>
-                              {isBlk?"🔒 blk":isGroupDay?`🔥 ${tShort}`:`⚒️ ${tShort}`}
+                            <span style={{color:isBlk?"#8080bb":isGroupDay?"#e06060":"#c4a84c",pointerEvents:"none"}}>
+                              {isBlk?"🔒 off":isGroupDay?`🔥 ${tShort}`:`⚒️ ${tShort}`}
                             </span>
                             <span style={{color:isBlk?C.red:slotItems.length>0?C.white:"#444",pointerEvents:"none",fontWeight:slotItems.length>0?600:400}}>
                               {isBlk?"":``}  {slotItems.length}/{maxSpots}
@@ -1099,6 +1104,33 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                         </div>
                       );
                     })}
+
+                    {/* Tentative chips — no slot assigned yet */}
+                    {tentativeItems.map((item,ti)=>(
+                      <div
+                        key={`t${ti}`}
+                        draggable="true"
+                        onDragStart={e=>onChipDragStart(e,item)}
+                        onDragEnd={onChipDragEnd}
+                        onClick={e=>{e.stopPropagation();setNoteId(item.id);setNoteText(item.coachNote||"");setNoteColl(item._coll||"bookings");}}
+                        title="Tentative — time TBD · drag to assign slot"
+                        style={{
+                          background:"rgba(196,168,76,0.08)",
+                          border:`1px dashed ${C.gold}66`,
+                          borderRadius:4,padding:"2px 5px",marginBottom:1,marginTop:2,
+                          cursor:"grab",userSelect:"none",
+                          opacity:dragId===item.id?0.4:1,
+                          display:"flex",alignItems:"center",gap:3,
+                        }}
+                      >
+                        <span style={{fontSize:7,color:C.gold,pointerEvents:"none"}}>⏰</span>
+                        <span style={{fontSize:8,color:C.gold,fontFamily:D.display,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"75%",pointerEvents:"none"}}>{item.name}</span>
+                        <div style={{marginLeft:"auto",display:"flex",gap:2,flexShrink:0,pointerEvents:"none"}}>
+                          {item.coachNote&&<span style={{fontSize:6}}>📝</span>}
+                          <div style={{width:4,height:4,borderRadius:"50%",background:C.gold,marginTop:1}}/>
+                        </div>
+                      </div>
+                    ))}
 
                     {isDragOver&&(
                       <div style={{position:"absolute",inset:0,border:`2px dashed ${C.gold}`,borderRadius:8,pointerEvents:"none",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -1369,12 +1401,43 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                   </>
                 )}
 
-                <div style={{display:"flex",gap:8}}>
-                  <button disabled={!dropSess||moving||!hasSlots} onClick={confirmDrop}
-                    style={{flex:1,background:dropSess&&hasSlots?`linear-gradient(135deg,${C.gold},${C.goldDim})`:"#1a1a1a",border:"none",borderRadius:9,padding:"12px",color:dropSess&&hasSlots?"#0a0a0a":C.silverDark,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:dropSess&&hasSlots?"pointer":"not-allowed",fontFamily:D.body,fontWeight:700}}>
-                    {moving?"Moving…":isPending?"Schedule":"Confirm Move"}
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  <div style={{display:"flex",gap:8}}>
+                    <button disabled={!dropSess||moving} onClick={confirmDrop}
+                      style={{flex:1,background:dropSess?`linear-gradient(135deg,${C.gold},${C.goldDim})`:"#1a1a1a",border:"none",borderRadius:9,padding:"12px",color:dropSess?"#0a0a0a":C.silverDark,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:dropSess?"pointer":"not-allowed",fontFamily:D.body,fontWeight:700}}>
+                      {moving?"Moving…":isPending?"Schedule":"Confirm Move"}
+                    </button>
+                    <button onClick={()=>setDropTarget(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:9,padding:"12px 14px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+                  </div>
+                  {/* Place as tentative — holds the date, no slot taken */}
+                  <button disabled={moving} onClick={async()=>{
+                    if(!dropTarget) return;
+                    const{item:b,date:targetDate}=dropTarget;
+                    const newDK=dKey(targetDate);
+                    const newDL=fmtDate(targetDate);
+                    setMoving(true);
+                    try{
+                      if(b._type==="pending"){
+                        await addDoc(collection(db,"bookings"),{
+                          name:b.name,email:b.contact||"",phone:b.contact||"",
+                          status:"tentative",dateKey:newDK,dateLabel:newDL,
+                          sessId:"tbd",sessTime:"Time TBD",ageGroup:"",ageTag:"",
+                          skill:"La Forja",skillIcon:"⏰",count:1,total:0,
+                          notes:b.note||"",createdAt:new Date().toISOString(),fromHolding:true,
+                        });
+                        if(b.id) await updateDoc(doc(db,"pending",b.id),{status:"scheduled"});
+                      } else {
+                        await updateDoc(doc(db,b._coll||"bookings",b.id),{
+                          dateKey:newDK,dateLabel:newDL,
+                          sessId:"tbd",sessTime:"Time TBD",
+                          status:"tentative",requestType:null,requestNote:null,
+                          movedAt:new Date().toISOString(),
+                        });
+                      }
+                    }finally{setMoving(false);setDropTarget(null);setDropSess(null);}
+                  }} style={{background:"transparent",border:`1px dashed ${C.gold}44`,borderRadius:9,padding:"10px",color:C.gold,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,textAlign:"center"}}>
+                    ⏰ Place as Tentative — Time TBD
                   </button>
-                  <button onClick={()=>setDropTarget(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:9,padding:"12px 14px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
                 </div>
               </div>
             </div>
