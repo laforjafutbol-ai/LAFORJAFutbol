@@ -123,7 +123,7 @@ export function AuthPage({setPage,authChecked,user}){
               <input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" style={IS}/>
             </div>
             {err&&<div style={{fontSize:12,color:C.red,marginBottom:14,fontFamily:D.body}}>{err}</div>}
-            <button type="submit" disabled={busy} style={{width:"100%",background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:500,opacity:busy?0.6:1}}>
+            <button onClick={handleSave} disabled={busy} style={{width:"100%",background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:500,opacity:busy?0.6:1}}>
               {busy?"Sending…":"Send Reset Link"}
             </button>
           </form>
@@ -145,7 +145,7 @@ export function AuthPage({setPage,authChecked,user}){
             <input type="password" required minLength={6} value={pw} onChange={e=>setPw(e.target.value)} placeholder="••••••••" style={IS}/>
           </div>
           {err&&<div style={{fontSize:12,color:C.red,marginBottom:14,fontFamily:D.body}}>{err}</div>}
-          <button type="submit" disabled={busy} style={{width:"100%",background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:500,opacity:busy?0.6:1,marginBottom:14}}>
+          <button onClick={handleSave} disabled={busy} style={{width:"100%",background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:500,opacity:busy?0.6:1,marginBottom:14}}>
             {busy?"Please wait…":mode==="signup"?"Create Account":"Sign In"}
           </button>
           {mode==="login"&&(
@@ -560,6 +560,7 @@ export function RequestModal({session,action,onClose,onSubmit,getDates,getPrivat
 export function PlayersTab({user,players,playersLoaded}){
   const [showForm,setShowForm] = useState(false);
   const [editId,setEditId]     = useState(null);
+  const [confirmDeleteId,setConfirmDeleteId] = useState(null);
   const [form,setForm] = useState({name:"",age:"",position:"",notes:""});
 
   function startEdit(p){
@@ -585,7 +586,6 @@ export function PlayersTab({user,players,playersLoaded}){
   }
 
   async function handleDelete(id){
-    if(!window.confirm("Remove this player profile?")) return;
     await deleteDoc(doc(db,"users",user.uid,"players",id));
   }
 
@@ -601,7 +601,7 @@ export function PlayersTab({user,players,playersLoaded}){
       </div>
 
       {showForm&&(
-        <form onSubmit={handleSave} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"20px 22px",marginBottom:16}}>
+        <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"20px 22px",marginBottom:16}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
             <div><FL>Player Name</FL><input type="text" required value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="e.g. Jake Smith" style={IS}/></div>
             <div><FL>Age</FL><input type="number" value={form.age} onChange={e=>setForm(p=>({...p,age:e.target.value}))} placeholder="e.g. 10" style={IS}/></div>
@@ -618,14 +618,14 @@ export function PlayersTab({user,players,playersLoaded}){
             <textarea rows={2} value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} placeholder="Anything Coach Carlos should know..." style={IS}/>
           </div>
           <div style={{display:"flex",gap:10}}>
-            <button type="submit" style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"11px 22px",fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>
+            <button onClick={handleSave} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"11px 22px",fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>
               {editId?"Save Changes":"Add Player"}
             </button>
-            <button type="button" onClick={()=>setShowForm(false)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:10,padding:"11px 18px",fontSize:11,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
+            <button onClick={()=>setShowForm(false)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:10,padding:"11px 18px",fontSize:11,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
               Cancel
             </button>
           </div>
-        </form>
+        </div>
       )}
 
       <div style={{display:"grid",gap:10}}>
@@ -646,7 +646,15 @@ export function PlayersTab({user,players,playersLoaded}){
             </div>
             <div style={{display:"flex",gap:8}}>
               <button onClick={()=>startEdit(p)} style={{background:"transparent",border:`1px solid ${C.silver}44`,color:C.silver,borderRadius:8,padding:"7px 14px",fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Edit</button>
-              <button onClick={()=>handleDelete(p.id)} style={{background:"transparent",border:`1px solid ${C.redDim}`,color:C.redDim,borderRadius:8,padding:"7px 14px",fontSize:10,cursor:"pointer",fontFamily:D.body}}>Remove</button>
+              {confirmDeleteId===p.id?(
+                <div style={{display:"flex",gap:5,alignItems:"center"}}>
+                  <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>Remove?</span>
+                  <button onClick={()=>{handleDelete(p.id);setConfirmDeleteId(null);}} style={{background:`${C.red}15`,border:`1px solid ${C.red}44`,color:C.red,borderRadius:6,padding:"5px 10px",fontSize:9,cursor:"pointer",fontFamily:D.body}}>Yes</button>
+                  <button onClick={()=>setConfirmDeleteId(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:6,padding:"5px 8px",fontSize:9,cursor:"pointer",fontFamily:D.body}}>No</button>
+                </div>
+              ):(
+                <button onClick={()=>setConfirmDeleteId(p.id)} style={{background:"transparent",border:`1px solid ${C.redDim}`,color:C.redDim,borderRadius:8,padding:"7px 14px",fontSize:10,cursor:"pointer",fontFamily:D.body}}>Remove</button>
+              )}
             </div>
           </div>
         ))}
@@ -713,7 +721,7 @@ export function ContactForm({user}){
             <textarea required rows={4} value={message} onChange={e=>setMessage(e.target.value)} placeholder="Type your question here..." style={IS}/>
           </div>
           {err&&<div style={{fontSize:12,color:C.red,marginBottom:12,fontFamily:D.body}}>{err}</div>}
-          <button type="submit" disabled={busy} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"12px 24px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:500,opacity:busy?0.6:1}}>
+          <button onClick={handleSave} disabled={busy} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"12px 24px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:500,opacity:busy?0.6:1}}>
             {busy?"Sending…":"Send Message"}
           </button>
         </form>
@@ -834,10 +842,10 @@ export function ReviewsPage({setPage,user}){
               <textarea required rows={4} value={text} onChange={e=>setText(e.target.value)} placeholder="Tell us about your experience training with La Forja..." style={IS}/>
             </div>
             <div style={{display:"flex",gap:10}}>
-              <button type="submit" disabled={busy} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"12px 24px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:500,opacity:busy?0.6:1}}>
+              <button onClick={handleSave} disabled={busy} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"12px 24px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:500,opacity:busy?0.6:1}}>
                 {busy?"Submitting…":"Submit Review"}
               </button>
-              <button type="button" onClick={()=>setShowForm(false)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:10,padding:"12px 24px",fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
+              <button onClick={()=>setShowForm(false)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:10,padding:"12px 24px",fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
                 Cancel
               </button>
             </div>
@@ -901,7 +909,7 @@ export function StripeCheckoutForm({amount,metadata,onSuccess,onError}){
         <PaymentElement options={{layout:"tabs"}}/>
       </div>
       {err&&<div style={{fontSize:12,color:C.red,marginBottom:12,fontFamily:D.body}}>{err}</div>}
-      <button type="submit" disabled={!stripe||busy} style={{width:"100%",background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:12,padding:"15px",fontSize:14,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:700,opacity:busy?0.6:1}}>
+      <button onClick={handleSave} disabled={!stripe||busy} style={{width:"100%",background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:12,padding:"15px",fontSize:14,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:700,opacity:busy?0.6:1}}>
         {busy?"Processing…":`Pay $${amount}`}
       </button>
       <div style={{textAlign:"center",marginTop:10,fontSize:10,color:C.silverDark,fontFamily:D.body,letterSpacing:1}}>🔒 Secured by Stripe</div>
