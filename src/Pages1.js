@@ -710,332 +710,389 @@ function MoveModal({booking,type,selDate,selSess,onClose,onSelectDate,onSelectSe
 
 // ── DASHBOARD ─────────────────────────────────────────────
 export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,scheduleInquiry,removeInquiry,sendReminderEmail,blocked,blockSession,locations,saveLocation,spotsLeft,getDates,getPrivateDates}){
-  const [authed,setAuthed]   = useState(false);
-  const [pw,setPw]           = useState("");
-  const [pwErr,setPwErr]     = useState(false);
-  const [tab,setTab]         = useState("bookings");
-  const [moveId,setMoveId] = useState(null);
-  const [moveDate,setMoveDate] = useState(null);
-  const [moveSess,setMoveSess] = useState(null);
-  const [coachNoteId,setCoachNoteId] = useState(null);
-  const [coachNoteText,setCoachNoteText] = useState("");
-  const [schedId,setSchedId] = useState(null);
-  const [schedTime,setSchedTime] = useState("");
-  const [showAvail,setShowAvail] = useState(false);
-  const [availWeek,setAvailWeek] = useState(0);
-  const [showLoc,setShowLoc]     = useState(false);
-  const [showPast,setShowPast]   = useState(false);
-  const [showPastI,setShowPastI] = useState(false);
-  // Calendar state
+  const [authed,setAuthed]     = useState(false);
+  const [pw,setPw]             = useState("");
   const [calMonth,setCalMonth] = useState(new Date().getMonth());
   const [calYear,setCalYear]   = useState(new Date().getFullYear());
-  const [calView,setCalView]   = useState("month"); // month | week
-  const [dragItem,setDragItem] = useState(null);
-  const [dragOver,setDragOver] = useState(null);
-  const [dropModal,setDropModal] = useState(null);
-  const [dropSess,setDropSess]  = useState(null);
-  const [calNoteId,setCalNoteId] = useState(null);
-  const [calNoteText,setCalNoteText] = useState("");
-  const [movingId,setMovingId]  = useState(null);
-  // Holding area
+  const [dragId,setDragId]     = useState(null); // id of item being dragged
+  const [dragOver,setDragOver] = useState(null); // dateKey being hovered
+  const [dropTarget,setDropTarget] = useState(null); // {item, date}
+  const [dropSess,setDropSess]     = useState(null);
+  const [moving,setMoving]         = useState(false);
+  const [noteId,setNoteId]         = useState(null);
+  const [noteText,setNoteText]     = useState("");
+  const [noteColl,setNoteColl]     = useState("bookings");
+  const [expandDay,setExpandDay]   = useState(null); // dateKey of expanded day detail
   const [pendingClients,setPendingClients] = useState([]);
   const [showAddPending,setShowAddPending] = useState(false);
-  const [pendingForm,setPendingForm] = useState({name:"",contact:"",note:""});
+  const [pendingForm,setPendingForm]       = useState({name:"",contact:"",note:""});
+  const [reminderModal,setReminderModal]   = useState(null); // {booking} or "group"
+  const [reminderMsg,setReminderMsg]       = useState("");
+  const [sendingReminder,setSendingReminder] = useState(false);
+  const [coachNoteId,setCoachNoteId]   = useState(null);
+  const [coachNoteText,setCoachNoteText] = useState("");
 
   useEffect(()=>{
-    const unsub = onSnapshot(collection(db,"pending"), s=>{
+    const unsub=onSnapshot(collection(db,"pending"),s=>{
       setPendingClients(s.docs.map(d=>({id:d.id,...d.data()})).filter(p=>p.status==="pending"));
     });
     return unsub;
   },[]);
 
-  function login(){ if(pw===BRAND.coachPw){setAuthed(true);setPwErr(false);}else setPwErr(true); }
+  const PASS = "laforja2024";
+  const monthNames=["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const dayLabels=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayKey = dKey(today);
+
+  const allItems = [
+    ...(bookings||[]).filter(b=>b.status!=="cancelled"&&b.status!=="removed").map(b=>({...b,_type:"group",_coll:"bookings",_time:b.sessTime})),
+    ...(inquiries||[]).filter(i=>i.status!=="cancelled"&&i.status!=="removed").map(i=>({...i,_type:"1on1",_coll:"inquiries",_time:i.slotTime})),
+    ...pendingClients.map(p=>({...p,_type:"pending",_coll:"pending",_time:"",dateKey:"pending"})),
+  ];
+
+  function itemsOnDate(dk){ return allItems.filter(s=>s.dateKey===dk&&s._type!=="pending"); }
+
+  const todayItems = itemsOnDate(todayKey);
+  const pendingCount = (bookings||[]).filter(b=>b.status==="pending").length;
+  const newInquiries = (inquiries||[]).filter(i=>i.status==="pending").length;
+  const requestCount = [...(bookings||[]),...(inquiries||[])].filter(x=>x.requestType).length;
+  const weekRevenue  = (bookings||[]).filter(b=>{
+    const d=new Date(b.dateKey); const now=new Date();
+    const wstart=new Date(now); wstart.setDate(now.getDate()-now.getDay());
+    return d>=wstart && b.status==="confirmed";
+  }).reduce((s,b)=>s+(b.total||0),0);
+  const weekSessions = (bookings||[]).filter(b=>{
+    const d=new Date(b.dateKey); const now=new Date();
+    const wstart=new Date(now); wstart.setDate(now.getDate()-now.getDay());
+    return d>=wstart && b.status==="confirmed";
+  });
+
+  // ── AUTH GATE ──
   if(!authed) return(
-    <div style={{paddingTop:100,minHeight:"80vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"120px 20px 60px"}}>
-      <div style={{width:"100%",maxWidth:380,animation:"fadeUp 0.4s ease"}}>
-        <div style={{textAlign:"center",marginBottom:28}}><Crest size={52}/><div style={{fontSize:10,letterSpacing:4,color:C.silverDim,textTransform:"uppercase",marginTop:14,marginBottom:5,fontFamily:D.body}}>Restricted Access</div><h2 style={{margin:0,fontSize:24,fontWeight:600,color:C.white,fontFamily:D.display}}>Coach Dashboard</h2></div>
-        <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:18,padding:"30px 26px"}}>
-          <label style={{display:"block",fontSize:9,letterSpacing:2,color:C.gold,marginBottom:7,textTransform:"uppercase",fontFamily:D.body}}>Password</label>
-          <input type="password" placeholder="Enter coach password" value={pw} onChange={e=>{setPw(e.target.value);setPwErr(false);}} onKeyDown={e=>e.key==="Enter"&&login()} style={{...IS,marginBottom:8,borderColor:pwErr?C.red:C.cardBorder}}/>
-          {pwErr&&<div style={{fontSize:11,color:C.red,marginBottom:10,fontFamily:D.body}}>Incorrect password</div>}
-          <button onClick={login} style={{width:"100%",background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"13px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,boxShadow:`0 4px 20px ${C.red}33`,marginTop:6}}>Enter Dashboard</button>
-        </div>
+    <div style={{minHeight:"100vh",background:C.black,display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"40px 32px",maxWidth:360,width:"100%",textAlign:"center"}}>
+        <div style={{fontSize:32,marginBottom:12}}>⚒️</div>
+        <div style={{fontSize:10,letterSpacing:4,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>Coach Access</div>
+        <h2 style={{margin:"0 0 24px",fontSize:22,color:C.white,fontFamily:D.display}}>La Forja Dashboard</h2>
+        <input type="password" placeholder="Password" value={pw} onChange={e=>setPw(e.target.value)}
+          onKeyDown={e=>e.key==="Enter"&&pw===PASS&&setAuthed(true)}
+          style={{...IS,width:"100%",marginBottom:12,textAlign:"center",letterSpacing:4}}/>
+        <button onClick={()=>pw===PASS?setAuthed(true):null}
+          style={{width:"100%",background:pw===PASS?`linear-gradient(135deg,${C.gold},${C.goldDim})`:"#1a1a1a",border:"none",borderRadius:10,padding:"13px",color:pw===PASS?"#0a0a0a":C.silverDark,fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:pw===PASS?"pointer":"not-allowed",fontFamily:D.body,fontWeight:700}}>
+          Enter
+        </button>
       </div>
     </div>
   );
 
-  const pendingCount=bookings.filter(b=>b.status==="pending").length;
-  const newInquiries=inquiries.filter(i=>i.status==="pending").length;
-  const requestCount=[...bookings,...inquiries].filter(x=>x.requestType).length;
+  // ── DRAG HELPERS ──
+  // We store the full item in a ref to avoid stale closure issues
+  const dragItemRef = {current:null};
 
-  // Today / this week confirmed session counts for quick stats
-  const today = new Date(); today.setHours(0,0,0,0);
-  const todayStr0 = today.toISOString().split("T")[0];
+  function onChipDragStart(e, item){
+    dragItemRef.current = item;
+    setDragId(item.id);
+    e.dataTransfer.effectAllowed="move";
+    e.dataTransfer.setData("text/plain", item.id||item.name||"item");
+  }
 
-  const todayStr = today.toISOString().split("T")[0];
-  const weekFromNow = new Date(today); weekFromNow.setDate(today.getDate()+7);
-  const weekStr = weekFromNow.toISOString().split("T")[0];
+  function onChipDragEnd(){
+    setDragId(null);
+    setDragOver(null);
+  }
 
-  const todaysSessions = [...bookings,...inquiries].filter(x=>x.dateKey===todayStr && (x.status==="confirmed"));
-  const weekSessions   = [...bookings,...inquiries].filter(x=>x.dateKey>=todayStr && x.dateKey<weekStr && (x.status==="confirmed"));
-  const weekRevenue    = weekSessions.reduce((s,x)=>s+(Number(x.total)||0),0);
+  function onDayCellDragOver(e, dk){
+    e.preventDefault();
+    e.dataTransfer.dropEffect="move";
+    if(dragOver!==dk) setDragOver(dk);
+  }
+
+  function onDayCellDrop(e, d){
+    e.preventDefault();
+    setDragOver(null);
+    setDragId(null);
+    // Get item from all items by matching dragId
+    const item = allItems.find(x=>x.id===dragId) || pendingClients.find(x=>x.id===dragId);
+    if(!item) return;
+    if(item.dateKey===dKey(d)&&item._type!=="pending") return; // same date
+    setDropTarget({item, date:d});
+    setDropSess(null);
+  }
+
+  async function confirmDrop(){
+    if(!dropTarget||!dropSess) return;
+    const{item:b,date:targetDate}=dropTarget;
+    const newDK=dKey(targetDate);
+    const newDL=fmtDate(targetDate);
+    setMoving(true);
+    try{
+      if(b._type==="1on1"){
+        await updateDoc(doc(db,"inquiries",b.id),{dateKey:newDK,dateLabel:newDL,slotId:dropSess.id,slotTime:dropSess.time,requestType:null,requestNote:null,movedAt:new Date().toISOString()});
+        try{await callEmailAPI({...b,dateLabel:newDL,sessTime:dropSess.time},"reschedule");}catch(e){}
+      }else if(b._type==="pending"){
+        const sched=DAY_SCHEDULE[targetDate.getDay()]||{};
+        await addDoc(collection(db,"bookings"),{
+          name:b.name,email:b.contact||"",phone:b.contact||"",
+          status:"pending",dateKey:newDK,dateLabel:newDL,
+          sessId:dropSess.id,sessTime:dropSess.time,
+          ageGroup:dropSess.ageGroup||"",ageTag:dropSess.ageTag||"",
+          skill:sched.skill||"The Furnace",skillIcon:sched.skillIcon||"🔥",
+          count:1,total:0,notes:b.note||"",createdAt:new Date().toISOString(),fromHolding:true,
+        });
+        if(b.id) await updateDoc(doc(db,"pending",b.id),{status:"scheduled"});
+      }else{
+        const sched=DAY_SCHEDULE[targetDate.getDay()]||{};
+        await updateDoc(doc(db,"bookings",b.id),{dateKey:newDK,dateLabel:newDL,sessId:dropSess.id,sessTime:dropSess.time,ageGroup:dropSess.ageGroup,ageTag:dropSess.ageTag,skill:sched.skill||b.skill,skillIcon:sched.skillIcon||b.skillIcon,requestType:null,requestNote:null,movedAt:new Date().toISOString()});
+        try{await callEmailAPI({...b,dateLabel:newDL,sessTime:dropSess.time},"reschedule");}catch(e){}
+      }
+    }finally{setMoving(false);setDropTarget(null);setDropSess(null);}
+  }
+
+  // ── CALENDAR BUILD ──
+  const firstDay = new Date(calYear,calMonth,1).getDay();
+  const daysInMonth = new Date(calYear,calMonth+1,0).getDate();
+  const calDays = [];
+  for(let i=0;i<firstDay;i++) calDays.push(null);
+  for(let d=1;d<=daysInMonth;d++) calDays.push(new Date(calYear,calMonth,d));
+  while(calDays.length%7!==0) calDays.push(null);
 
   return(
-    <div style={{paddingTop:100,background:C.black,minHeight:"100vh"}}>
-      <div style={{maxWidth:1200,margin:"0 auto",padding:"28px 24px 100px"}}>
+    <div style={{paddingTop:88,background:C.black,minHeight:"100vh"}}>
+      <div style={{maxWidth:1280,margin:"0 auto",padding:"20px 20px 100px"}}>
 
         {/* ── HEADER ── */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
           <div>
-            <div style={{fontSize:9,letterSpacing:4,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>La Forja</div>
-            <h1 style={{margin:0,fontSize:22,fontWeight:600,color:C.white,fontFamily:D.display}}>Coach Dashboard</h1>
+            <div style={{fontSize:8,letterSpacing:4,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:2}}>La Forja</div>
+            <h1 style={{margin:0,fontSize:20,fontWeight:600,color:C.white,fontFamily:D.display}}>Coach Dashboard</h1>
           </div>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-            {pendingCount>0&&<div style={{fontSize:10,padding:"5px 12px",borderRadius:20,background:C.redDark,border:`1px solid ${C.red}44`,color:C.red,fontFamily:D.body,animation:"pulse 2s infinite"}}>⏳ {pendingCount} pending</div>}
-            {newInquiries>0&&<div style={{fontSize:10,padding:"5px 12px",borderRadius:20,background:C.goldDark,border:`1px solid ${C.gold}44`,color:C.gold,fontFamily:D.body,animation:"pulse 2s infinite"}}>🔔 {newInquiries} new 1-on-1</div>}
-            {requestCount>0&&<div style={{fontSize:10,padding:"5px 12px",borderRadius:20,background:"rgba(180,174,160,0.08)",border:`1px solid ${C.silver}33`,color:C.silver,fontFamily:D.body,animation:"pulse 2s infinite"}}>⚠ {requestCount} request{requestCount>1?"s":""}</div>}
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+            {pendingCount>0&&<span style={{fontSize:9,padding:"4px 10px",borderRadius:12,background:C.redDark,border:`1px solid ${C.red}44`,color:C.red,fontFamily:D.body}}>⏳ {pendingCount} pending</span>}
+            {newInquiries>0&&<span style={{fontSize:9,padding:"4px 10px",borderRadius:12,background:C.goldDark,border:`1px solid ${C.gold}44`,color:C.gold,fontFamily:D.body}}>🔔 {newInquiries} 1-on-1</span>}
+            {requestCount>0&&<span style={{fontSize:9,padding:"4px 10px",borderRadius:12,background:"rgba(168,160,144,0.08)",border:`1px solid ${C.silver}33`,color:C.silver,fontFamily:D.body}}>⚠ {requestCount} request{requestCount>1?"s":""}</span>}
           </div>
         </div>
 
         {/* ── STATS ── */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
           {[
-            {label:"Today",value:todaysSessions.length,icon:"🔥",color:C.gold},
-            {label:"This Week",value:weekSessions.length,icon:"✓",color:C.green},
-            {label:"Revenue",value:`$${weekRevenue}`,icon:"$",color:C.silverBright},
-            {label:"Pending",value:pendingCount,icon:"⏳",color:C.red},
+            {label:"Today",value:todayItems.length,icon:"🔥",color:C.gold},
+            {label:"Week Sessions",value:weekSessions.length,icon:"✓",color:C.green},
+            {label:"Week Revenue",value:`$${weekRevenue}`,icon:"$",color:C.silverBright},
+            {label:"Pending",value:pendingCount+newInquiries,icon:"⏳",color:C.red},
           ].map((s,i)=>(
             <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:32,height:32,borderRadius:8,background:`${s.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>{s.icon}</div>
+              <div style={{width:30,height:30,borderRadius:7,background:`${s.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>{s.icon}</div>
               <div>
-                <div style={{fontSize:18,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:2}}>{s.value}</div>
-                <div style={{fontSize:8,letterSpacing:1.5,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
+                <div style={{fontSize:18,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:1}}>{s.value}</div>
+                <div style={{fontSize:7,letterSpacing:1.5,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* ── MAIN LAYOUT: Calendar + Side Panel ── */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 260px",gap:14,marginBottom:16,alignItems:"start"}}>
+        {/* ── MAIN: Calendar + Side Panel ── */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 240px",gap:12,marginBottom:14,alignItems:"start"}}>
 
           {/* ── CALENDAR ── */}
           <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"16px"}}>
-            {(()=>{
-              const monthNames=["January","February","March","April","May","June","July","August","September","October","November","December"];
-              const dayNames=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-              const todayD=new Date(); todayD.setHours(0,0,0,0);
-              const todayKey=dKey(todayD);
 
-              const allSessions=[
-                ...(bookings||[]).filter(b=>b.status!=="cancelled"&&b.status!=="removed").map(b=>({...b,_type:"group",_collection:"bookings",_time:b.sessTime})),
-                ...(inquiries||[]).filter(i=>i.status!=="cancelled"&&i.status!=="removed").map(i=>({...i,_type:"1on1",_collection:"inquiries",_time:i.slotTime})),
-              ];
-              function sessOnDate(dk){return allSessions.filter(s=>s.dateKey===dk);}
+            {/* Calendar nav + legend */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <button onClick={()=>{if(calMonth===0){setCalMonth(11);setCalYear(y=>y-1);}else setCalMonth(m=>m-1);}} style={{background:"#0a0805",border:`1px solid ${C.cardBorder}`,borderRadius:6,width:28,height:28,color:C.textMid,cursor:"pointer",fontFamily:D.body,fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
+                <span style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display,minWidth:160,textAlign:"center"}}>{monthNames[calMonth]} {calYear}</span>
+                <button onClick={()=>{if(calMonth===11){setCalMonth(0);setCalYear(y=>y+1);}else setCalMonth(m=>m+1);}} style={{background:"#0a0805",border:`1px solid ${C.cardBorder}`,borderRadius:6,width:28,height:28,color:C.textMid,cursor:"pointer",fontFamily:D.body,fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
+                <button onClick={()=>{setCalMonth(new Date().getMonth());setCalYear(new Date().getFullYear());}} style={{background:`${C.gold}12`,border:`1px solid ${C.gold}33`,borderRadius:6,padding:"3px 10px",color:C.gold,cursor:"pointer",fontFamily:D.body,fontSize:8,letterSpacing:2,textTransform:"uppercase"}}>Today</button>
+              </div>
+              <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                <div style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:8,height:8,borderRadius:2,background:C.red}}/><span style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>Furnace</span></div>
+                <div style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:8,height:8,borderRadius:"50%",background:C.gold}}/><span style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>Tempering</span></div>
+                <div style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:8,height:8,borderRadius:"50%",background:C.green}}/><span style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>Confirmed</span></div>
+                <span style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>🔒 tap slot · drag to move</span>
+              </div>
+            </div>
 
-              const firstDay=new Date(calYear,calMonth,1).getDay();
-              const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
-              const calDays=[];
-              for(let i=0;i<firstDay;i++) calDays.push(null);
-              for(let d=1;d<=daysInMonth;d++) calDays.push(new Date(calYear,calMonth,d));
-              while(calDays.length%7!==0) calDays.push(null);
+            {/* Day headers */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3,marginBottom:3}}>
+              {dayLabels.map(d=><div key={d} style={{textAlign:"center",fontSize:9,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,padding:"4px 0"}}>{d}</div>)}
+            </div>
 
-              function SessionChip({session}){
-                const is1on1=session._type==="1on1";
-                const color=is1on1?C.gold:C.red;
-                const confirmed=session.status==="confirmed";
+            {/* Calendar grid */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3}}>
+              {calDays.map((d,i)=>{
+                if(!d) return <div key={i} style={{minHeight:120}}/>;
+                const dk=dKey(d);
+                const isToday=dk===todayKey;
+                const isPast=d<today;
+                const isDragOver=dragOver===dk;
+                const isGroupDay=COACH_DAYS.includes(d.getDay());
+                const isPrivDay=[3,6].includes(d.getDay());
+                const isCoachDay=isGroupDay||isPrivDay;
+                const sessions=isGroupDay?(DAY_SCHEDULE[d.getDay()]?.sessions||[]):isPrivDay?(PRIVATE_SCHEDULE[d.getDay()]?.slots||[]):[];
+                const allBlocked=sessions.length>0&&sessions.every(s=>(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id));
+                const anyBlocked=sessions.some(s=>(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id));
+                const dayItems=itemsOnDate(dk);
+
                 return(
-                  <div
-                    draggable="true"
-                    onDragStart={e=>{
-                      e.stopPropagation();
-                      setDragItem(session);
-                      e.dataTransfer.effectAllowed="move";
-                      e.dataTransfer.setData("text/plain",session.id);
+                  <div key={i}
+                    onDragOver={e=>onDayCellDragOver(e,dk)}
+                    onDragLeave={e=>{if(e.currentTarget===e.target||!e.currentTarget.contains(e.relatedTarget)){setDragOver(null);}}}
+                    onDrop={e=>onDayCellDrop(e,d)}
+                    style={{
+                      background:isDragOver?"rgba(196,168,76,0.1)":allBlocked?"#180603":isToday?"rgba(196,168,76,0.06)":isCoachDay?"#0d0a07":"#080604",
+                      border:isDragOver?`2px solid ${C.gold}`:allBlocked?`1px solid ${C.red}55`:isToday?`1px solid ${C.gold}55`:isCoachDay?`1px solid #201810`:`1px solid #0e0c0a`,
+                      borderRadius:8,padding:"6px",minHeight:120,transition:"background 0.1s, border 0.1s",
+                      position:"relative",cursor:"default",
                     }}
-                    onDragEnd={()=>setDragOver(null)}
-                    onClick={e=>{e.stopPropagation();setCalNoteId(calNoteId===session.id?null:session.id);setCalNoteText(session.coachNote||"");}}
-                    title={`${session.name} · click for note · drag to move`}
-                    style={{background:is1on1?"rgba(196,168,76,0.13)":"rgba(204,34,34,0.13)",border:`1px solid ${color}33`,borderLeft:`2px solid ${color}`,borderRadius:4,padding:"2px 5px",cursor:"grab",marginBottom:1,opacity:movingId===session.id?0.3:1,display:"flex",alignItems:"center",justifyContent:"space-between",gap:3,userSelect:"none"}}
                   >
-                    <span style={{fontSize:8,color:C.white,fontFamily:D.display,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"75%",pointerEvents:"none"}}>{session.name}</span>
-                    <div style={{display:"flex",gap:2,flexShrink:0,pointerEvents:"none"}}>
-                      {session.coachNote&&<span style={{fontSize:6,color:C.gold}}>📝</span>}
-                      {session.requestType&&<span style={{fontSize:6,color:C.silver}}>⚠</span>}
-                      <div style={{width:4,height:4,borderRadius:"50%",background:confirmed?C.green:C.gold,marginTop:1}}/>
+                    {/* Date number + block button */}
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                      <div style={{
+                        fontSize:12,fontWeight:isToday?700:500,
+                        color:isToday?C.gold:isCoachDay?C.white:C.textDim,
+                        fontFamily:D.display,
+                        width:22,height:22,borderRadius:"50%",
+                        background:isToday?`${C.gold}25`:"transparent",
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                      }}>{d.getDate()}</div>
+                      {isCoachDay&&!isPast&&(
+                        <button
+                          onClick={e=>{e.stopPropagation();
+                            if(allBlocked){sessions.forEach(s=>blockSession(dk,s.id,""));}
+                            else{sessions.forEach(s=>{if(!(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id))blockSession(dk,s.id,`${fmtDate(d)} ${s.time}`);});}
+                          }}
+                          style={{background:allBlocked?`${C.red}15`:"transparent",border:`1px solid ${allBlocked?C.red+"55":C.cardBorder}`,borderRadius:4,width:18,height:18,color:allBlocked?C.red:C.textDim,fontSize:9,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}
+                          title={allBlocked?"Unblock day":"Block day"}
+                        >{allBlocked?"🔓":"🔒"}</button>
+                      )}
                     </div>
+
+                    {/* Session slots — visible even when empty */}
+                    {isCoachDay&&sessions.map(sess=>{
+                      const isBlk=(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===sess.id);
+                      const slotItems=dayItems.filter(s=>isGroupDay?(s.sessId===sess.id):(s.slotId===sess.id||s.slotTime===sess.time));
+                      const maxSpots=isGroupDay?MAX_PLAYERS:1;
+                      const tShort=(sess.time||"").split("–")[0].trim().replace(":00","").replace(" PM","p").replace(" AM","a");
+                      return(
+                        <div key={sess.id} style={{marginBottom:3}}>
+                          {/* Slot header — tap to block/unblock */}
+                          <div
+                            onClick={e=>{e.stopPropagation();blockSession(dk,sess.id,isBlk?"":(`${fmtDate(d)} ${sess.time}`));}}
+                            style={{
+                              fontSize:7,padding:"2px 5px",borderRadius:3,cursor:"pointer",
+                              display:"flex",justifyContent:"space-between",alignItems:"center",
+                              background:isBlk?"rgba(204,34,34,0.18)":isGroupDay?"rgba(204,34,34,0.06)":"rgba(196,168,76,0.06)",
+                              border:`1px solid ${isBlk?C.red+"44":isGroupDay?"rgba(204,34,34,0.15)":"rgba(196,168,76,0.15)"}`,
+                              marginBottom:slotItems.length?2:0,userSelect:"none",
+                            }}
+                          >
+                            <span style={{color:isBlk?C.red:isGroupDay?"#e06060":"#c4a84c",pointerEvents:"none"}}>
+                              {isBlk?"🔒 blk":isGroupDay?`🔥 ${tShort}`:`⚒️ ${tShort}`}
+                            </span>
+                            <span style={{color:isBlk?C.red:slotItems.length>0?C.white:"#444",pointerEvents:"none",fontWeight:slotItems.length>0?600:400}}>
+                              {isBlk?"":``}  {slotItems.length}/{maxSpots}
+                            </span>
+                          </div>
+                          {/* Player chips */}
+                          {!isBlk&&slotItems.map((item,si)=>(
+                            <div
+                              key={si}
+                              draggable="true"
+                              onDragStart={e=>onChipDragStart(e,item)}
+                              onDragEnd={onChipDragEnd}
+                              style={{
+                                background:item._type==="1on1"?"rgba(196,168,76,0.14)":"rgba(204,34,34,0.14)",
+                                border:`1px solid ${item._type==="1on1"?C.gold+"33":C.red+"33"}`,
+                                borderLeft:`2px solid ${item._type==="1on1"?C.gold:C.red}`,
+                                borderRadius:4,padding:"2px 5px",marginBottom:1,
+                                cursor:"grab",userSelect:"none",
+                                opacity:dragId===item.id?0.4:1,
+                                display:"flex",alignItems:"center",justifyContent:"space-between",gap:3,
+                              }}
+                              onClick={e=>{e.stopPropagation();setNoteId(item.id);setNoteText(item.coachNote||"");setNoteColl(item._coll);}}
+                              title="Click for note · drag to move"
+                            >
+                              <span style={{fontSize:8,color:C.white,fontFamily:D.display,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"70%",pointerEvents:"none"}}>{item.name}</span>
+                              <div style={{display:"flex",gap:2,flexShrink:0,pointerEvents:"none"}}>
+                                {item.coachNote&&<span style={{fontSize:6}}>📝</span>}
+                                {item.requestType&&<span style={{fontSize:6,color:C.silver}}>⚠</span>}
+                                <div style={{width:4,height:4,borderRadius:"50%",background:item.status==="confirmed"?C.green:C.gold,marginTop:1}}/>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+
+                    {isDragOver&&(
+                      <div style={{position:"absolute",inset:0,border:`2px dashed ${C.gold}`,borderRadius:8,pointerEvents:"none",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        <span style={{fontSize:9,color:C.gold,fontFamily:D.body,background:"rgba(0,0,0,0.7)",padding:"2px 6px",borderRadius:4}}>Drop here</span>
+                      </div>
+                    )}
                   </div>
                 );
-              }
-
-              return(<>
-                {/* Calendar nav */}
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <button onClick={()=>{if(calMonth===0){setCalMonth(11);setCalYear(y=>y-1);}else setCalMonth(m=>m-1);}} style={{background:"#0a0805",border:`1px solid ${C.cardBorder}`,borderRadius:6,padding:"4px 10px",color:C.textMid,cursor:"pointer",fontFamily:D.body,fontSize:10}}>←</button>
-                    <span style={{fontSize:15,fontWeight:600,color:C.white,fontFamily:D.display}}>{monthNames[calMonth]} {calYear}</span>
-                    <button onClick={()=>{if(calMonth===11){setCalMonth(0);setCalYear(y=>y+1);}else setCalMonth(m=>m+1);}} style={{background:"#0a0805",border:`1px solid ${C.cardBorder}`,borderRadius:6,padding:"4px 10px",color:C.textMid,cursor:"pointer",fontFamily:D.body,fontSize:10}}>→</button>
-                    <button onClick={()=>{setCalMonth(new Date().getMonth());setCalYear(new Date().getFullYear());}} style={{background:`${C.gold}12`,border:`1px solid ${C.gold}33`,borderRadius:6,padding:"4px 9px",color:C.gold,cursor:"pointer",fontFamily:D.body,fontSize:8,letterSpacing:2,textTransform:"uppercase"}}>Today</button>
-                  </div>
-                  {/* Legend */}
-                  <div style={{display:"flex",gap:10,alignItems:"center"}}>
-                    {[{color:C.red,l:"Furnace"},{color:C.gold,l:"Tempering"},{color:C.green,l:"Confirmed"},{color:C.red,l:"Blocked",bg:true}].map((x,i)=>(
-                      <div key={i} style={{display:"flex",alignItems:"center",gap:3}}>
-                        <div style={{width:6,height:6,borderRadius:1,background:x.color,opacity:x.bg?0.5:1}}/>
-                        <span style={{fontSize:7,color:C.textDim,fontFamily:D.body}}>{x.l}</span>
-                      </div>
-                    ))}
-                    <span style={{fontSize:7,color:C.textDim,fontFamily:D.body}}>🔒 tap slot · drag to move</span>
-                  </div>
-                </div>
-
-                {/* Day headers */}
-                <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:2}}>
-                  {dayNames.map(d=><div key={d} style={{textAlign:"center",fontSize:7,letterSpacing:1,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,padding:"2px 0"}}>{d}</div>)}
-                </div>
-
-                {/* Calendar grid */}
-                <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
-                  {calDays.map((d,i)=>{
-                    if(!d) return <div key={i} style={{minHeight:90}}/>;
-                    const dk=dKey(d);
-                    const isToday=dk===todayKey;
-                    const isPast=d<todayD;
-                    const isDragOver=dragOver===dk;
-                    const isGroupDay=COACH_DAYS.includes(d.getDay());
-                    const isPrivDay=[3,6].includes(d.getDay());
-                    const isCoachDay=isGroupDay||isPrivDay;
-                    const sessions=isGroupDay?(DAY_SCHEDULE[d.getDay()]?.sessions||[]):isPrivDay?(PRIVATE_SCHEDULE[d.getDay()]?.slots||[]):[];
-                    const allBlocked=sessions.length>0&&sessions.every(s=>(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id));
-                    const anyBlocked=sessions.some(s=>(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id));
-
-                    return(
-                      <div key={i}
-                        onDragOver={e=>{e.preventDefault();e.stopPropagation();e.dataTransfer.dropEffect="move";setDragOver(dk);}}
-                        onDragEnter={e=>{e.preventDefault();setDragOver(dk);}}
-                        onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget))setDragOver(null);}}
-                        onDrop={e=>{e.preventDefault();e.stopPropagation();setDragOver(null);if(dragItem&&dKey(d)!==dragItem.dateKey){setDropModal({booking:dragItem,targetDate:d});setDropSess(null);setDragItem(null);}}}
-                        style={{
-                          background:isDragOver?"rgba(196,168,76,0.08)":allBlocked?"#180603":isToday?"rgba(196,168,76,0.05)":isCoachDay?"#0a0805":"#060402",
-                          border:isDragOver?`1px solid ${C.gold}`:allBlocked?`1px solid ${C.red}55`:anyBlocked?`1px solid ${C.red}22`:isToday?`1px solid ${C.gold}44`:isCoachDay?`1px solid #181210`:`1px solid #0e0c0a`,
-                          borderRadius:6,padding:"4px",minHeight:90,transition:"all 0.1s",
-                          opacity:isPast&&!sessOnDate(dk).length&&!isCoachDay?0.2:1,
-                        }}
-                      >
-                        {/* Date + block day */}
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
-                          <div style={{fontSize:10,fontWeight:isToday?700:400,color:isToday?C.gold:isCoachDay?C.silverBright:C.textDim,fontFamily:D.display,width:16,height:16,borderRadius:isToday?"50%":"2px",background:isToday?`${C.gold}22`:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>{d.getDate()}</div>
-                          {isCoachDay&&!isPast&&(
-                            <button
-                              onClick={e=>{e.stopPropagation();
-                                if(allBlocked){sessions.forEach(s=>blockSession(dk,s.id,""));}
-                                else{sessions.forEach(s=>{if(!(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id))blockSession(dk,s.id,`${fmtDate(d)} ${s.time}`);});}
-                              }}
-                              title={allBlocked?"Unblock day":"Block entire day"}
-                              style={{background:allBlocked?`${C.red}15`:"transparent",border:`1px solid ${allBlocked?C.red+"44":C.cardBorder}`,borderRadius:3,padding:"0 4px",color:allBlocked?C.red:C.textDim,fontSize:7,cursor:"pointer",fontFamily:D.body,lineHeight:"14px"}}
-                            >{allBlocked?"🔓":"🔒"}</button>
-                          )}
-                        </div>
-
-                        {/* Session slots */}
-                        {isCoachDay&&sessions.map(sess=>{
-                          const isBlk=(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===sess.id);
-                          const slotSess=sessOnDate(dk).filter(s=>isGroupDay?(s.sessId===sess.id):(s.slotId===sess.id||s.slotTime===sess.time));
-                          const maxSpots=isGroupDay?MAX_PLAYERS:1;
-                          const tShort=(sess.time||"").split("–")[0].trim().replace(":00","").replace(" PM","p").replace(" AM","a");
-                          return(
-                            <div key={sess.id} style={{marginBottom:2}}>
-                              <div
-                                onClick={e=>{e.stopPropagation();blockSession(dk,sess.id,isBlk?"":(`${fmtDate(d)} ${sess.time}`));}}
-                                title={isBlk?"Unblock slot":"Block slot"}
-                                style={{fontSize:6,padding:"1px 3px",borderRadius:2,cursor:"pointer",display:"flex",justifyContent:"space-between",background:isBlk?"rgba(204,34,34,0.2)":"rgba(255,255,255,0.04)",border:`1px solid ${isBlk?C.red+"44":"rgba(255,255,255,0.05)"}`,marginBottom:slotSess.length?1:0,userSelect:"none"}}
-                              >
-                                <span style={{color:isBlk?C.red:isGroupDay?"#cc5555":"#b89a3e",fontFamily:D.body,pointerEvents:"none"}}>{isBlk?"🔒":isGroupDay?"🔥":"⚒️"} {tShort}</span>
-                                <span style={{color:isBlk?C.red:slotSess.length>0?C.gold:"#333",fontFamily:D.body,pointerEvents:"none"}}>{isBlk?"blk":`${slotSess.length}/${maxSpots}`}</span>
-                              </div>
-                              {!isBlk&&!isPast&&slotSess.map((s,si)=><SessionChip key={si} session={s}/>)}
-                            </div>
-                          );
-                        })}
-
-                        {isDragOver&&<div style={{fontSize:6,color:C.gold,textAlign:"center",fontFamily:D.body,marginTop:2}}>drop</div>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </>);
-            })()}
+              })}
+            </div>
           </div>
 
           {/* ── SIDE PANEL ── */}
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
 
-            {/* Pending / Holding Area */}
-            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,overflow:"hidden"}}>
+            {/* Holding Area */}
+            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,overflow:"hidden"}}>
               <div style={{background:`linear-gradient(135deg,#1a1308,#0f0c05)`,padding:"10px 14px",borderBottom:`1px solid ${C.cardBorder}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div>
-                  <div style={{fontSize:8,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:2}}>Holding Area</div>
+                  <div style={{fontSize:7,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:1}}>Holding Area</div>
                   <div style={{fontSize:11,color:C.white,fontFamily:D.display}}>Working Out a Time</div>
                 </div>
-                <button onClick={()=>setShowAddPending(v=>!v)} style={{background:`${C.gold}15`,border:`1px solid ${C.gold}33`,borderRadius:6,padding:"4px 8px",color:C.gold,fontSize:9,cursor:"pointer",fontFamily:D.body}}>+ Add</button>
+                <button onClick={()=>setShowAddPending(v=>!v)} style={{background:`${C.gold}15`,border:`1px solid ${C.gold}33`,borderRadius:6,padding:"4px 8px",color:C.gold,fontSize:8,cursor:"pointer",fontFamily:D.body}}>+ Add</button>
               </div>
-
-              {/* Add pending form */}
               {showAddPending&&(
-                <div style={{padding:"10px 12px",borderBottom:`1px solid ${C.cardBorder}`,background:"#0a0805"}}>
-                  <input placeholder="Client name *" value={pendingForm.name} onChange={e=>setPendingForm(p=>({...p,name:e.target.value}))} style={{...IS,fontSize:11,marginBottom:6,width:"100%"}}/>
-                  <input placeholder="Phone or email" value={pendingForm.contact} onChange={e=>setPendingForm(p=>({...p,contact:e.target.value}))} style={{...IS,fontSize:11,marginBottom:6,width:"100%"}}/>
-                  <input placeholder="Note (e.g. wants Thursday eve)" value={pendingForm.note} onChange={e=>setPendingForm(p=>({...p,note:e.target.value}))} style={{...IS,fontSize:11,marginBottom:8,width:"100%"}}/>
-                  <div style={{display:"flex",gap:6}}>
+                <div style={{padding:"10px",borderBottom:`1px solid ${C.cardBorder}`,background:"#0a0805"}}>
+                  {[{k:"name",ph:"Name *"},{k:"contact",ph:"Phone or email"},{k:"note",ph:"Note (e.g. wants Thu eve)"}].map(f=>(
+                    <input key={f.k} placeholder={f.ph} value={pendingForm[f.k]} onChange={e=>setPendingForm(p=>({...p,[f.k]:e.target.value}))} style={{...IS,fontSize:10,marginBottom:5,width:"100%"}}/>
+                  ))}
+                  <div style={{display:"flex",gap:5}}>
                     <button onClick={async()=>{
                       if(!pendingForm.name.trim()) return;
                       await addDoc(collection(db,"pending"),{...pendingForm,createdAt:new Date().toISOString(),status:"pending"});
                       setPendingForm({name:"",contact:"",note:""});setShowAddPending(false);
-                    }} style={{flex:1,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:6,padding:"7px",color:"#0a0a0a",fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save</button>
-                    <button onClick={()=>{setShowAddPending(false);setPendingForm({name:"",contact:"",note:""}); }} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:6,padding:"7px 10px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+                    }} style={{flex:1,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:6,padding:"7px",color:"#0a0a0a",fontSize:8,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save</button>
+                    <button onClick={()=>{setShowAddPending(false);setPendingForm({name:"",contact:"",note:""}); }} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:6,padding:"7px 8px",color:C.textDim,fontSize:8,cursor:"pointer",fontFamily:D.body}}>✕</button>
                   </div>
                 </div>
               )}
-
-              {/* Pending clients list */}
-              <div style={{padding:"8px",maxHeight:280,overflowY:"auto"}}>
-                {(pendingClients||[]).length===0?(
-                  <div style={{textAlign:"center",padding:"20px 10px",color:C.textDim,fontSize:10,fontFamily:D.body,lineHeight:1.6}}>No one in the queue.<br/>Add clients you're working out a time with.</div>
-                ):(pendingClients||[]).map((p,i)=>(
+              <div style={{padding:"8px",maxHeight:260,overflowY:"auto"}}>
+                {pendingClients.length===0?(
+                  <div style={{textAlign:"center",padding:"16px 8px",color:C.textDim,fontSize:9,fontFamily:D.body,lineHeight:1.6}}>No one waiting.<br/>Add clients you're coordinating with.</div>
+                ):pendingClients.map((p,i)=>(
                   <div key={i}
                     draggable="true"
-                    onDragStart={e=>{
-                      e.stopPropagation();
-                      setDragItem({...p,_type:"pending",_collection:"pending",name:p.name,dateKey:"pending"});
-                      e.dataTransfer.effectAllowed="move";
-                      e.dataTransfer.setData("text/plain",p.id||p.name);
-                    }}
-                    onDragEnd={()=>setDragOver(null)}
-                    style={{background:"#0a0805",border:`1px solid ${C.gold}22`,borderRadius:8,padding:"8px 10px",marginBottom:6,cursor:"grab"}}
-                    title="Drag onto calendar to schedule"
+                    onDragStart={e=>onChipDragStart(e,{...p,_type:"pending",_coll:"pending"})}
+                    onDragEnd={onChipDragEnd}
+                    style={{background:"#0a0805",border:`1px solid ${C.gold}22`,borderRadius:8,padding:"8px 10px",marginBottom:5,cursor:"grab",userSelect:"none"}}
                   >
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:11,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:2}}>{p.name}</div>
+                        <div style={{fontSize:11,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:1}}>{p.name}</div>
                         {p.contact&&<div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{p.contact}</div>}
                         {p.note&&<div style={{fontSize:9,color:C.gold,fontFamily:D.body,marginTop:2,fontStyle:"italic"}}>{p.note}</div>}
                       </div>
-                      <button onClick={async()=>{await updateDoc(doc(db,"pending",p.id),{status:"scheduled"});}} style={{background:"transparent",border:"none",color:C.textDim,fontSize:10,cursor:"pointer",padding:"0 0 0 6px",flexShrink:0}} title="Mark done">✓</button>
+                      <button onClick={async()=>await updateDoc(doc(db,"pending",p.id),{status:"scheduled"})} style={{background:"transparent",border:"none",color:C.green,fontSize:12,cursor:"pointer",padding:"0 0 0 4px",flexShrink:0}} title="Mark done">✓</button>
                     </div>
-                    <div style={{fontSize:7,color:C.textDim,fontFamily:D.body,marginTop:4}}>⋮ drag to calendar to schedule</div>
+                    <div style={{fontSize:7,color:C.textDim,fontFamily:D.body,marginTop:3}}>drag to calendar to schedule</div>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Quick stats */}
-            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"12px 14px"}}>
-              <div style={{fontSize:8,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>This Week</div>
-              {[
-                {label:"Sessions",value:weekSessions.length,color:C.green},
-                {label:"Revenue",value:`$${weekRevenue}`,color:C.gold},
-                {label:"Pending Pay",value:pendingCount,color:C.red},
-              ].map((s,i)=>(
+            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"12px 14px"}}>
+              <div style={{fontSize:7,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>This Week</div>
+              {[{label:"Sessions",value:weekSessions.length,color:C.green},{label:"Revenue",value:`$${weekRevenue}`,color:C.gold},{label:"Pending Pay",value:pendingCount,color:C.red}].map((s,i)=>(
                 <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:i<2?`1px solid ${C.cardBorder}`:"none"}}>
                   <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{s.label}</span>
                   <span style={{fontSize:13,fontWeight:700,color:s.color,fontFamily:D.display}}>{s.value}</span>
@@ -1043,15 +1100,22 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
               ))}
             </div>
 
+            {/* Group reminder button */}
+            <button onClick={()=>setReminderModal("group")} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"11px 14px",cursor:"pointer",textAlign:"left",width:"100%"}}>
+              <div style={{fontSize:7,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:2}}>Send Reminder</div>
+              <div style={{fontSize:11,color:C.white,fontFamily:D.display}}>📧 Group Reminder</div>
+              <div style={{fontSize:9,color:C.textDim,fontFamily:D.body,marginTop:2}}>Send to all confirmed sessions</div>
+            </button>
+
             {/* Reschedule requests */}
             {requestCount>0&&(
-              <div style={{background:C.card,border:`1px solid ${C.silver}22`,borderRadius:14,padding:"12px 14px"}}>
-                <div style={{fontSize:8,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>⚠ Reschedule Requests</div>
+              <div style={{background:C.card,border:`1px solid ${C.silver}22`,borderRadius:12,padding:"10px 12px"}}>
+                <div style={{fontSize:7,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>⚠ Requests</div>
                 {[...(bookings||[]),...(inquiries||[])].filter(x=>x.requestType).map((x,i)=>(
-                  <div key={i} style={{background:"#0a0805",borderRadius:7,padding:"7px 10px",marginBottom:5,border:`1px solid ${C.silver}22`}}>
-                    <div style={{fontSize:11,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:2}}>{x.name}</div>
-                    <div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{x.dateLabel} · {x.sessTime||x.slotTime}</div>
-                    {x.requestedNewDate&&<div style={{fontSize:9,color:C.gold,fontFamily:D.body,marginTop:2}}>→ wants {x.requestedNewDate}</div>}
+                  <div key={i} style={{background:"#0a0805",borderRadius:6,padding:"6px 8px",marginBottom:4,border:`1px solid ${C.silver}22`}}>
+                    <div style={{fontSize:10,fontWeight:600,color:C.white,fontFamily:D.display}}>{x.name}</div>
+                    <div style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>{x.dateLabel}</div>
+                    {x.requestedNewDate&&<div style={{fontSize:8,color:C.gold,fontFamily:D.body}}>→ {x.requestedNewDate}</div>}
                   </div>
                 ))}
               </div>
@@ -1060,183 +1124,78 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
         </div>
 
         {/* ── TODAY'S ROSTER ── */}
-        {(()=>{
-          const todayD=new Date(); todayD.setHours(0,0,0,0);
-          const tk=dKey(todayD);
-          const allSessions=[
-            ...(bookings||[]).filter(b=>b.status!=="cancelled"&&b.status!=="removed"&&b.dateKey===tk).map(b=>({...b,_type:"group",_time:b.sessTime})),
-            ...(inquiries||[]).filter(i=>i.status!=="cancelled"&&i.status!=="removed"&&i.dateKey===tk).map(i=>({...i,_type:"1on1",_time:i.slotTime})),
-          ];
+        <div style={{marginBottom:14}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,paddingBottom:8,borderBottom:`1px solid ${C.cardBorder}`}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{width:7,height:7,borderRadius:"50%",background:C.green,animation:"pulse 1.5s infinite",flexShrink:0}}/>
+              <span style={{fontSize:10,letterSpacing:3,color:C.green,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Today's Roster</span>
+              <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} · {todayItems.length} player{todayItems.length!==1?"s":""}</span>
+            </div>
+          </div>
+          {todayItems.length===0?(
+            <div style={{textAlign:"center",padding:"24px",background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,color:C.textDim,fontSize:11,fontFamily:D.body}}>No sessions today</div>
+          ):(()=>{
+            const groups={};
+            todayItems.forEach(s=>{const k=s._time||"x";if(!groups[k])groups[k]={time:s._time,type:s._type,players:[]};groups[k].players.push(s);});
+            return(
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:10}}>
+                {Object.values(groups).map((group,gi)=>(
+                  <div key={gi} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,overflow:"hidden"}}>
+                    <div style={{background:group.type==="1on1"?`linear-gradient(135deg,#1a1308,#0f0c05)`:`linear-gradient(135deg,${C.redDark},#150804)`,padding:"8px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <span style={{fontSize:14}}>{group.type==="1on1"?"⚒️":"🔥"}</span>
+                        <div>
+                          <div style={{fontSize:11,fontWeight:600,color:C.white,fontFamily:D.display}}>{group.type==="1on1"?"The Tempering":"The Furnace"}</div>
+                          <div style={{fontSize:9,color:group.type==="1on1"?C.gold:C.red,fontFamily:D.body}}>{group.time}</div>
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                        <span style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{group.players.length} player{group.players.length!==1?"s":""}</span>
+                        <button onClick={()=>setReminderModal({group:true,players:group.players,time:group.time})} style={{background:`${C.gold}12`,border:`1px solid ${C.gold}33`,borderRadius:5,padding:"2px 7px",color:C.gold,fontSize:8,cursor:"pointer",fontFamily:D.body}} title="Send reminder to this session">📧</button>
+                      </div>
+                    </div>
+                    <div style={{padding:"6px 10px",display:"grid",gap:5}}>
+                      {group.players.map((s,si)=>(
+                        <div key={si} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 10px",background:"#080603",borderRadius:7,border:`1px solid ${s.status==="confirmed"?C.green+"22":C.cardBorder}`,borderLeft:`2px solid ${s.status==="confirmed"?C.green:C.gold}`}}>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:12,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:2}}>{s.name}</div>
+                            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                              {s.ageGroup&&<span style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>👤 {s.ageGroup}</span>}
+                              {s.position&&<span style={{fontSize:8,color:C.gold,fontFamily:D.body}}>⚽ {s.position}</span>}
+                              {s.phone&&<span style={{fontSize:8,color:C.silverDim,fontFamily:D.body}}>{s.phone}</span>}
+                            </div>
+                            {s.coachNote&&<div style={{fontSize:8,color:C.gold,marginTop:2,fontFamily:D.body}}>📝 {s.coachNote}</div>}
+                          </div>
+                          <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0}}>
+                            <button onClick={()=>setReminderModal(s)} style={{background:`${C.gold}10`,border:`1px solid ${C.gold}22`,borderRadius:5,padding:"3px 6px",color:C.gold,fontSize:8,cursor:"pointer",fontFamily:D.body}} title="Send reminder">📧</button>
+                            <button onClick={()=>{setNoteId(s.id);setNoteText(s.coachNote||"");setNoteColl(s._coll||"bookings");}} style={{background:"transparent",border:`1px solid ${s.coachNote?C.gold+"44":C.cardBorder}`,borderRadius:5,padding:"3px 6px",color:s.coachNote?C.gold:C.textDim,fontSize:8,cursor:"pointer",fontFamily:D.body}}>📝</button>
+                            {s.status==="pending"&&<button onClick={()=>confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings")} style={{background:`${C.green}15`,border:`1px solid ${C.green}44`,borderRadius:5,padding:"3px 8px",color:C.green,fontSize:8,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓</button>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
 
+        {/* ── ALL UPCOMING ── */}
+        {(()=>{
+          const upcoming=[
+            ...(bookings||[]).filter(b=>b.dateKey>=todayKey&&b.status!=="cancelled"&&b.status!=="removed").map(b=>({...b,_type:"group",_coll:"bookings",_time:b.sessTime})),
+            ...(inquiries||[]).filter(i=>i.dateKey>=todayKey&&i.status!=="cancelled"&&i.status!=="removed").map(i=>({...i,_type:"1on1",_coll:"inquiries",_time:i.slotTime})),
+          ].sort((a,b)=>a.dateKey>b.dateKey?1:-1);
+          if(!upcoming.length) return null;
           return(
             <div>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,paddingBottom:8,borderBottom:`1px solid ${C.cardBorder}`}}>
-                <div style={{width:7,height:7,borderRadius:"50%",background:C.green,animation:"pulse 1.5s infinite",flexShrink:0}}/>
-                <span style={{fontSize:10,letterSpacing:3,color:C.green,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Today's Roster</span>
-                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} · {allSessions.length} player{allSessions.length!==1?"s":""}</span>
+                <span style={{fontSize:10,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>All Upcoming</span>
+                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {upcoming.length} sessions</span>
               </div>
-
-              {allSessions.length===0?(
-                <div style={{textAlign:"center",padding:"24px",background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,color:C.textDim,fontSize:11,fontFamily:D.body}}>No sessions today</div>
-              ):(()=>{
-                const groups={};
-                allSessions.forEach(s=>{
-                  const k=s._time||"x";
-                  if(!groups[k]) groups[k]={time:s._time,type:s._type,players:[]};
-                  groups[k].players.push(s);
-                });
-                return(
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:10}}>
-                    {Object.values(groups).map((group,gi)=>(
-                      <div key={gi} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,overflow:"hidden"}}>
-                        <div style={{background:group.type==="1on1"?`linear-gradient(135deg,#1a1308,#0f0c05)`:`linear-gradient(135deg,${C.redDark},#150804)`,padding:"8px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                          <div style={{display:"flex",alignItems:"center",gap:6}}>
-                            <span style={{fontSize:14}}>{group.type==="1on1"?"⚒️":"🔥"}</span>
-                            <div>
-                              <div style={{fontSize:11,fontWeight:600,color:C.white,fontFamily:D.display}}>{group.type==="1on1"?"The Tempering":"The Furnace"}</div>
-                              <div style={{fontSize:9,color:group.type==="1on1"?C.gold:C.red,fontFamily:D.body}}>{group.time}</div>
-                            </div>
-                          </div>
-                          <div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{group.players.length} player{group.players.length!==1?"s":""}</div>
-                        </div>
-                        <div style={{padding:"6px 10px",display:"grid",gap:4}}>
-                          {group.players.map((s,si)=>(
-                            <div key={si} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 8px",background:"#080603",borderRadius:6,border:`1px solid ${s.status==="confirmed"?C.green+"22":C.cardBorder}`,borderLeft:`2px solid ${s.status==="confirmed"?C.green:C.gold}`}}>
-                              <div>
-                                <div style={{fontSize:12,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:1}}>{s.name}</div>
-                                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                                  {s.ageGroup&&<span style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>👤 {s.ageGroup}</span>}
-                                  {s.position&&<span style={{fontSize:8,color:C.gold,fontFamily:D.body}}>⚽ {s.position}</span>}
-                                  {s.phone&&<span style={{fontSize:8,color:C.silverDim,fontFamily:D.body}}>{s.phone}</span>}
-                                </div>
-                                {s.coachNote&&<div style={{fontSize:8,color:C.gold,marginTop:2,fontFamily:D.body}}>📝 {s.coachNote}</div>}
-                              </div>
-                              <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                                <button onClick={()=>{setCalNoteId(s.id);setCalNoteText(s.coachNote||"");}} style={{background:"transparent",border:`1px solid ${s.coachNote?C.gold+"44":C.cardBorder}`,borderRadius:4,padding:"2px 6px",color:s.coachNote?C.gold:C.textDim,fontSize:8,cursor:"pointer",fontFamily:D.body}}>📝</button>
-                                {s.status==="pending"&&<button onClick={()=>confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings")} style={{background:`${C.green}15`,border:`1px solid ${C.green}44`,borderRadius:4,padding:"2px 6px",color:C.green,fontSize:8,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓ Confirm</button>}
-                                <div style={{fontSize:7,padding:"1px 5px",borderRadius:3,background:s.status==="confirmed"?`${C.green}18`:`${C.gold}18`,color:s.status==="confirmed"?C.green:C.gold,fontFamily:D.body}}>{s.status==="confirmed"?"✓":"⏳"}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-          );
-        })()}
-
-        {/* ── DROP MODAL ── */}
-        {dropModal&&(()=>{
-          const b=dropModal.booking;
-          const is1on1=b._type==="1on1";
-          const isPending=b._type==="pending";
-          const sched=is1on1?PRIVATE_SCHEDULE[dropModal.targetDate.getDay()]:DAY_SCHEDULE[dropModal.targetDate.getDay()];
-          const slots=sched?(is1on1?sched.slots:sched.sessions):[];
-          return(
-            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>setDropModal(null)}>
-              <div style={{background:"#111",border:`1px solid ${C.gold}44`,borderRadius:16,padding:"22px",maxWidth:420,width:"100%"}} onClick={e=>e.stopPropagation()}>
-                <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>Moving</div>
-                <div style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:3}}>{b.name}</div>
-                <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginBottom:14}}>→ {fmtDate(dropModal.targetDate)}</div>
-                {!sched?(
-                  <div style={{fontSize:11,color:C.red,fontFamily:D.body,marginBottom:14}}>No sessions on this day. Drop onto a coaching day.</div>
-                ):(
-                  <div style={{display:"grid",gap:6,marginBottom:14}}>
-                    {slots.map(slot=>{
-                      const sel=dropSess?.id===slot.id;
-                      return(
-                        <button key={slot.id} onClick={()=>setDropSess(slot)} style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:8,padding:"10px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                          <span style={{fontSize:12,fontWeight:600,color:sel?C.gold:C.white,fontFamily:D.display}}>{slot.time}</span>
-                          {!is1on1&&<span style={{fontSize:9,color:sel?C.gold:C.textDim,fontFamily:D.body}}>{slot.ageGroup}</span>}
-                          {sel&&<span style={{fontSize:9,color:C.gold}}>✓</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                <div style={{display:"flex",gap:8}}>
-                  <button disabled={!dropSess||!!movingId||!sched} onClick={async()=>{
-                    if(!dropModal||!dropSess) return;
-                    const{booking:b,targetDate}=dropModal;
-                    const newDK=dKey(targetDate);
-                    const newDL=fmtDate(targetDate);
-                    setMovingId(b.id);
-                    try{
-                      if(b._type==="1on1"){
-                        await updateDoc(doc(db,"inquiries",b.id),{dateKey:newDK,dateLabel:newDL,slotId:dropSess.id,slotTime:dropSess.time,requestType:null,requestNote:null,movedAt:new Date().toISOString()});
-                        try{await callEmailAPI({...b,dateLabel:newDL,sessTime:dropSess.time},"reschedule");}catch(e){}
-                      }else if(b._type==="pending"){
-                        // Pending client - create a new booking from the holding area
-                        await addDoc(collection(db,"bookings"),{
-                          name:b.name,email:b.contact||"",phone:b.contact||"",
-                          status:"pending",dateKey:newDK,dateLabel:newDL,
-                          sessId:dropSess.id,sessTime:dropSess.time,
-                          ageGroup:dropSess.ageGroup||"",ageTag:dropSess.ageTag||"",
-                          skill:sched2.skill||"The Furnace",skillIcon:sched2.skillIcon||"🔥",
-                          count:1,total:0,notes:b.note||"",
-                          createdAt:new Date().toISOString(),fromHolding:true,
-                        });
-                        // Mark pending client as scheduled
-                        if(b.id) await updateDoc(doc(db,"pending",b.id),{status:"scheduled"});
-                      }else{
-                        const sched2=DAY_SCHEDULE[targetDate.getDay()]||{};
-                        await updateDoc(doc(db,"bookings",b.id),{dateKey:newDK,dateLabel:newDL,sessId:dropSess.id,sessTime:dropSess.time,ageGroup:dropSess.ageGroup,ageTag:dropSess.ageTag,skill:sched2.skill||b.skill,skillIcon:sched2.skillIcon||b.skillIcon,requestType:null,requestNote:null,movedAt:new Date().toISOString()});
-                        try{await callEmailAPI({...b,dateLabel:newDL,sessTime:dropSess.time},"reschedule");}catch(e){}
-                      }
-                    }finally{setMovingId(null);setDropModal(null);setDropSess(null);}
-                  }} style={{flex:1,background:dropSess&&sched?`linear-gradient(135deg,${C.gold},${C.goldDim})`:"#1a1a1a",border:"none",borderRadius:8,padding:"11px",color:dropSess&&sched?"#0a0a0a":C.silverDark,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:dropSess&&sched?"pointer":"not-allowed",fontFamily:D.body,fontWeight:700}}>
-                    {movingId?"Moving…":"Confirm Move"}
-                  </button>
-                  <button onClick={()=>setDropModal(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"11px 12px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* ── NOTE MODAL ── */}
-        {calNoteId&&(()=>{
-          const allS=[...(bookings||[]).map(b=>({...b,_collection:"bookings"})),...(inquiries||[]).map(i=>({...i,_collection:"inquiries"}))];
-          const s=allS.find(x=>x.id===calNoteId);
-          if(!s) return null;
-          return(
-            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>setCalNoteId(null)}>
-              <div style={{background:"#111",border:`1px solid ${C.gold}44`,borderRadius:16,padding:"22px",maxWidth:420,width:"100%"}} onClick={e=>e.stopPropagation()}>
-                <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>Coach Note</div>
-                <div style={{fontSize:15,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:3}}>{s.name}</div>
-                <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginBottom:12}}>{s.dateLabel} · {s.sessTime||s.slotTime}</div>
-                <textarea value={calNoteText} onChange={e=>setCalNoteText(e.target.value)} placeholder="Session notes, changes, anything to remember..." rows={3} style={{...IS,width:"100%",marginBottom:10,fontSize:12,resize:"vertical"}} autoFocus/>
-                <div style={{display:"flex",gap:8}}>
-                  <button onClick={async()=>{await updateDoc(doc(db,s._collection,s.id),{coachNote:calNoteText,coachNoteUpdated:new Date().toISOString()});setCalNoteId(null);}} style={{flex:1,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:8,padding:"10px",color:"#0a0a0a",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save Note</button>
-                  {s.coachNote&&<button onClick={async()=>{await updateDoc(doc(db,s._collection,s.id),{coachNote:"",coachNoteUpdated:new Date().toISOString()});setCalNoteId(null);}} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:8,padding:"10px 10px",color:C.redDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
-                  <button onClick={()=>setCalNoteId(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"10px 10px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* ── UPCOMING SESSIONS MANAGEMENT ── */}
-        {(()=>{
-          const allUpcoming = [
-            ...(bookings||[]).filter(b=>b.dateKey>=dKey(new Date())&&b.status!=="cancelled"&&b.status!=="removed").map(b=>({...b,_type:"group",_collection:"bookings",_time:b.sessTime})),
-            ...(inquiries||[]).filter(i=>i.dateKey>=dKey(new Date())&&i.status!=="cancelled"&&i.status!=="removed").map(i=>({...i,_type:"1on1",_collection:"inquiries",_time:i.slotTime})),
-          ].sort((a,b)=>a.dateKey>b.dateKey?1:-1);
-
-          if(allUpcoming.length===0) return null;
-
-          return(
-            <div style={{marginTop:20}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,paddingBottom:8,borderBottom:`1px solid ${C.cardBorder}`}}>
-                <span style={{fontSize:10,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>All Upcoming Sessions</span>
-                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {allUpcoming.length} total</span>
-              </div>
-              <div style={{display:"grid",gap:6}}>
-                {allUpcoming.map((s,i)=>{
-                  const is1on1=s._type==="1on1";
+              <div style={{display:"grid",gap:5}}>
+                {upcoming.map((s,i)=>{
                   const confirmed=s.status==="confirmed";
                   const noteOpen=coachNoteId===s.id;
                   return(
@@ -1244,42 +1203,152 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
                         <div style={{flex:1,minWidth:180}}>
                           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,flexWrap:"wrap"}}>
-                            <span style={{fontSize:14,fontWeight:700,color:C.white,fontFamily:D.display}}>{s.name}</span>
-                            <span style={{fontSize:8,padding:"1px 6px",borderRadius:4,background:confirmed?`${C.green}18`:`${C.gold}18`,color:confirmed?C.green:C.gold,fontFamily:D.body}}>{confirmed?"✓ Confirmed":"⏳ Pending"}</span>
-                            {is1on1&&<span style={{fontSize:8,padding:"1px 6px",borderRadius:4,background:`${C.gold}12`,color:C.gold,fontFamily:D.body}}>⚒️ 1-on-1</span>}
-                            {s.packageBooking&&<span style={{fontSize:8,padding:"1px 6px",borderRadius:4,background:`${C.gold}12`,color:C.gold,fontFamily:D.body}}>📦 Pack</span>}
-                            {s.requestType&&<span style={{fontSize:8,padding:"1px 6px",borderRadius:4,background:`${C.silver}12`,color:C.silver,fontFamily:D.body}}>⚠ {s.requestType==="cancel"?"Cancel Req":"Reschedule Req"}</span>}
+                            <span style={{fontSize:13,fontWeight:700,color:C.white,fontFamily:D.display}}>{s.name}</span>
+                            <span style={{fontSize:7,padding:"1px 6px",borderRadius:4,background:confirmed?`${C.green}18`:`${C.gold}18`,color:confirmed?C.green:C.gold,fontFamily:D.body}}>{confirmed?"✓ Confirmed":"⏳ Pending"}</span>
+                            {s._type==="1on1"&&<span style={{fontSize:7,padding:"1px 6px",borderRadius:4,background:`${C.gold}12`,color:C.gold,fontFamily:D.body}}>⚒️ 1-on-1</span>}
+                            {s.packageBooking&&<span style={{fontSize:7,padding:"1px 6px",borderRadius:4,background:`${C.gold}12`,color:C.gold,fontFamily:D.body}}>📦 Pack</span>}
+                            {s.requestType&&<span style={{fontSize:7,padding:"1px 6px",borderRadius:4,background:`${C.silver}12`,color:C.silver,fontFamily:D.body}}>⚠ {s.requestType==="cancel"?"Cancel":"Reschedule"} Req</span>}
                           </div>
-                          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                            <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>📅 {s.dateLabel}</span>
-                            <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>🕐 {s._time}</span>
-                            <span style={{fontSize:11,color:C.gold,fontFamily:D.body,fontWeight:600}}>${s.total||s.price||0}</span>
-                            {s.phone&&<span style={{fontSize:11,color:C.silverDim,fontFamily:D.body}}>{s.phone}</span>}
+                          <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+                            <span style={{fontSize:10,color:C.textMid,fontFamily:D.body}}>📅 {s.dateLabel}</span>
+                            <span style={{fontSize:10,color:C.textMid,fontFamily:D.body}}>🕐 {s._time}</span>
+                            <span style={{fontSize:10,color:C.gold,fontFamily:D.body,fontWeight:600}}>${s.total||s.price||0}</span>
+                            {s.phone&&<span style={{fontSize:10,color:C.silverDim,fontFamily:D.body}}>{s.phone}</span>}
                           </div>
-                          {s.requestedNewDate&&<div style={{fontSize:10,color:C.gold,fontFamily:D.body,marginTop:3}}>→ Wants: {s.requestedNewDate}</div>}
-                          {s.coachNote&&!noteOpen&&<div style={{fontSize:9,color:C.gold,fontFamily:D.body,marginTop:3,background:`${C.gold}08`,borderRadius:4,padding:"2px 6px",display:"inline-block"}}>📝 {s.coachNote}</div>}
+                          {s.requestedNewDate&&<div style={{fontSize:9,color:C.gold,fontFamily:D.body,marginTop:2}}>→ Wants: {s.requestedNewDate}</div>}
+                          {s.coachNote&&!noteOpen&&<div style={{fontSize:8,color:C.gold,fontFamily:D.body,marginTop:3,background:`${C.gold}08`,borderRadius:4,padding:"2px 6px",display:"inline-block"}}>📝 {s.coachNote}</div>}
                         </div>
                         <div style={{display:"flex",gap:5,flexShrink:0,alignItems:"center"}}>
-                          {!confirmed&&<button onClick={()=>confirmBooking(s.id,is1on1?"inquiries":"bookings")} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:7,padding:"6px 12px",color:C.white,fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓ Confirm</button>}
-                          {s.requestType&&<button onClick={()=>updateDoc(doc(db,s._collection,s.id),{requestType:null,requestNote:null})} style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:7,padding:"6px 8px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
+                          {!confirmed&&<button onClick={()=>confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings")} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:7,padding:"6px 12px",color:C.white,fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓ Confirm</button>}
+                          <button onClick={()=>setReminderModal(s)} style={{background:`${C.gold}10`,border:`1px solid ${C.gold}22`,borderRadius:7,padding:"6px 8px",color:C.gold,fontSize:9,cursor:"pointer",fontFamily:D.body}} title="Send reminder">📧</button>
+                          {s.requestType&&<button onClick={()=>updateDoc(doc(db,s._coll,s.id),{requestType:null,requestNote:null})} style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:7,padding:"6px 8px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
                           <button onClick={()=>{setCoachNoteId(noteOpen?null:s.id);setCoachNoteText(s.coachNote||"");}} style={{background:noteOpen?`${C.gold}15`:"transparent",border:`1px solid ${s.coachNote?C.gold+"44":C.cardBorder}`,borderRadius:7,padding:"6px 8px",color:s.coachNote?C.gold:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📝</button>
-                          <button onClick={()=>s._type==="1on1"?removeInquiry(s.id):removeBooking(s.id)} style={{width:26,height:26,background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:7,color:C.redDim,fontSize:11,cursor:"pointer",fontFamily:D.body,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                          <button onClick={()=>s._type==="1on1"?removeInquiry(s.id):removeBooking(s.id)} style={{width:26,height:26,background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:7,color:C.redDim,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
                         </div>
                       </div>
-                      {/* Inline note editor */}
                       {noteOpen&&(
-                        <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${C.cardBorder}`}}>
-                          <textarea value={coachNoteText} onChange={e=>setCoachNoteText(e.target.value)} placeholder="Session notes, changes, player focus..." rows={2} style={{...IS,width:"100%",marginBottom:8,fontSize:12,resize:"vertical"}}/>
-                          <div style={{display:"flex",gap:6}}>
-                            <button onClick={async()=>{await updateDoc(doc(db,s._collection,s.id),{coachNote:coachNoteText,coachNoteUpdated:new Date().toISOString()});setCoachNoteId(null);}} style={{background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:7,padding:"8px 16px",color:"#0a0a0a",fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save</button>
-                            {s.coachNote&&<button onClick={async()=>{await updateDoc(doc(db,s._collection,s.id),{coachNote:"",coachNoteUpdated:new Date().toISOString()});setCoachNoteId(null);}} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:7,padding:"8px 10px",color:C.redDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
-                            <button onClick={()=>setCoachNoteId(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"8px 10px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+                        <div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${C.cardBorder}`}}>
+                          <textarea value={coachNoteText} onChange={e=>setCoachNoteText(e.target.value)} placeholder="Session notes, changes, focus areas..." rows={2} style={{...IS,width:"100%",marginBottom:7,fontSize:11,resize:"vertical"}}/>
+                          <div style={{display:"flex",gap:5}}>
+                            <button onClick={async()=>{await updateDoc(doc(db,s._coll,s.id),{coachNote:coachNoteText,coachNoteUpdated:new Date().toISOString()});setCoachNoteId(null);}} style={{background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:6,padding:"7px 14px",color:"#0a0a0a",fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save</button>
+                            {s.coachNote&&<button onClick={async()=>{await updateDoc(doc(db,s._coll,s.id),{coachNote:"",coachNoteUpdated:new Date().toISOString()});setCoachNoteId(null);}} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:6,padding:"7px 8px",color:C.redDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
+                            <button onClick={()=>setCoachNoteId(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:6,padding:"7px 8px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
                           </div>
                         </div>
                       )}
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── DROP MODAL ── */}
+        {dropTarget&&(()=>{
+          const b=dropTarget.item;
+          const targetDate=dropTarget.date;
+          const is1on1=b._type==="1on1";
+          const isPending=b._type==="pending";
+          const usePrivate=is1on1||(!isPending&&false);
+          const sched=is1on1?PRIVATE_SCHEDULE[targetDate.getDay()]:DAY_SCHEDULE[targetDate.getDay()];
+          const slots=sched?(is1on1?sched.slots:sched.sessions):[];
+          return(
+            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>setDropTarget(null)}>
+              <div style={{background:"#111",border:`1px solid ${C.gold}44`,borderRadius:16,padding:"24px",maxWidth:420,width:"100%"}} onClick={e=>e.stopPropagation()}>
+                <div style={{fontSize:8,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>{isPending?"Schedule Client":"Move Session"}</div>
+                <div style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:3}}>{b.name}</div>
+                <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginBottom:16}}>→ {fmtDate(targetDate)}</div>
+                {!sched?(
+                  <div style={{fontSize:11,color:C.red,fontFamily:D.body,marginBottom:14}}>No coaching sessions on this day. Drop onto Mon, Tue, Thu, Fri for group or Wed, Sat for 1-on-1.</div>
+                ):(
+                  <div style={{display:"grid",gap:6,marginBottom:16}}>
+                    {slots.map(slot=>{
+                      const sel=dropSess?.id===slot.id;
+                      return(
+                        <button key={slot.id} onClick={()=>setDropSess(slot)} style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:9,padding:"11px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <span style={{fontSize:12,fontWeight:600,color:sel?C.gold:C.white,fontFamily:D.display}}>{slot.time}</span>
+                          {!is1on1&&<span style={{fontSize:9,color:sel?C.gold:C.textDim,fontFamily:D.body}}>{slot.ageGroup}</span>}
+                          {sel&&<span style={{color:C.gold}}>✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <div style={{display:"flex",gap:8}}>
+                  <button disabled={!dropSess||moving||!sched} onClick={confirmDrop} style={{flex:1,background:dropSess&&sched?`linear-gradient(135deg,${C.gold},${C.goldDim})`:"#1a1a1a",border:"none",borderRadius:9,padding:"12px",color:dropSess&&sched?"#0a0a0a":C.silverDark,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:dropSess&&sched?"pointer":"not-allowed",fontFamily:D.body,fontWeight:700}}>
+                    {moving?"Moving…":isPending?"Schedule":"Confirm Move"}
+                  </button>
+                  <button onClick={()=>setDropTarget(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:9,padding:"12px 14px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── NOTE MODAL ── */}
+        {noteId&&(()=>{
+          return(
+            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>setNoteId(null)}>
+              <div style={{background:"#111",border:`1px solid ${C.gold}44`,borderRadius:16,padding:"22px",maxWidth:400,width:"100%"}} onClick={e=>e.stopPropagation()}>
+                <div style={{fontSize:8,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Coach Note</div>
+                <textarea value={noteText} onChange={e=>setNoteText(e.target.value)} placeholder="Session notes, changes, player focus..." rows={4} style={{...IS,width:"100%",marginBottom:10,fontSize:12,resize:"vertical"}} autoFocus/>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={async()=>{await updateDoc(doc(db,noteColl,noteId),{coachNote:noteText,coachNoteUpdated:new Date().toISOString()});setNoteId(null);}} style={{flex:1,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:8,padding:"11px",color:"#0a0a0a",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save Note</button>
+                  <button onClick={async()=>{await updateDoc(doc(db,noteColl,noteId),{coachNote:"",coachNoteUpdated:new Date().toISOString()});setNoteId(null);}} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:8,padding:"11px 12px",color:C.redDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Clear</button>
+                  <button onClick={()=>setNoteId(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"11px 12px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── REMINDER MODAL ── */}
+        {reminderModal&&(()=>{
+          const isGroup=reminderModal==="group"||reminderModal?.group;
+          const recipients=isGroup
+            ? (reminderModal?.players||[...(bookings||[]),...(inquiries||[])].filter(x=>x.status==="confirmed"&&x.dateKey>=todayKey))
+            : [reminderModal];
+          const defaultMsg=isGroup
+            ? `Hi! This is a reminder for your upcoming La Forja session. Please confirm you'll be there by replying to this message. See you on the field! — Coach Carlos`
+            : `Hi ${reminderModal?.name?.split(" ")[0]||""}! Reminder for your La Forja session on ${reminderModal?.dateLabel||""} at ${reminderModal?._time||reminderModal?.sessTime||""}. Looking forward to it! — Coach Carlos`;
+
+          return(
+            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>setReminderModal(null)}>
+              <div style={{background:"#111",border:`1px solid ${C.gold}44`,borderRadius:16,padding:"24px",maxWidth:460,width:"100%",maxHeight:"80vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+                <div style={{fontSize:8,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>{isGroup?"Group Reminder":"Individual Reminder"}</div>
+                <div style={{fontSize:15,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:3}}>{isGroup?`${recipients.length} clients`:(reminderModal?.name||"")}</div>
+                {!isGroup&&<div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginBottom:12}}>{reminderModal?.dateLabel} · {reminderModal?._time||reminderModal?.sessTime}</div>}
+                {isGroup&&(
+                  <div style={{marginBottom:12,maxHeight:120,overflowY:"auto"}}>
+                    {recipients.map((r,i)=>(
+                      <div key={i} style={{fontSize:9,color:C.textDim,fontFamily:D.body,padding:"2px 0"}}>{r.name} — {r.dateLabel}</div>
+                    ))}
+                  </div>
+                )}
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:8,letterSpacing:2,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:5}}>Message</div>
+                  <textarea
+                    value={reminderMsg||defaultMsg}
+                    onChange={e=>setReminderMsg(e.target.value)}
+                    rows={4}
+                    style={{...IS,width:"100%",fontSize:11,resize:"vertical"}}
+                  />
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <button disabled={sendingReminder} onClick={async()=>{
+                    setSendingReminder(true);
+                    try{
+                      const msg=reminderMsg||defaultMsg;
+                      for(const r of recipients){
+                        if(r.email) await callEmailAPI({...r,message:msg,sessTime:r.sessTime||r.slotTime,skill:r.skill||"La Forja Session",skillIcon:r.skillIcon||"⚒️",count:r.count||1,total:r.total||r.price||0,ageGroup:r.ageGroup||"",ageTag:r.ageTag||"9-11"},"reminder");
+                      }
+                    }finally{setSendingReminder(false);setReminderModal(null);setReminderMsg("");}
+                  }} style={{flex:1,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:9,padding:"12px",color:"#0a0a0a",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:sendingReminder?"not-allowed":"pointer",fontFamily:D.body,fontWeight:700,opacity:sendingReminder?0.6:1}}>
+                    {sendingReminder?"Sending…":`Send to ${recipients.length} client${recipients.length!==1?"s":""}`}
+                  </button>
+                  <button onClick={()=>{setReminderModal(null);setReminderMsg("");}} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:9,padding:"12px 14px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+                </div>
               </div>
             </div>
           );
