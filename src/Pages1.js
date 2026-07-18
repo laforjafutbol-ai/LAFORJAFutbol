@@ -967,6 +967,81 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
           ))}
         </div>
 
+        {/* ── COMPACT STRIP ── */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:12}}>
+
+          {/* Holding Area */}
+          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"12px 14px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <div style={{fontSize:8,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body}}>⏰ Working Out a Time</div>
+              <button onClick={()=>setShowAddPending(v=>!v)} style={{background:`${C.gold}12`,border:`1px solid ${C.gold}22`,borderRadius:5,padding:"2px 8px",color:C.gold,fontSize:8,cursor:"pointer",fontFamily:D.body}}>+ Add</button>
+            </div>
+            {showAddPending&&(
+              <div style={{marginBottom:8,paddingBottom:8,borderBottom:`1px solid ${C.cardBorder}`}}>
+                {[{k:"name",ph:"Name *"},{k:"contact",ph:"Phone / email"},{k:"note",ph:"Note"}].map(f=>(
+                  <input key={f.k} placeholder={f.ph} value={pendingForm[f.k]} onChange={e=>setPendingForm(p=>({...p,[f.k]:e.target.value}))} style={{...IS,fontSize:10,marginBottom:4,width:"100%"}}/>
+                ))}
+                <div style={{display:"flex",gap:5}}>
+                  <button onClick={async()=>{
+                    if(!pendingForm.name.trim()) return;
+                    await addDoc(collection(db,"pending"),{...pendingForm,createdAt:new Date().toISOString(),status:"pending"});
+                    setPendingForm({name:"",contact:"",note:""});setShowAddPending(false);
+                  }} style={{flex:1,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:5,padding:"6px",color:"#0a0a0a",fontSize:8,cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save</button>
+                  <button onClick={()=>{setShowAddPending(false);setPendingForm({name:"",contact:"",note:""}); }} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:5,padding:"6px 8px",color:C.textDim,fontSize:8,cursor:"pointer",fontFamily:D.body}}>✕</button>
+                </div>
+              </div>
+            )}
+            <div style={{display:"flex",flexWrap:"wrap",gap:5,maxHeight:80,overflowY:"auto"}}>
+              {pendingClients.length===0?(
+                <div style={{fontSize:9,color:C.textDim,fontFamily:D.body,padding:"4px 0"}}>No one waiting — drag from calendar or add above</div>
+              ):pendingClients.map((p,i)=>(
+                <div key={i} draggable="true"
+                  onDragStart={e=>onChipDragStart(e,{...p,_type:"pending",_coll:"pending"})}
+                  onDragEnd={onChipDragEnd}
+                  style={{background:"#1e1a08",border:`1px solid ${C.gold}33`,borderRadius:6,padding:"4px 8px",cursor:"grab",userSelect:"none",display:"flex",alignItems:"center",gap:5}}
+                >
+                  <span style={{fontSize:9,color:"#e0d0b8",fontFamily:D.display,fontWeight:600}}>{p.name}</span>
+                  {p.note&&<span style={{fontSize:8,color:C.gold,fontFamily:D.body,fontStyle:"italic"}}>{p.note}</span>}
+                  <button onClick={async()=>await updateDoc(doc(db,"pending",p.id),{status:"scheduled"})} style={{background:"transparent",border:"none",color:C.green,fontSize:10,cursor:"pointer",padding:0,lineHeight:1}}>✓</button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Stats */}
+          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"12px 14px",display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,alignContent:"center"}}>
+            {[
+              {label:"Today",value:todayItems.length,color:C.gold},
+              {label:"Week $",value:`$${weekRevenue}`,color:C.green},
+              {label:"Pending",value:pendingCount+newInquiries,color:pendingCount+newInquiries>0?C.red:C.textDim},
+            ].map((s,i)=>(
+              <div key={i} style={{textAlign:"center"}}>
+                <div style={{fontSize:20,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:2}}>{s.value}</div>
+                <div style={{fontSize:7,letterSpacing:1,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Reschedule Requests */}
+          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"12px 14px"}}>
+            <div style={{fontSize:8,letterSpacing:3,color:requestCount>0?C.silver:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>
+              {requestCount>0?`⚠ ${requestCount} Reschedule Request${requestCount>1?"s":""}` :"No Pending Requests"}
+            </div>
+            {requestCount===0?(
+              <div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>All clear — no client requests</div>
+            ):[...(bookings||[]),...(inquiries||[])].filter(x=>x.requestType).map((x,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5,padding:"4px 8px",background:"#0a0805",borderRadius:6,border:`1px solid ${C.silver}22`}}>
+                <div>
+                  <div style={{fontSize:10,fontWeight:600,color:C.white,fontFamily:D.display}}>{x.name}</div>
+                  <div style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>{x.dateLabel}{x.requestedNewDate?` → ${x.requestedNewDate}`:""}</div>
+                </div>
+                <button onClick={()=>updateDoc(doc(db,x.sessTime?"bookings":"inquiries",x.id),{requestType:null,requestNote:null})}
+                  style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:4,padding:"2px 6px",color:C.silver,fontSize:8,cursor:"pointer",fontFamily:D.body}}>Clear</button>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* ── MAIN: Full-width Calendar ── */}
         <div style={{marginBottom:14}}>
           <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"16px"}}>
@@ -1011,7 +1086,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                 let bg,brd;
                 if(isDragOver){bg="rgba(196,168,76,0.1)";brd=C.gold;}
                 else if(allBlocked){bg="#0f0d0b";brd="#28221a";}
-                else if(isPast){bg="#080705";brd="#141008";}
+                else if(isPast){bg="#0e0b08";brd="#201a10";}
                 else if(isToday){bg="rgba(196,168,76,0.07)";brd=`${C.gold}55`;}
                 else if(isGroupDay){bg="#100c08";brd="#241a10";}
                 else if(isPrivDay){bg="#0e0c08";brd="#201c10";}
@@ -1022,23 +1097,23 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                     onDragOver={e=>onDayCellDragOver(e,dk)}
                     onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget))setDragOver(null);}}
                     onDrop={e=>onDayCellDrop(e,d)}
-                    style={{background:bg,border:`1px solid ${brd}`,borderRadius:8,padding:"6px 5px",minHeight:160,position:"relative",opacity:isPast?0.55:1}}
+                    style={{background:bg,border:`1px solid ${brd}`,borderRadius:8,padding:"6px 5px",minHeight:160,position:"relative",opacity:isPast?0.8:1}}
                   >
                     {/* Date + lock */}
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
-                      <div style={{fontSize:13,fontWeight:isToday?700:400,color:isPast?"#2e2820":allBlocked?"#44405a":isToday?C.gold:isCoachDay?"#c8bca8":"#3a3428",fontFamily:D.display,width:22,height:22,borderRadius:"50%",background:isToday?`${C.gold}22`:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>{d.getDate()}</div>
-                      {isCoachDay&&!isPast&&(
+                      <div style={{fontSize:13,fontWeight:isToday?700:400,color:isPast?"#8a7858":allBlocked?"#44405a":isToday?C.gold:isCoachDay?"#c8bca8":"#3a3428",fontFamily:D.display,width:22,height:22,borderRadius:"50%",background:isToday?`${C.gold}22`:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>{d.getDate()}</div>
+                      {isCoachDay&&(
                         <button onClick={e=>{e.stopPropagation();
                           if(allBlocked){sessions.forEach(s=>blockSession(dk,s.id,""));}
-                          else{sessions.forEach(s=>{if(!(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id))blockSession(dk,s.id,fmtDate(d));});}
-                        }} style={{background:"transparent",border:"none",color:allBlocked?"#6060a0":"#2e2820",fontSize:10,cursor:"pointer",padding:0,lineHeight:1}} title={allBlocked?"Unblock":"Block day"}>
-                          {allBlocked?"🔓":"🔒"}
+                          else if(!isPast){sessions.forEach(s=>{if(!(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id))blockSession(dk,s.id,fmtDate(d));});}
+                        }} style={{background:allBlocked?"rgba(50,45,80,0.2)":"transparent",border:"none",color:allBlocked?"#7070aa":"#2e2820",fontSize:10,cursor:"pointer",padding:0,lineHeight:1}} title={allBlocked?"Unblock day":isPast?"":"Block day"}>
+                          {allBlocked?"🔓":isPast?"":"🔒"}
                         </button>
                       )}
                     </div>
 
                     {/* Session slots */}
-                    {isCoachDay&&!isPast&&!allBlocked&&sessions.map(sess=>{
+                    {isCoachDay&&!allBlocked&&sessions.map(sess=>{
                       const isBlk=(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===sess.id);
                       const slotItems=dayBookings.filter(s=>
                         isGroupDay
