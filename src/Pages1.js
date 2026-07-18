@@ -3,7 +3,7 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, order
 import { db, auth, googleProvider } from "./firebase";
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signOut, updateProfile, sendPasswordResetEmail } from "firebase/auth";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, POSITIONS, DAY_SCHEDULE, PRIVATE_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, stripePromise, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles } from "./constants";
+import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, POSITIONS, DAY_SCHEDULE, PRIVATE_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, SITE_READY, stripePromise, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles } from "./constants";
 
 export function PrivatePage({addInquiry, inquiries, isBlocked, blocked, getLocation, getLocationDetail, getLocationMaps, user}){
   const [step,setStep]           = useState(1);
@@ -136,6 +136,18 @@ export function PrivatePage({addInquiry, inquiries, isBlocked, blocked, getLocat
 
   const DAY_ABBRp = {3:"WED",6:"SAT"};
   const total = PRICE_1ON1;
+
+  if(!SITE_READY) return(
+    <div style={{paddingTop:120,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"120px 24px 80px"}}>
+      <div style={{maxWidth:500,textAlign:"center"}}>
+        <div style={{fontSize:40,marginBottom:20}}>⚒️</div>
+        <div style={{fontSize:9,letterSpacing:5,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Coming Soon</div>
+        <h2 style={{fontSize:32,fontWeight:600,color:C.white,fontFamily:D.display,margin:"0 0 16px"}}>1-on-1 Sessions Coming August 2025</h2>
+        <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:32}}>The Tempering — private 1-on-1 sessions — will be bookable starting August 2025. In the meantime, reach out directly to schedule with Coach Carlos.</p>
+        <a href="mailto:laforjafutbol@gmail.com?subject=1-on-1 Training Request" style={{background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,color:"#0a0a0a",borderRadius:9,padding:"14px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700,textDecoration:"none",display:"block",textAlign:"center"}}>Email Coach Carlos →</a>
+      </div>
+    </div>
+  );
 
   return(
     <div style={{paddingTop:100}}>
