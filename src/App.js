@@ -39,6 +39,15 @@ function isCutoff(dateObj, sessTime){
 // ══ ROOT APP ══════════════════════════════════════════════
 export default function App(){
   const [page,setPage]       = useState("home");
+  const [transition,setTransition] = useState(null); // null | "anvil" | "swords"
+  const [transitionDone,setTransitionDone] = useState(false);
+
+  function navigateWithAnimation(type, dest){
+    setTransition(type);
+    setTransitionDone(false);
+    setTimeout(()=>{ setPage(dest); setTransitionDone(true); }, 1200);
+    setTimeout(()=>{ setTransition(null); setTransitionDone(false); }, 1800);
+  }
   const [bookings,setBookings] = useState([]);
   const [inquiries,setInquiries] = useState([]);
   const [loaded,setLoaded]   = useState(false);
@@ -172,6 +181,79 @@ export default function App(){
       {page==="reviews"   && <ReviewsPage   setPage={setPage} user={user}/>}
       <Footer setPage={setPage}/>
       <GStyles/>
+
+      {/* ── TRANSITION ANIMATIONS ── */}
+      {transition&&(
+        <div onClick={()=>{setTransition(null);}} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(6,4,2,0.97)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",animation:transitionDone?"overlayFade 0.6s ease forwards":"fadeIn 0.2s ease"}}>
+
+          {transition==="anvil"&&(
+            <div style={{textAlign:"center"}}>
+              {/* Anvil */}
+              <div style={{position:"relative",display:"inline-block",marginBottom:8}}>
+                <svg width="120" height="80" viewBox="0 0 120 80" style={{animation:"anvilBounce 0.3s ease 1.0s"}}>
+                  <rect x="20" y="45" width="80" height="30" rx="4" fill="#2a2a2a" stroke="#555" strokeWidth="1.5"/>
+                  <rect x="30" y="30" width="60" height="20" rx="3" fill="#333" stroke="#666" strokeWidth="1.5"/>
+                  <rect x="45" y="20" width="30" height="14" rx="2" fill="#3a3a3a" stroke="#666" strokeWidth="1.5"/>
+                  <rect x="35" y="72" width="20" height="8" rx="2" fill="#222"/>
+                  <rect x="65" y="72" width="20" height="8" rx="2" fill="#222"/>
+                </svg>
+                {/* Hammer */}
+                <div style={{position:"absolute",top:-40,left:"50%",transform:"translateX(-50%)",animation:"hammerSwing 0.8s cubic-bezier(0.25,0.46,0.45,0.94) 0.3s both"}}>
+                  <svg width="60" height="80" viewBox="0 0 60 80">
+                    <rect x="22" y="0" width="16" height="50" rx="3" fill="#555" stroke="#777" strokeWidth="1"/>
+                    <rect x="5" y="20" width="50" height="22" rx="4" fill="#c4a84c" stroke="#e8a93c" strokeWidth="1.5"/>
+                  </svg>
+                </div>
+              </div>
+              {/* Sparks */}
+              <div style={{position:"relative",height:60,width:200,margin:"0 auto"}}>
+                {[...Array(12)].map((_,i)=>{
+                  const angle = (i/12)*360;
+                  const dist = 40+Math.random()*40;
+                  const tx = Math.cos(angle*Math.PI/180)*dist;
+                  const ty = Math.sin(angle*Math.PI/180)*dist;
+                  return(
+                    <div key={i} style={{position:"absolute",top:"50%",left:"50%",width:4,height:4,borderRadius:"50%",background:i%3===0?"#ff4d2e":i%3===1?"#e8a93c":"#fff",animation:`sparkle 0.6s ease 1.0s forwards`,["--tx"]:tx+"px",["--ty"]:ty+"px",opacity:0}}/>
+                  );
+                })}
+              </div>
+              <div style={{fontSize:10,letterSpacing:5,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginTop:8,animation:"fadeIn 0.4s ease 0.8s both"}}>The Forge Awaits</div>
+            </div>
+          )}
+
+          {transition==="swords"&&(
+            <div style={{textAlign:"center"}}>
+              <div style={{position:"relative",width:200,height:120,margin:"0 auto 16px"}}>
+                {/* Left sword */}
+                <div style={{position:"absolute",left:0,top:"50%",transform:"translateY(-50%)",animation:"swordLeft 0.7s cubic-bezier(0.25,0.46,0.45,0.94) 0.2s both"}}>
+                  <svg width="90" height="20" viewBox="0 0 90 20">
+                    <polygon points="0,10 70,4 90,10 70,16" fill="#c0c0c0" stroke="#888" strokeWidth="1"/>
+                    <rect x="65" y="5" width="14" height="10" rx="2" fill="#c4a84c" stroke="#e8a93c" strokeWidth="1"/>
+                    <rect x="74" y="3" width="16" height="14" rx="2" fill="#8a5e1f"/>
+                  </svg>
+                </div>
+                {/* Right sword (mirrored) */}
+                <div style={{position:"absolute",right:0,top:"50%",transform:"translateY(-50%) scaleX(-1)",animation:"swordRight 0.7s cubic-bezier(0.25,0.46,0.45,0.94) 0.2s both"}}>
+                  <svg width="90" height="20" viewBox="0 0 90 20">
+                    <polygon points="0,10 70,4 90,10 70,16" fill="#c0c0c0" stroke="#888" strokeWidth="1"/>
+                    <rect x="65" y="5" width="14" height="10" rx="2" fill="#c4a84c" stroke="#e8a93c" strokeWidth="1"/>
+                    <rect x="74" y="3" width="16" height="14" rx="2" fill="#8a5e1f"/>
+                  </svg>
+                </div>
+                {/* Clash flare */}
+                <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",width:60,height:60,borderRadius:"50%",background:"radial-gradient(circle,#ff8c00,#ff4d2e,transparent)",animation:"clashFlare 0.5s ease 0.85s both",opacity:0}}/>
+                {/* Flames */}
+                {[...Array(6)].map((_,i)=>(
+                  <div key={i} style={{position:"absolute",bottom:-10,left:`${15+i*12}%`,width:8,height:20+Math.random()*15,background:`linear-gradient(to top,#ff4d2e,#ff8c00,transparent)`,borderRadius:"50% 50% 20% 20%",animation:`flameFlicker ${0.4+Math.random()*0.3}s ease-in-out infinite`,animationDelay:`${i*0.1}s`,opacity:0.8}}/>
+                ))}
+              </div>
+              <div style={{fontSize:10,letterSpacing:5,color:C.gold,textTransform:"uppercase",fontFamily:D.body,animation:"fadeIn 0.4s ease 0.8s both"}}>The Tempering Begins</div>
+            </div>
+          )}
+
+          <div style={{position:"absolute",bottom:40,fontSize:9,color:"#333",fontFamily:D.body,letterSpacing:2}}>tap to skip</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -241,7 +323,7 @@ function HomePage({setPage,user}){
       {/* ── HERO WITH VIDEO ── */}
       <div style={{position:"relative",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"120px 24px 80px",textAlign:"center",overflow:"hidden"}}>
         <video autoPlay muted loop playsInline style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}>
-          <source src="https://res.cloudinary.com/odsbhfdb/video/upload/v1784339721/copy_DF229305-BD87-45F6-B94B-2CF7E60A1E0B_mtrtdy.mov" type="video/mp4"/>
+          <source src="https://res.cloudinary.com/odsbhfdb/video/upload/q_auto,f_auto/v1784339721/copy_DF229305-BD87-45F6-B94B-2CF7E60A1E0B_mtrtdy.mp4" type="video/mp4"/>
         </video>
         <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(6,4,2,0.80) 0%,rgba(6,4,2,0.55) 40%,rgba(6,4,2,0.92) 100%)",zIndex:1}}/>
         <div style={{position:"relative",zIndex:2,maxWidth:680}}>
@@ -251,8 +333,8 @@ function HomePage({setPage,user}){
           <p style={{fontSize:11,letterSpacing:5,color:C.gold,marginBottom:14,textTransform:"uppercase",fontFamily:D.body,fontWeight:300}}>{BRAND.tagline}</p>
           <p style={{fontSize:16,color:"rgba(240,235,226,0.65)",marginBottom:50,maxWidth:520,lineHeight:1.9,fontFamily:D.display,fontStyle:"italic",margin:"0 auto 50px"}}>You come in raw. You leave forged.</p>
           <div style={{display:"flex",gap:14,flexWrap:"wrap",justifyContent:"center"}}>
-            <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:C.white,borderRadius:10,padding:"15px 44px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 8px 32px ${C.red}55`,fontFamily:D.body,fontWeight:600}}>Book a Session</button>
-            <button onClick={()=>setPage("private")} style={{background:"transparent",border:"1px solid rgba(196,168,76,0.4)",color:C.gold,borderRadius:10,padding:"15px 44px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Request 1-on-1</button>
+            <button onClick={()=>navigateWithAnimation("anvil","book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:C.white,borderRadius:10,padding:"15px 44px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 8px 32px ${C.red}55`,fontFamily:D.body,fontWeight:600}}>Book a Session</button>
+            <button onClick={()=>navigateWithAnimation("swords","private")} style={{background:"transparent",border:"1px solid rgba(196,168,76,0.4)",color:C.gold,borderRadius:10,padding:"15px 44px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Request 1-on-1</button>
           </div>
         </div>
         <div style={{position:"absolute",bottom:32,left:"50%",transform:"translateX(-50%)",zIndex:2,display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
@@ -364,11 +446,56 @@ function HomePage({setPage,user}){
             <a href="https://maps.google.com/?q=Bayview+Park+James+Island+SC" target="_blank" rel="noopener noreferrer" style={{background:"transparent",border:"1px solid rgba(196,168,76,0.25)",color:C.gold,borderRadius:8,padding:"10px 18px",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,textDecoration:"none"}}>Directions →</a>
           </div>
 
+          {/* What to Expect */}
+          <div style={{marginBottom:60}}>
+            <div style={{textAlign:"center",marginBottom:32}}>
+              <div style={{fontSize:8,letterSpacing:6,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>First Session</div>
+              <h2 style={{fontSize:"clamp(24px,4vw,36px)",color:C.white,fontFamily:D.display,fontWeight:600,margin:0}}>What to Expect</h2>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:12}}>
+              {[
+                {icon:"👟",title:"Gear Up",desc:"Cleats or turf shoes. Water bottle. Your own ball if you have one. Arrive 5-10 minutes early."},
+                {icon:"🔥",title:"Full Intensity",desc:"High-pressure drills from minute one. Every rep has a purpose. No standing around."},
+                {icon:"🎯",title:"Real Feedback",desc:"Coach Carlos is on you every rep. Direct, specific, actionable feedback on everything."},
+                {icon:"📋",title:"Debrief",desc:"Sessions end with one win and one focus area. You leave knowing exactly what to work on."},
+              ].map((item,i)=>(
+                <div key={i} style={{background:"#0e0b08",border:"1px solid #1e1810",borderRadius:12,padding:"20px 18px"}}>
+                  <div style={{fontSize:24,marginBottom:10}}>{item.icon}</div>
+                  <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:6}}>{item.title}</div>
+                  <div style={{fontSize:11,color:C.textMid,fontFamily:D.body,lineHeight:1.8}}>{item.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* FAQ */}
+          <div style={{marginBottom:60}}>
+            <div style={{textAlign:"center",marginBottom:32}}>
+              <div style={{fontSize:8,letterSpacing:6,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Questions</div>
+              <h2 style={{fontSize:"clamp(24px,4vw,36px)",color:C.white,fontFamily:D.display,fontWeight:600,margin:0}}>Quick Answers</h2>
+            </div>
+            <div style={{display:"grid",gap:8,maxWidth:680,margin:"0 auto"}}>
+              {[
+                {q:"What age can my player train?",a:"U11 and up — players who are on full 11v11 fields. If your player is younger and you think they're ready, reach out directly and we'll talk."},
+                {q:"What if it rains?",a:"Light rain we train. Lightning or severe weather we reschedule at no charge. You'll get a message before the session if conditions force a change."},
+                {q:"How do I pay?",a:"Through Venmo to @carlos-cepeda-41 once your spot is reserved. Card payments are coming August 2026."},
+                {q:"Can I reschedule?",a:"Yes — with 24 hours notice. Log into your account, tap Reschedule on your session, and pick a new date. Same-day cancellations are forfeited."},
+                {q:"How many players per session?",a:`Maximum ${MAX_PLAYERS} players. Small on purpose — every player gets real reps and real feedback.`},
+                {q:"What should my player bring?",a:"Cleats or turf shoes, water, and their own ball if they have one. No equipment rental needed."},
+              ].map((item,i)=>(
+                <div key={i} style={{background:"#0e0b08",border:"1px solid #1e1810",borderRadius:10,padding:"16px 20px"}}>
+                  <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:6}}>{item.q}</div>
+                  <div style={{fontSize:11,color:C.textMid,fontFamily:D.body,lineHeight:1.8}}>{item.a}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* CTA + Account */}
           <div style={{textAlign:"center"}}>
             <div style={{display:"flex",gap:14,flexWrap:"wrap",justifyContent:"center",marginBottom:20}}>
-              <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 6px 24px ${C.red}33`,fontFamily:D.body,fontWeight:500}}>Book The Furnace</button>
-              <button onClick={()=>setPage("private")} style={{background:"transparent",border:`1px solid ${C.silver}44`,color:C.gold,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>Book The Tempering</button>
+              <button onClick={()=>navigateWithAnimation("anvil","book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 6px 24px ${C.red}33`,fontFamily:D.body,fontWeight:500}}>Book The Furnace</button>
+              <button onClick={()=>navigateWithAnimation("swords","private")} style={{background:"transparent",border:`1px solid ${C.silver}44`,color:C.gold,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>Book The Tempering</button>
             </div>
             <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"18px 22px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap",maxWidth:600,margin:"0 auto"}}>
               {user?(
@@ -961,13 +1088,49 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
           <div style={{animation:"fadeUp 0.5s ease"}}>
             {myBooking.status==="confirmed"?(
               <>
-                <div style={{textAlign:"center",marginBottom:28}}>
-                  <div style={{width:76,height:76,borderRadius:"50%",margin:"0 auto 16px",background:`linear-gradient(135deg,${C.green},#0e7a47)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,color:C.white,boxShadow:`0 0 48px ${C.green}55`}}>✓</div>
-                  <h2 style={{margin:"0 0 8px",fontSize:28,fontWeight:600,color:C.white,fontFamily:D.display}}>Booking Confirmed!</h2>
-                  <p style={{margin:0,fontSize:13,color:C.textDim,fontFamily:D.body}}>Coach Carlos confirmed your payment. A confirmation email has been sent. See you on the field! ⚽</p>
+                <div style={{textAlign:"center",marginBottom:28,animation:"slideUp 0.6s ease"}}>
+                  <div style={{width:80,height:80,borderRadius:"50%",margin:"0 auto 20px",background:`linear-gradient(135deg,${C.green},#0e7a47)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:34,color:C.white,boxShadow:`0 0 60px ${C.green}44`}}>⚒️</div>
+                  <h2 style={{margin:"0 0 8px",fontSize:30,fontWeight:700,color:C.white,fontFamily:D.display,letterSpacing:2}}>You're In The Forge</h2>
+                  <p style={{margin:0,fontSize:13,color:C.textDim,fontFamily:D.body,lineHeight:1.8}}>Coach Carlos confirmed your spot. A confirmation email is on its way. See you on the field.</p>
                 </div>
-                <SC title="Your Session" rows={[{label:"Name",value:myBooking.name},{label:"Date",value:myBooking.dateLabel},{label:"Time",value:myBooking.sessTime},{label:"Age Group",value:myBooking.ageGroup,color:AGE_COLORS[myBooking.ageTag]?.text},{label:"Skill Focus",value:`${myBooking.skillIcon} ${myBooking.skill}`,color:SKILL_COLORS[myBooking.skill]?.color},{label:"Players",value:`${myBooking.count} player${myBooking.count>1?"s":""}`},{label:"Paid",value:`$${myBooking.total}`,accent:true}]}/>
-                <div style={{textAlign:"center",marginTop:22}}><GB onClick={reset}>Book Another Spot</GB></div>
+
+                <SC title="Session Details" rows={[{label:"Name",value:myBooking.name},{label:"Date",value:myBooking.dateLabel},{label:"Time",value:myBooking.sessTime},{label:"Location",value:myBooking.location||"Bayview Park · James Island"},{label:"Session",value:`${myBooking.skillIcon||"🔥"} ${myBooking.skill||"The Furnace"}`},{label:"Players",value:`${myBooking.count||1} player${(myBooking.count||1)>1?"s":""}`}]}/>
+
+                {/* What to bring */}
+                <div style={{background:"#0e0b08",border:`1px solid #1e1810`,borderRadius:12,padding:"18px 20px",margin:"16px 0"}}>
+                  <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>What to Bring</div>
+                  {[
+                    {icon:"👟",text:"Cleats or turf shoes — no street shoes on the field"},
+                    {icon:"💧",text:"Water bottle — sessions are intense, stay hydrated"},
+                    {icon:"⚽",text:"Your own ball if you have one (we have extras)"},
+                    {icon:"🧢",text:"Arrive 5-10 minutes early to warm up"},
+                  ].map((item,i)=>(
+                    <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:i<3?10:0}}>
+                      <span style={{fontSize:16,flexShrink:0}}>{item.icon}</span>
+                      <span style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.7}}>{item.text}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* What to expect */}
+                <div style={{background:"#0e0b08",border:`1px solid #1e1810`,borderRadius:12,padding:"18px 20px",marginBottom:16}}>
+                  <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>What to Expect</div>
+                  {[
+                    {n:"1",text:"High-intensity drills from minute one — no standing around"},
+                    {n:"2",text:"Every drill has a purpose tied to real game situations"},
+                    {n:"3",text:"Coach Carlos gives direct feedback on every rep"},
+                    {n:"4",text:"Sessions end with a debrief — one win, one focus for next time"},
+                  ].map((item,i)=>(
+                    <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:i<3?10:0}}>
+                      <div style={{width:20,height:20,borderRadius:"50%",background:C.redDark,border:`1px solid ${C.red}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:C.red,flexShrink:0,fontWeight:700,marginTop:1}}>{item.n}</div>
+                      <span style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.7}}>{item.text}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{textAlign:"center"}}>
+                  <GB onClick={reset}>Book Another Spot</GB>
+                </div>
               </>
             ):(
               <>
