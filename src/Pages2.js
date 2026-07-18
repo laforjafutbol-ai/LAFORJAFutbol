@@ -123,7 +123,7 @@ export function AuthPage({setPage,authChecked,user}){
               <input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" style={IS}/>
             </div>
             {err&&<div style={{fontSize:12,color:C.red,marginBottom:14,fontFamily:D.body}}>{err}</div>}
-            <button onClick={handleSave} disabled={busy} style={{width:"100%",background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:500,opacity:busy?0.6:1}}>
+            <button type="submit" disabled={busy} style={{width:"100%",background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:500,opacity:busy?0.6:1}}>
               {busy?"Sending…":"Send Reset Link"}
             </button>
           </form>
@@ -145,7 +145,7 @@ export function AuthPage({setPage,authChecked,user}){
             <input type="password" required minLength={6} value={pw} onChange={e=>setPw(e.target.value)} placeholder="••••••••" style={IS}/>
           </div>
           {err&&<div style={{fontSize:12,color:C.red,marginBottom:14,fontFamily:D.body}}>{err}</div>}
-          <button onClick={handleSave} disabled={busy} style={{width:"100%",background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:500,opacity:busy?0.6:1,marginBottom:14}}>
+          <button type="submit" disabled={busy} style={{width:"100%",background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:500,opacity:busy?0.6:1,marginBottom:14}}>
             {busy?"Please wait…":mode==="signup"?"Create Account":"Sign In"}
           </button>
           {mode==="login"&&(
