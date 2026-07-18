@@ -190,7 +190,7 @@ function Nav({page,setPage,user}){
         <Crest size={30}/><span style={{fontSize:18,letterSpacing:4,color:C.gold,textTransform:"uppercase",fontFamily:D.display,fontWeight:600}}>La Forja</span>
       </button>
       <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
-        {[["home","Home"],["about","About"],["book","Book"],["private","1-on-1"],["sessions","My Sessions"]].map(([key,lbl])=>(
+        {[["home","Home"],["about","About"],["book","Book"],["private","1-on-1"],user?["account","My Account"]:["sessions","My Sessions"]].map(([key,lbl])=>(
           <button key={key} onClick={()=>setPage(key)} style={{background:key==="book"&&page!=="book"?`linear-gradient(135deg,${C.red},${C.redDim})`:page===key?"rgba(201,168,76,0.1)":"transparent",border:key==="book"&&page!=="book"?`1px solid ${C.red}`:page===key?`1px solid ${C.silver}44`:"1px solid transparent",color:key==="book"&&page!=="book"?C.white:page===key?C.silverBright:C.textMid,borderRadius:8,padding:"6px 13px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",transition:"all 0.2s",fontFamily:D.body,fontWeight:500}}>
             {lbl}
           </button>
