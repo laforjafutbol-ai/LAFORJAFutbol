@@ -182,6 +182,13 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
     if(authChecked && !user) setPage("login");
   },[authChecked,user]);
 
+  // Don't render anything until auth is checked
+  if(!authChecked) return(
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,letterSpacing:4,textTransform:"uppercase"}}>Loading…</div>
+    </div>
+  );
+
   // Load saved player profiles
   useEffect(()=>{
     if(!user) return;
@@ -218,11 +225,7 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
     linkGuestBookings();
   },[user?.uid, user?.emailVerified]);
 
-  if(!user) return(
-    <div style={{maxWidth:440,margin:"0 auto",padding:"160px 24px 80px",textAlign:"center"}}>
-      <div style={{fontSize:12,color:C.textDim,fontFamily:D.body,animation:"pulse 1.5s infinite"}}>Loading…</div>
-    </div>
-  );
+  if(!user) return null; // handled by authChecked effect above
 
   const email = user.email;
   const myBookings  = bookings.filter(b=>b.userId===user.uid || (b.email && b.email.toLowerCase()===email?.toLowerCase()));
@@ -347,7 +350,7 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
         <div style={{display:"grid",gap:10}}>
           {(tab==="upcoming"?upcoming:past).length===0?(
             <div style={{textAlign:"center",padding:"60px 20px",color:C.textDim,fontSize:13,fontFamily:D.body,background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14}}>
-              {tab==="upcoming"?"No upcoming sessions. Ready to book one?":"No past sessions yet."}
+              {tab==="upcoming"?"No upcoming sessions — ready to book one?":"No past sessions on record yet."}
             </div>
           ):(tab==="upcoming"?upcoming:past).map((s,i)=>(
             <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:`3px solid ${statusColor[s.status]||C.silverDark}`,borderRadius:12,padding:"16px 18px"}}>
@@ -370,7 +373,7 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
                     )}
                   </div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:"4px 14px",marginBottom:s.location?5:0}}>
-                    <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>🕐 {s._time}</span>
+                    <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>🕐 {s._time||s.sessTime||s.slotTime||"TBD"}</span>
                     {s.type==="group"?(
                       <>
                         <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>🔥 {s.skill||"The Furnace"}</span>
