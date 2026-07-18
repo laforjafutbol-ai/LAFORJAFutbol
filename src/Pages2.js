@@ -178,17 +178,6 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
   const [reschedDate,setReschedDate] = useState(null);
   const [reschedSess,setReschedSess] = useState(null);
 
-  useEffect(()=>{
-    if(authChecked && !user) setPage("login");
-  },[authChecked,user]);
-
-  // Don't render anything until auth is checked
-  if(!authChecked) return(
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",paddingTop:80}}>
-      <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,letterSpacing:4,textTransform:"uppercase"}}>Loading…</div>
-    </div>
-  );
-
   // Load saved player profiles
   useEffect(()=>{
     if(!user) return;
@@ -206,14 +195,12 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
     async function linkGuestBookings(){
       try{
         const { collection:col, query:q, where, getDocs, updateDoc:upDoc, doc:d } = await import("firebase/firestore");
-        // Find unlinked bookings with matching email
         const bSnap = await getDocs(q(col(db,"bookings"),where("email","==",user.email)));
         for(const bDoc of bSnap.docs){
           if(!bDoc.data().userId){
             await upDoc(d(db,"bookings",bDoc.id),{userId:user.uid,linkedAt:new Date().toISOString()});
           }
         }
-        // Find unlinked inquiries with matching email
         const iSnap = await getDocs(q(col(db,"inquiries"),where("email","==",user.email)));
         for(const iDoc of iSnap.docs){
           if(!iDoc.data().userId){
@@ -225,7 +212,17 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
     linkGuestBookings();
   },[user?.uid, user?.emailVerified]);
 
-  if(!user) return null; // handled by authChecked effect above
+  useEffect(()=>{
+    if(authChecked && !user) setPage("login");
+  },[authChecked,user]);
+
+  // All hooks above — conditional returns below
+  if(!authChecked) return(
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",paddingTop:80}}>
+      <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,letterSpacing:4,textTransform:"uppercase"}}>Loading…</div>
+    </div>
+  );
+  if(!user) return null;
 
   const email = user.email;
   const myBookings  = bookings.filter(b=>b.userId===user.uid || (b.email && b.email.toLowerCase()===email?.toLowerCase()));
