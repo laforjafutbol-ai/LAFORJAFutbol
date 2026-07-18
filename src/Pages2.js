@@ -225,8 +225,8 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
   if(!user) return null;
 
   const email = user.email;
-  const myBookings  = bookings.filter(b=>b.userId===user.uid || (b.email && b.email.toLowerCase()===email?.toLowerCase()));
-  const myInquiries = inquiries.filter(i=>i.userId===user.uid || (i.email && i.email.toLowerCase()===email?.toLowerCase()));
+  const myBookings  = (bookings||[]).filter(b=>b.userId===user.uid || (b.email && b.email.toLowerCase()===email?.toLowerCase()));
+  const myInquiries = (inquiries||[]).filter(i=>i.userId===user.uid || (i.email && i.email.toLowerCase()===email?.toLowerCase()));
 
   // Combine into unified session list
   const allSessions = [
@@ -575,7 +575,7 @@ export function PlayersTab({user,players,playersLoaded}){
   }
 
   async function handleSave(e){
-    e.preventDefault();
+    if(e&&e.preventDefault) e.preventDefault();
     if(!form.name.trim()) return;
     if(editId){
       await updateDoc(doc(db,"users",user.uid,"players",editId), {...form});
@@ -978,7 +978,7 @@ export function SessionsPage({setPage,user}){
   },[user]);
   if(user) return null;
   return(
-    <div style={{maxWidth:600,margin:"0 auto",padding:"110px 24px 80px"}}>
+    <div style={{maxWidth:600,margin:"0 auto",padding:"110px 24px 80px",minHeight:"100vh"}}>
 
       {/* Hero */}
       <div style={{textAlign:"center",marginBottom:40}}>
