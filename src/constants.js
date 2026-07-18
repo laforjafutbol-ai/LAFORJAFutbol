@@ -44,10 +44,10 @@ export const C = {
 export const D = { display:"'Cormorant Garamond',Georgia,serif", body:"'Montserrat',sans-serif" };
 
 export const DAY_SCHEDULE = {
-  1:{ skill:"The Furnace", skillDesc:"1v1 dominance · Tight space control · Decision making under pressure", skillIcon:"🔥", sessions:[{id:"s1",label:"Session 1",time:"5:00 PM – 6:15 PM",ageGroup:"Ages 9–11", ageTag:"9-11"},{id:"s2",label:"Session 2",time:"6:30 PM – 7:45 PM",ageGroup:"Ages 12–14",ageTag:"12-14"}]},
-  2:{ skill:"The Furnace", skillDesc:"1v1 dominance · Tight space control · Decision making under pressure", skillIcon:"🔥", sessions:[{id:"s1",label:"Session 1",time:"5:00 PM – 6:15 PM",ageGroup:"Ages 9–11", ageTag:"9-11"},{id:"s2",label:"Session 2",time:"6:30 PM – 7:45 PM",ageGroup:"Ages 12–14",ageTag:"12-14"}]},
-  4:{ skill:"The Furnace", skillDesc:"1v1 dominance · Tight space control · Decision making under pressure", skillIcon:"🔥", sessions:[{id:"s1",label:"Session 1",time:"5:00 PM – 6:15 PM",ageGroup:"Ages 9–11", ageTag:"9-11"},{id:"s2",label:"Session 2",time:"6:30 PM – 7:45 PM",ageGroup:"Ages 12–14",ageTag:"12-14"}]},
-  5:{ skill:"The Furnace", skillDesc:"1v1 dominance · Tight space control · Decision making under pressure", skillIcon:"🔥", sessions:[{id:"s1",label:"Session 1",time:"5:00 PM – 6:15 PM",ageGroup:"Ages 9–11", ageTag:"9-11"},{id:"s2",label:"Session 2",time:"6:30 PM – 7:45 PM",ageGroup:"Ages 12–14",ageTag:"12-14"}]},
+  1:{ skill:"The Furnace", skillDesc:"1v1 dominance · Tight space control · Decision making under pressure", skillIcon:"🔥", sessions:[{id:"s1",label:"Session 1",time:"5:00 PM – 6:15 PM",ageGroup:"U11+", ageTag:"u11+"},{id:"s2",label:"Session 2",time:"6:30 PM – 7:45 PM",ageGroup:"U11+", ageTag:"u11+"}]},
+  2:{ skill:"The Furnace", skillDesc:"1v1 dominance · Tight space control · Decision making under pressure", skillIcon:"🔥", sessions:[{id:"s1",label:"Session 1",time:"5:00 PM – 6:15 PM",ageGroup:"U11+", ageTag:"u11+"},{id:"s2",label:"Session 2",time:"6:30 PM – 7:45 PM",ageGroup:"U11+", ageTag:"u11+"}]},
+  4:{ skill:"The Furnace", skillDesc:"1v1 dominance · Tight space control · Decision making under pressure", skillIcon:"🔥", sessions:[{id:"s1",label:"Session 1",time:"5:00 PM – 6:15 PM",ageGroup:"U11+", ageTag:"u11+"},{id:"s2",label:"Session 2",time:"6:30 PM – 7:45 PM",ageGroup:"U11+", ageTag:"u11+"}]},
+  5:{ skill:"The Furnace", skillDesc:"1v1 dominance · Tight space control · Decision making under pressure", skillIcon:"🔥", sessions:[{id:"s1",label:"Session 1",time:"5:00 PM – 6:15 PM",ageGroup:"U11+", ageTag:"u11+"},{id:"s2",label:"Session 2",time:"6:30 PM – 7:45 PM",ageGroup:"U11+", ageTag:"u11+"}]},
 };
 export const PRIVATE_SCHEDULE = {
   3: { // Wednesday
@@ -67,8 +67,9 @@ export const PRIVATE_SCHEDULE = {
 };
 
 export const AGE_COLORS = {
-  "9-11": {bg:"#1c160c",border:C.gold,  text:C.gold,  badge:"#241a08"},
-  "12-14":{bg:"#181613",border:C.silver,text:C.silver,badge:"#201d18"},
+  "u11+": {bg:"#1c160c",border:C.gold,text:C.gold,badge:"#241a08"},
+  "9-11": {bg:"#1c160c",border:C.gold,text:C.gold,badge:"#241a08"},
+  "12-14":{bg:"#1c160c",border:C.gold,text:C.gold,badge:"#241a08"},
 };
 export const SKILL_COLORS = {
   "The Furnace":   {color:C.red,  bg:"#1f0a05"},
