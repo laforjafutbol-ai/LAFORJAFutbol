@@ -297,7 +297,6 @@ function HomePage({setPage,user}){
           </div>
         </div>
 
-
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:44}}>
           {[{val:"4",label:"Max Players",sub:"per session"},{val:`$${PRICE_GROUP}`,label:"Group Rate",sub:"per player"},{val:`$${PRICE_1ON1}`,label:"1-on-1 Rate",sub:"private session"}].map(s=>(
             <div key={s.label} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"22px 18px",textAlign:"center"}}>
@@ -323,7 +322,6 @@ function HomePage({setPage,user}){
           <button onClick={()=>setPage("private")} style={{background:"transparent",border:`1px solid ${C.silver}44`,color:C.gold,borderRadius:10,padding:"13px 36px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>Book The Tempering</button>
         </div>
 
-                {/* ── ACCOUNT SIGN UP SECTION ── */}
         <div style={{marginTop:32,background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"18px 22px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap"}}>
           {user?(
             <>
@@ -338,7 +336,7 @@ function HomePage({setPage,user}){
               </div>
               <div style={{display:"flex",gap:8,flexShrink:0}}>
                 <button onClick={()=>setPage("login")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:8,padding:"9px 20px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500,whiteSpace:"nowrap"}}>Sign Up</button>
-                <button onClick={()=>setPage("login")} style={{background:"transparent",border:`1px solid ${C.silver}33`,color:C.silver,borderRadius:8,padding:"9px 16px",fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>Sign In</button>
+                <button onClick={()=>setPage("login")} style={{background:"transparent",border:`1px solid ${C.silver}33`,color:C.silver,borderRadius:8,padding:"9px 20px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>Sign In</button>
               </div>
             </>
           )}
@@ -867,8 +865,23 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
                   </div>
                 ))}
               </div>
-              <SC rows={[{label:"Date",value:fmtDate(selDate)},{label:"Session",value:selSess?.time},{label:"Age Group",value:selSess?.ageGroup,color:AGE_COLORS[selSess?.ageTag]?.text},{label:"Focus",value:`${DAY_SCHEDULE[selDate?.getDay()]?.skillIcon} ${DAY_SCHEDULE[selDate?.getDay()]?.skill}`,color:SKILL_COLORS[DAY_SCHEDULE[selDate?.getDay()]?.skill]?.color},{label:"Players Training",value:`${effectiveCount} player${effectiveCount>1?"s":""}`},{label:"Total Due",value:`$${total}`,accent:true}]}/>
-              <div style={{display:"flex",gap:10,marginTop:18}}>
+              <SC rows={[{label:"Date",value:fmtDate(selDate)},{label:"Session",value:selSess?.time},{label:"Age Group",value:"U11+",color:C.gold},{label:"Focus",value:`${DAY_SCHEDULE[selDate?.getDay()]?.skillIcon} ${DAY_SCHEDULE[selDate?.getDay()]?.skill}`,color:SKILL_COLORS[DAY_SCHEDULE[selDate?.getDay()]?.skill]?.color},{label:"Players Training",value:`${effectiveCount} player${effectiveCount>1?"s":""}`},{label:"Total Due",value:`$${total}`,accent:true}]}/>
+
+              {/* Waiver & Policy */}
+              <div style={{background:"#0d0b08",border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"16px",marginTop:16,marginBottom:6}}>
+                <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Waiver & Cancellation Policy</div>
+                <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.8,marginBottom:12}}>
+                  I acknowledge that soccer training involves inherent physical risks including but not limited to muscle strains, sprains, collisions, and other injuries. I voluntarily allow my player to participate in La Forja Futbol training sessions and release La Forja Futbol and its coaches from liability for injuries arising from normal training activities. I consent to photos and videos of my player being used for coaching and promotional purposes.
+                  <br/><br/>
+                  <strong style={{color:C.textMid}}>Cancellation Policy:</strong> All sessions are reschedule-friendly with 24 hours notice. Same-day cancellations and no-shows are forfeited. No cash refunds — all value stays as session credit. Sessions missed due to genuine emergencies are handled on a case-by-case basis directly with Coach Carlos.
+                </div>
+                <label style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer"}}>
+                  <input type="checkbox" checked={waiverAgreed} onChange={e=>setWaiverAgreed(e.target.checked)} style={{marginTop:2,accentColor:C.gold,width:14,height:14,flexShrink:0}}/>
+                  <span style={{fontSize:11,color:C.textMid,fontFamily:D.body,lineHeight:1.6}}>I have read and agree to the waiver and cancellation policy on behalf of myself and my player.</span>
+                </label>
+              </div>
+
+              <div style={{display:"flex",gap:10,marginTop:14}}>
                 <GB onClick={()=>setStep(1)}>← Back</GB>
                 <AB disabled={!canNext2||bookingLoading} onClick={doBook}>{bookingLoading?"Reserving…":"Reserve My Spot →"}</AB>
               </div>
