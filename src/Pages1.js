@@ -1159,21 +1159,39 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                       );
                     })}
 
-                    {/* Custom-time sessions (not matched to preset slot) */}
-                    {!isPast&&!allBlocked&&(()=>{
-                      const customItems=dayBookings.filter(s=>
-                        (s.sessId==="custom"||(!s.sessId&&s.sessTime&&s.sessTime!=="Time TBD"))&&
-                        !sessions.some(sess=>s.sessTime===sess.time)
-                      );
-                      return customItems.map((item,ci)=>(
-                        <div key={`c${ci}`} draggable="true"
+
+                    {/* ALL sessions not matched to a preset slot — shows on any day, past or future */}
+                    {(()=>{
+                      const shownIds=new Set();
+                      if(isCoachDay&&!allBlocked){
+                        sessions.forEach(sess=>{
+                          dayBookings.filter(s=>
+                            isGroupDay
+                              ?(s.sessId===sess.id||(s.sessId==="custom"&&s.sessTime===sess.time))
+                              :(s.slotId===sess.id||s.slotTime===sess.time||(s.sessId==="custom"&&s.sessTime===sess.time))
+                          ).forEach(s=>shownIds.add(s.id));
+                        });
+                      }
+                      const unmatched=dayBookings.filter(s=>!shownIds.has(s.id)&&s.status!=="tentative");
+                      if(!unmatched.length) return null;
+                      return unmatched.map((item,ci)=>(
+                        <div key={`u${ci}`} draggable="true"
                           onDragStart={e=>onChipDragStart(e,item)}
                           onDragEnd={onChipDragEnd}
                           onClick={e=>{e.stopPropagation();setNoteId(item.id);setNoteText(item.coachNote||"");setNoteColl(item._coll);}}
-                          style={{background:"#1e1a08",border:"1px solid #c4a84c33",borderLeft:"2px solid #c4a84c",borderRadius:4,padding:"3px 5px",marginBottom:2,cursor:"grab",userSelect:"none",opacity:dragId===item.id?0.35:1}}
+                          style={{background:item._type==="1on1"?"#241c06":"#1e1208",border:`1px solid ${item._type==="1on1"?"#c4a84c44":"#c4704433"}`,borderLeft:`2px solid ${item._type==="1on1"?"#c4a84c":"#c47044"}`,borderRadius:4,padding:"3px 5px",marginBottom:2,cursor:"grab",userSelect:"none",opacity:dragId===item.id?0.35:1}}
                         >
-                          <div style={{fontSize:7,color:"#c4a84c88",fontFamily:D.body,pointerEvents:"none"}}>{item._time||item.sessTime}</div>
-                          <div style={{fontSize:9,color:"#e0d0b8",fontFamily:D.display,fontWeight:600,pointerEvents:"none"}}>{item.name}</div>
+                          {(item._time||item.sessTime)&&item.sessTime!=="Time TBD"&&(
+                            <div style={{fontSize:7,color:"#c4a84c77",fontFamily:D.body,pointerEvents:"none"}}>{item._time||item.sessTime}</div>
+                          )}
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:2}}>
+                            <span style={{fontSize:9,color:"#e0d0b8",fontFamily:D.display,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"72%",pointerEvents:"none"}}>{item.name}</span>
+                            <div style={{display:"flex",gap:2,flexShrink:0,pointerEvents:"none",alignItems:"center"}}>
+                              {item.coachNote&&<span style={{fontSize:6,color:"#c4a84c"}}>📝</span>}
+                              {item.requestType&&<span style={{fontSize:6,color:"#909090"}}>⚠</span>}
+                              <div style={{width:5,height:5,borderRadius:"50%",background:item.status==="confirmed"?"#4db870":"#c4a84c"}}/>
+                            </div>
+                          </div>
                         </div>
                       ));
                     })()}
