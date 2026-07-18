@@ -10,6 +10,7 @@ export const stripePromise = loadStripe("pk_test_51TW0MzFU9deEKlhCmhj0SXJS0kQ4ZF
 export const BRAND = { name:"La Forja", coach:"Carlos Cepeda", venmo:"carlos-cepeda-41", tagline:"Where Champions Are Forged", coachPw:"LAForja37" };
 // Set to true to show the "Pay by Card" option to clients. Keep false while testing Stripe.
 export const STRIPE_ENABLED = false;
+export const SITE_READY = false; // Set to true when ready to accept bookings
 export const MAX_PLAYERS = 4;
 export const PRICE_GROUP = 45;
 export const PRICE_1ON1 = 65;
