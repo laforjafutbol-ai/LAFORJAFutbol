@@ -10,7 +10,7 @@ import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, POSITIONS, DAY_SCHED
 
 
 // ── BOOKING DATE CUTOFF — July 31 is last bookable day
-const BOOKING_CUTOFF_DATE = new Date('2025-08-01T00:00:00');
+const BOOKING_CUTOFF_DATE = new Date('2026-08-01T00:00:00');
 
 // ── BOOKING CUTOFF — 3 hours before session start ─────────
 function isCutoff(dateObj, sessTime){
@@ -335,7 +335,7 @@ function HomePage({setPage,user}){
           <div style={{background:"#0e0b08",border:"1px solid #1e1810",borderRadius:16,padding:"32px 28px",marginBottom:60,textAlign:"center"}}>
             <div style={{fontSize:8,letterSpacing:4,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Training Packages</div>
             <h3 style={{fontSize:22,color:C.white,fontFamily:D.display,fontWeight:600,margin:"0 0 10px"}}>Monthly & Season Packages</h3>
-            <p style={{fontSize:12,color:C.textDim,fontFamily:D.body,marginBottom:24,lineHeight:1.8}}>Lock in your spot and save. Packages launching August 2025.</p>
+            <p style={{fontSize:12,color:C.textDim,fontFamily:D.body,marginBottom:24,lineHeight:1.8}}>Lock in your spot and save. Packages launching August 2026.</p>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:22}}>
               {[
                 {name:"Monthly Lite",sessions:"4 sessions",price:"$140",save:"Save $40"},
@@ -350,7 +350,7 @@ function HomePage({setPage,user}){
                 </div>
               ))}
             </div>
-            <div style={{display:"inline-block",background:"rgba(196,168,76,0.08)",border:"1px solid rgba(196,168,76,0.2)",borderRadius:20,padding:"6px 20px",fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body}}>Coming August 2025</div>
+            <div style={{display:"inline-block",background:"rgba(196,168,76,0.08)",border:"1px solid rgba(196,168,76,0.2)",borderRadius:20,padding:"6px 20px",fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body}}>Coming August 2026</div>
           </div>
 
           {/* Location */}
@@ -595,8 +595,8 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
       <div style={{maxWidth:500,textAlign:"center"}}>
         <div style={{fontSize:40,marginBottom:20}}>⚒️</div>
         <div style={{fontSize:9,letterSpacing:5,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Coming Soon</div>
-        <h2 style={{fontSize:32,fontWeight:600,color:C.white,fontFamily:D.display,margin:"0 0 16px"}}>Booking Opens August 2025</h2>
-        <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:32}}>We're putting the final touches on everything. Group sessions, packages, and automated confirmations are all coming. Check back August 1st.</p>
+        <h2 style={{fontSize:32,fontWeight:600,color:C.white,fontFamily:D.display,margin:"0 0 16px"}}>Booking Opens August 2026</h2>
+        <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:32}}>We're putting the final touches on everything. Group sessions, packages, and automated confirmations are all coming. Check back August 1st, 2026.</p>
         <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 20px"}}>
           <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,letterSpacing:2,textTransform:"uppercase",marginBottom:12}}>Want to train before then?</div>
           <a href="mailto:laforjafutbol@gmail.com?subject=Training Inquiry" style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,color:C.white,borderRadius:9,padding:"13px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,textDecoration:"none",display:"block",textAlign:"center"}}>Email Coach Carlos →</a>
