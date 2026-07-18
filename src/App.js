@@ -413,6 +413,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
   const [selPlayerIds,setSelPlayerIds] = useState([]); // array of selected player ids
   const [addingPlayer,setAddingPlayer] = useState(false);
   const [newPlayerForm,setNewPlayerForm] = useState({name:"",age:"",position:""});
+  const [waiverAgreed,setWaiverAgreed] = useState(false);
 
   // If logged in, load saved players and auto-fill email/name
   useEffect(()=>{
@@ -466,7 +467,6 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
 
   function clearLookup(){ setLookEmail(""); setLookSt("idle"); setRetClient(null); setForm({name:"",email:"",phone:"",notes:""}); }
 
-  const [waiverAgreed,setWaiverAgreed] = useState(false);
   const [bookingLoading,setBookingLoading] = useState(false);
 
   async function doBook(){
