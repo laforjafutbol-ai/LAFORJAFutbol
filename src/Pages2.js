@@ -184,7 +184,7 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
 
   // Don't render anything until auth is checked
   if(!authChecked) return(
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",paddingTop:80}}>
       <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,letterSpacing:4,textTransform:"uppercase"}}>Loading…</div>
     </div>
   );
@@ -976,11 +976,10 @@ export function StripeCheckout({amount,metadata,onSuccess}){
 // ── ABOUT ─────────────────────────────────────────────────
 // ── SESSIONS PAGE ─────────────────────────────────────────
 export function SessionsPage({setPage,user}){
-  if(user) {
-    // Already logged in — send straight to account
-    setPage("account");
-    return null;
-  }
+  useEffect(()=>{
+    if(user) setPage("account");
+  },[user]);
+  if(user) return null;
   return(
     <div style={{maxWidth:600,margin:"0 auto",padding:"110px 24px 80px"}}>
 
