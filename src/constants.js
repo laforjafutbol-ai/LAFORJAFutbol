@@ -165,4 +165,20 @@ export function AB({children,onClick,disabled}){ return <button onClick={onClick
 export function GB({children,onClick}){ return <button onClick={onClick} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:10,padding:"12px 18px",fontSize:11,cursor:"pointer",letterSpacing:2,textTransform:"uppercase",fontFamily:D.body}}>{children}</button>; }
 export function NB({children,onClick,disabled}){ return <button onClick={onClick} disabled={disabled} style={{background:"transparent",border:"none",color:disabled?C.silverDark:C.gold,cursor:disabled?"not-allowed":"pointer",fontSize:11,letterSpacing:1,padding:"4px 8px",fontFamily:D.body}}>{children}</button>; }
 export const IS = {width:"100%",background:"#161310",border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"11px 13px",color:C.white,fontSize:14,fontFamily:D.body,outline:"none"};
-export function GStyles(){ return <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}@keyframes bounce{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(8px)}}*{box-sizing:border-box}textarea{resize:vertical}input::placeholder,textarea::placeholder{color:#333}`}</style>; }
+export function GStyles(){ return <style>{`
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+@keyframes bounce{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(8px)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:none}}
+@keyframes sparkle{0%{opacity:1;transform:scale(0) translate(0,0)}100%{opacity:0;transform:scale(1) translate(var(--tx),var(--ty))}}
+@keyframes hammerSwing{0%{transform:rotate(-45deg) translateY(-20px);opacity:0}40%{transform:rotate(0deg) translateY(0);opacity:1}70%{transform:rotate(15deg)}85%{transform:rotate(-5deg)}100%{transform:rotate(0deg)}}
+@keyframes anvilBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes swordLeft{0%{transform:translateX(-120px) rotate(-30deg);opacity:0}60%{transform:translateX(0) rotate(0deg);opacity:1}100%{transform:translateX(0) rotate(0deg)}}
+@keyframes swordRight{0%{transform:translateX(120px) rotate(30deg);opacity:0}60%{transform:translateX(0) rotate(0deg);opacity:1}100%{transform:translateX(0) rotate(0deg)}}
+@keyframes clashFlare{0%{opacity:0;transform:scale(0)}50%{opacity:1;transform:scale(1.4)}100%{opacity:0;transform:scale(2)}}
+@keyframes flameFlicker{0%,100%{transform:scaleY(1) scaleX(1)}25%{transform:scaleY(1.1) scaleX(0.95)}75%{transform:scaleY(0.95) scaleX(1.05)}}
+@keyframes overlayFade{0%{opacity:1}100%{opacity:0}}
+@keyframes transitionIn{0%{opacity:0;transform:scale(0.97)}100%{opacity:1;transform:none}}
+*{box-sizing:border-box}textarea{resize:vertical}input::placeholder,textarea::placeholder{color:#333}
+`}</style>; }
