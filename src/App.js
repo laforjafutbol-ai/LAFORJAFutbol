@@ -9,6 +9,9 @@ import { AuthPage, AccountPage, ContactPage, ReviewsPage, AboutPage, StripeCheck
 import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, POSITIONS, DAY_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, stripePromise, TX, EMBER_GLOW, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles } from "./constants";
 
 
+// ── BOOKING DATE CUTOFF — July 31 is last bookable day
+const BOOKING_CUTOFF_DATE = new Date('2025-08-01T00:00:00');
+
 // ── BOOKING CUTOFF — 3 hours before session start ─────────
 function isCutoff(dateObj, sessTime){
   try {
@@ -107,13 +110,13 @@ export default function App(){
         ...inq,
         sessTime: inq.slotTime,
         dateLabel: inq.dateLabel,
-        skillIcon: "⚽",
+        skillIcon: "⚒️",
         skill: "The Tempering",
         count: 1,
-        total: inq.price,
-        ageGroup: inq.age ? "Age " + inq.age : "Private",
-        ageTag: "9-11",
-      }, "group");
+        total: inq.price||PRICE_1ON1,
+        ageGroup: "Private",
+        ageTag: "u11+",
+      }, "1on1_paid");
     } else {
       const b = bookings.find(x=>x.id===id);
       await updateDoc(doc(db,"bookings",id),{status:"confirmed"});
@@ -164,7 +167,7 @@ export default function App(){
       </div>}
       {page==="login"     && <AuthPage      setPage={setPage} authChecked={authChecked} user={user}/>}
       {page==="sessions"  && <SessionsPage  setPage={setPage} user={user}/>}
-      {page==="account"   && <AccountPage   setPage={setPage} user={user} authChecked={authChecked} bookings={bookings} inquiries={inquiries} getDates={getDates} getPrivateDates={getPrivateDates}/>}
+      {page==="account"   && <div style={{paddingTop:62}}><AccountPage setPage={setPage} user={user} authChecked={authChecked} bookings={bookings} inquiries={inquiries} getDates={getDates} getPrivateDates={getPrivateDates}/></div>}
       {page==="contact"   && <ContactPage   setPage={setPage} user={user}/>}
       {page==="reviews"   && <ReviewsPage   setPage={setPage} user={user}/>}
       <Footer setPage={setPage}/>
@@ -233,113 +236,161 @@ function Footer({setPage}){
 // ── HOME ──────────────────────────────────────────────────
 function HomePage({setPage,user}){
   return(
-    <div>
-      <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"100px 24px 60px",textAlign:"center",background:`radial-gradient(ellipse at 50% 80%,${C.redDark} 0%,transparent 55%),radial-gradient(ellipse at 20% 20%,#0e0e18 0%,transparent 45%)`,position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",inset:0,backgroundImage:`linear-gradient(${C.goldDim}08 1px,transparent 1px),linear-gradient(90deg,${C.goldDim}08 1px,transparent 1px)`,backgroundSize:"60px 60px",pointerEvents:"none"}}/>
-        <div style={{position:"relative",zIndex:1,animation:"fadeUp 0.8s ease"}}>
-          <Crest size={96}/>
-          <div style={{fontSize:10,letterSpacing:7,color:C.silverDim,textTransform:"uppercase",marginTop:22,marginBottom:8,fontFamily:D.body,fontWeight:300}}>Private Group Training</div>
-          <h1 style={{margin:"0 0 8px",fontFamily:D.display,fontWeight:700,fontSize:"clamp(52px,10vw,90px)",letterSpacing:8,textTransform:"uppercase",background:`linear-gradient(135deg,${C.silverDark} 0%,${C.silver} 35%,${C.silverBright} 55%,${C.gold} 100%)`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",lineHeight:1}}>La Forja</h1>
-          <p style={{fontSize:12,letterSpacing:5,color:C.silver,marginBottom:16,textTransform:"uppercase",fontFamily:D.body,fontWeight:300}}>{BRAND.tagline}</p>
-          <p style={{fontSize:15,color:C.textMid,marginBottom:50,maxWidth:500,lineHeight:2,fontFamily:D.display,fontStyle:"italic",textAlign:"center"}}>We are dedicated to perfecting the basics and ironing out imperfections — building players who are smooth on the ball, sharp in their decisions, and confident enough to do anything on the field.</p>
+    <div style={{fontFamily:D.body}}>
+
+      {/* ── HERO WITH VIDEO ── */}
+      <div style={{position:"relative",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"120px 24px 80px",textAlign:"center",overflow:"hidden"}}>
+        <video autoPlay muted loop playsInline style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}>
+          <source src="https://res.cloudinary.com/odsbhfdb/video/upload/v1784339721/copy_DF229305-BD87-45F6-B94B-2CF7E60A1E0B_mtrtdy.mov" type="video/mp4"/>
+        </video>
+        <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(6,4,2,0.80) 0%,rgba(6,4,2,0.55) 40%,rgba(6,4,2,0.92) 100%)",zIndex:1}}/>
+        <div style={{position:"relative",zIndex:2,maxWidth:680}}>
+          <Crest size={80}/>
+          <div style={{fontSize:9,letterSpacing:8,color:"rgba(196,168,76,0.65)",textTransform:"uppercase",marginTop:20,marginBottom:6,fontFamily:D.body,fontWeight:300}}>James Island · Charleston SC</div>
+          <h1 style={{margin:"0 0 10px",fontFamily:D.display,fontWeight:700,fontSize:"clamp(48px,9vw,82px)",letterSpacing:6,textTransform:"uppercase",color:C.white,lineHeight:1}}>La Forja</h1>
+          <p style={{fontSize:11,letterSpacing:5,color:C.gold,marginBottom:14,textTransform:"uppercase",fontFamily:D.body,fontWeight:300}}>{BRAND.tagline}</p>
+          <p style={{fontSize:16,color:"rgba(240,235,226,0.65)",marginBottom:50,maxWidth:520,lineHeight:1.9,fontFamily:D.display,fontStyle:"italic",margin:"0 auto 50px"}}>You come in raw. You leave forged.</p>
           <div style={{display:"flex",gap:14,flexWrap:"wrap",justifyContent:"center"}}>
-            <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 8px 32px ${C.red}44`,fontFamily:D.body,fontWeight:500}}>Book Group Session</button>
-            <button onClick={()=>setPage("private")} style={{background:"transparent",border:`1px solid ${C.silver}44`,color:C.gold,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>Request 1-on-1</button>
+            <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:C.white,borderRadius:10,padding:"15px 44px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 8px 32px ${C.red}55`,fontFamily:D.body,fontWeight:600}}>Book a Session</button>
+            <button onClick={()=>setPage("private")} style={{background:"transparent",border:"1px solid rgba(196,168,76,0.4)",color:C.gold,borderRadius:10,padding:"15px 44px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Request 1-on-1</button>
           </div>
         </div>
-        <div style={{position:"absolute",bottom:28,left:"50%",transform:"translateX(-50%)",animation:"bounce 2s infinite"}}>
-          <div style={{width:1,height:44,background:`linear-gradient(to bottom,${C.goldDim},transparent)`,margin:"0 auto"}}/>
+        <div style={{position:"absolute",bottom:32,left:"50%",transform:"translateX(-50%)",zIndex:2,display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
+          <div style={{fontSize:8,letterSpacing:3,color:"rgba(196,168,76,0.35)",fontFamily:D.body,textTransform:"uppercase"}}>Scroll</div>
+          <div style={{width:1,height:40,background:"linear-gradient(to bottom,rgba(196,168,76,0.35),transparent)"}}/>
         </div>
       </div>
 
-      <div style={{maxWidth:960,margin:"0 auto",padding:"70px 24px"}}>
-        <SH eyebrow="Training" title="What We Work On"/>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:44}}>
+      {/* ── CONTENT ── */}
+      <div style={{background:C.black}}>
+        <div style={{maxWidth:960,margin:"0 auto",padding:"80px 24px"}}>
 
-          {/* The Furnace */}
-          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderTop:`3px solid ${C.red}`,borderRadius:16,padding:"26px 22px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
-              <div style={{width:44,height:44,borderRadius:12,background:C.redDark,border:`1px solid ${C.red}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🔥</div>
-              <div>
-                <div style={{fontSize:16,color:C.red,fontFamily:D.display,fontWeight:600,marginBottom:2}}>The Furnace</div>
-                <div style={{fontSize:9,letterSpacing:2,color:C.redDim,textTransform:"uppercase",fontFamily:D.body}}>Mon · Tue · Thu · Fri</div>
+          {/* Programs */}
+          <div style={{textAlign:"center",marginBottom:48}}>
+            <div style={{fontSize:8,letterSpacing:6,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>The Programs</div>
+            <h2 style={{fontSize:"clamp(28px,5vw,42px)",color:C.white,fontFamily:D.display,fontWeight:600,margin:0}}>Built Around One Thing</h2>
+            <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,marginTop:12,maxWidth:500,margin:"12px auto 0",lineHeight:1.8}}>Making you dangerous on the ball. Everything else follows.</p>
+          </div>
+
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:16,marginBottom:60}}>
+            <div style={{background:"#100c08",border:"1px solid #241a10",borderTop:`3px solid ${C.red}`,borderRadius:16,padding:"28px 24px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+                <div style={{width:46,height:46,borderRadius:12,background:C.redDark,border:`1px solid ${C.red}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🔥</div>
+                <div>
+                  <div style={{fontSize:18,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:2}}>The Furnace</div>
+                  <div style={{fontSize:8,letterSpacing:2,color:C.red,textTransform:"uppercase",fontFamily:D.body}}>Mon · Tue · Thu · Fri · Group · U11+</div>
+                </div>
+              </div>
+              <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:16}}>High-pressure group training built for players who want to be dangerous in tight spaces. Real defenders, real decisions, full speed.</p>
+              {["1v1 dominance in tight spaces","Receiving under pressure","Split-second decision making","Finishing with composure"].map((pt,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
+                  <div style={{width:4,height:4,borderRadius:"50%",background:C.red,flexShrink:0,opacity:0.7}}/>
+                  <span style={{fontSize:11,color:"#a89888",fontFamily:D.body}}>{pt}</span>
+                </div>
+              ))}
+              <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid #241a10",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>Up to {MAX_PLAYERS} players per session</span>
+                <span style={{fontSize:16,fontWeight:700,color:C.white,fontFamily:D.display}}>${PRICE_GROUP}<span style={{fontSize:10,color:C.textDim,fontWeight:400}}>/session</span></span>
               </div>
             </div>
-            <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:14}}>Most players fall apart under pressure. La Forja players don't. Every session is built around 1v1 dominance — tight spaces, real defenders, split-second decisions. We train players to receive under pressure, manipulate in confined space, beat their opponent, and make the right move at full speed.</p>
-            <div style={{display:"flex",flexDirection:"column",gap:7}}>
-              {["1v1 dominance — beat defenders in tight spaces","Pressure control — receive and move under pressure","Decision making — right move, right time, full speed","Finishing — composure and technique in front of goal"].map((pt,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8}}>
-                  <div style={{width:5,height:5,borderRadius:"50%",background:C.red,flexShrink:0,marginTop:5,opacity:0.7}}/>
-                  <span style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.7}}>{pt}</span>
+
+            <div style={{background:"#0d0c08",border:"1px solid #201c10",borderTop:`3px solid ${C.gold}`,borderRadius:16,padding:"28px 24px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+                <div style={{width:46,height:46,borderRadius:12,background:C.goldDark,border:`1px solid ${C.gold}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>⚒️</div>
+                <div>
+                  <div style={{fontSize:18,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:2}}>The Tempering</div>
+                  <div style={{fontSize:8,letterSpacing:2,color:C.gold,textTransform:"uppercase",fontFamily:D.body}}>Wed · Sat · Private · By Request</div>
+                </div>
+              </div>
+              <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:16}}>One player. One coach. Built entirely around your game, your position, your weaknesses. Schedule directly with Coach Carlos.</p>
+              {["Position-specific curriculum","Film review of your actual game","Full coach attention every minute","Exactly what you need, nothing else"].map((pt,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
+                  <div style={{width:4,height:4,borderRadius:"50%",background:C.gold,flexShrink:0,opacity:0.7}}/>
+                  <span style={{fontSize:11,color:"#a89888",fontFamily:D.body}}>{pt}</span>
+                </div>
+              ))}
+              <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid #201c10",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>Private 75-min session</span>
+                <span style={{fontSize:16,fontWeight:700,color:C.white,fontFamily:D.display}}>${PRICE_1ON1}<span style={{fontSize:10,color:C.textDim,fontWeight:400}}>/session</span></span>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:60}}>
+            {[
+              {val:MAX_PLAYERS,label:"Max Players",sub:"small group, real reps"},
+              {val:`$${PRICE_GROUP}`,label:"Group Rate",sub:"per player per session"},
+              {val:"U11+",label:"Age Requirement",sub:"11v11 players only"},
+            ].map(s=>(
+              <div key={s.label} style={{background:"#0e0b08",border:"1px solid #1e1810",borderRadius:14,padding:"24px 18px",textAlign:"center"}}>
+                <div style={{fontSize:36,fontWeight:700,color:C.white,marginBottom:4,fontFamily:D.display}}>{s.val}</div>
+                <div style={{fontSize:10,color:"#c8bca8",letterSpacing:2,textTransform:"uppercase",fontFamily:D.body,fontWeight:500,marginBottom:4}}>{s.label}</div>
+                <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{s.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Packages - Coming Soon */}
+          <div style={{background:"#0e0b08",border:"1px solid #1e1810",borderRadius:16,padding:"32px 28px",marginBottom:60,textAlign:"center"}}>
+            <div style={{fontSize:8,letterSpacing:4,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Training Packages</div>
+            <h3 style={{fontSize:22,color:C.white,fontFamily:D.display,fontWeight:600,margin:"0 0 10px"}}>Monthly & Season Packages</h3>
+            <p style={{fontSize:12,color:C.textDim,fontFamily:D.body,marginBottom:24,lineHeight:1.8}}>Lock in your spot and save. Packages launching August 2025.</p>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:22}}>
+              {[
+                {name:"Monthly Lite",sessions:"4 sessions",price:"$140",save:"Save $40"},
+                {name:"Full Month",sessions:"8 sessions",price:"$280",save:"Save $80"},
+                {name:"Season Pack",sessions:"16 sessions",price:"$480",save:"Save $240"},
+              ].map((p,i)=>(
+                <div key={i} style={{background:"rgba(196,168,76,0.04)",border:"1px dashed rgba(196,168,76,0.15)",borderRadius:10,padding:"16px 12px",opacity:0.75}}>
+                  <div style={{fontSize:12,fontWeight:600,color:"#c8bca8",fontFamily:D.display,marginBottom:6}}>{p.name}</div>
+                  <div style={{fontSize:20,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:2}}>{p.price}</div>
+                  <div style={{fontSize:9,color:C.textDim,fontFamily:D.body,marginBottom:3}}>{p.sessions}</div>
+                  <div style={{fontSize:9,color:C.gold,fontFamily:D.body}}>{p.save}</div>
                 </div>
               ))}
             </div>
+            <div style={{display:"inline-block",background:"rgba(196,168,76,0.08)",border:"1px solid rgba(196,168,76,0.2)",borderRadius:20,padding:"6px 20px",fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body}}>Coming August 2025</div>
           </div>
 
-          {/* The Tempering */}
-          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderTop:`3px solid ${C.gold}`,borderRadius:16,padding:"26px 22px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
-              <div style={{width:44,height:44,borderRadius:12,background:C.goldDark,border:`1px solid ${C.gold}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>⚒️</div>
-              <div>
-                <div style={{fontSize:16,color:C.gold,fontFamily:D.display,fontWeight:600,marginBottom:2}}>The Tempering</div>
-                <div style={{fontSize:9,letterSpacing:2,color:C.goldDim,textTransform:"uppercase",fontFamily:D.body}}>Wed · Sat — Private</div>
-              </div>
+          {/* Location */}
+          <div style={{background:"#0e0b08",border:"1px solid #1e1810",borderRadius:14,padding:"22px 26px",marginBottom:50,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
+            <div style={{fontSize:28}}>📍</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:8,letterSpacing:4,color:C.textDim,textTransform:"uppercase",marginBottom:4,fontFamily:D.body}}>Location</div>
+              <div style={{fontSize:17,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:4}}>Bayview Park · James Island, SC</div>
+              <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Private group training available across the Charleston area.</div>
             </div>
-            <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:14}}>Your position. Your weaknesses. Your game. Private sessions are designed entirely around you — no generic curriculum, no one-size-fits-all. Your coach builds every session around your specific position, what you need to improve, and where your game breaks down under pressure.</p>
-            <div style={{display:"flex",flexDirection:"column",gap:7}}>
-              {["Position-specific training — built around how you actually play","Film-informed sessions — we find your weaknesses, then fix them","One player, one coach, full attention","The same foundation as The Furnace — applied only to you"].map((pt,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8}}>
-                  <div style={{width:5,height:5,borderRadius:"50%",background:C.gold,flexShrink:0,marginTop:5,opacity:0.7}}/>
-                  <span style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.7}}>{pt}</span>
-                </div>
-              ))}
+            <a href="https://maps.google.com/?q=Bayview+Park+James+Island+SC" target="_blank" rel="noopener noreferrer" style={{background:"transparent",border:"1px solid rgba(196,168,76,0.25)",color:C.gold,borderRadius:8,padding:"10px 18px",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,textDecoration:"none"}}>Directions →</a>
+          </div>
+
+          {/* CTA + Account */}
+          <div style={{textAlign:"center"}}>
+            <div style={{display:"flex",gap:14,flexWrap:"wrap",justifyContent:"center",marginBottom:20}}>
+              <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 6px 24px ${C.red}33`,fontFamily:D.body,fontWeight:500}}>Book The Furnace</button>
+              <button onClick={()=>setPage("private")} style={{background:"transparent",border:`1px solid ${C.silver}44`,color:C.gold,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>Book The Tempering</button>
+            </div>
+            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"18px 22px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap",maxWidth:600,margin:"0 auto"}}>
+              {user?(
+                <>
+                  <div style={{fontSize:13,color:C.textMid,fontFamily:D.body}}>👋 Welcome back, <span style={{color:C.white,fontWeight:600}}>{user.displayName?.split(" ")[0]||"there"}</span></div>
+                  <button onClick={()=>setPage("account")} style={{background:"transparent",border:`1px solid ${C.silver}33`,color:C.silver,borderRadius:8,padding:"9px 20px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>My Account →</button>
+                </>
+              ):(
+                <>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:3}}>Book faster with a free account</div>
+                    <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Save your info, track sessions, manage player profiles.</div>
+                  </div>
+                  <div style={{display:"flex",gap:8,flexShrink:0}}>
+                    <button onClick={()=>setPage("login")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:8,padding:"9px 20px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500,whiteSpace:"nowrap"}}>Sign Up</button>
+                    <button onClick={()=>setPage("login")} style={{background:"transparent",border:`1px solid ${C.silver}33`,color:C.silver,borderRadius:8,padding:"9px 16px",fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>Sign In</button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
-        </div>
 
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:44}}>
-          {[{val:"4",label:"Max Players",sub:"per session"},{val:`$${PRICE_GROUP}`,label:"Group Rate",sub:"per player"},{val:`$${PRICE_1ON1}`,label:"1-on-1 Rate",sub:"private session"}].map(s=>(
-            <div key={s.label} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"22px 18px",textAlign:"center"}}>
-              <div style={{fontSize:34,fontWeight:700,color:C.silverBright,marginBottom:4,fontFamily:D.display}}>{s.val}</div>
-              <div style={{fontSize:11,color:C.white,letterSpacing:2,textTransform:"uppercase",fontFamily:D.body,fontWeight:500,marginBottom:4}}>{s.label}</div>
-              <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{s.sub}</div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"22px 26px",marginBottom:40,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
-          <div style={{fontSize:32}}>📍</div>
-          <div style={{flex:1}}>
-            <div style={{fontSize:9,letterSpacing:4,color:C.silverDim,textTransform:"uppercase",marginBottom:5,fontFamily:D.body}}>Service Area</div>
-            <div style={{fontSize:18,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:6}}>Charleston · James Island · Summerville</div>
-            <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.7}}>Private group training available across the Charleston area.</div>
-          </div>
-          <a href="https://maps.google.com/?q=Bayview+Park+James+Island+SC" target="_blank" rel="noopener noreferrer" style={{background:"transparent",border:`1px solid ${C.silver}44`,color:C.gold,borderRadius:10,padding:"10px 18px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,textDecoration:"none"}}>Get Directions →</a>
-        </div>
-
-        <div style={{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap",marginBottom:40}}>
-          <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"13px 36px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 6px 24px ${C.red}33`,fontFamily:D.body,fontWeight:500}}>Book The Furnace</button>
-          <button onClick={()=>setPage("private")} style={{background:"transparent",border:`1px solid ${C.silver}44`,color:C.gold,borderRadius:10,padding:"13px 36px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>Book The Tempering</button>
-        </div>
-
-        <div style={{marginTop:32,background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"18px 22px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap"}}>
-          {user?(
-            <>
-              <div style={{fontSize:13,color:C.textMid,fontFamily:D.body}}>👋 Welcome back, <span style={{color:C.white,fontWeight:600}}>{user.displayName?.split(" ")[0]||"there"}</span></div>
-              <button onClick={()=>setPage("account")} style={{background:"transparent",border:`1px solid ${C.silver}33`,color:C.silver,borderRadius:8,padding:"9px 20px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>My Account →</button>
-            </>
-          ):(
-            <>
-              <div>
-                <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:3}}>Book faster with a free account</div>
-                <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Save your info, track sessions, manage player profiles.</div>
-              </div>
-              <div style={{display:"flex",gap:8,flexShrink:0}}>
-                <button onClick={()=>setPage("login")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:8,padding:"9px 20px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500,whiteSpace:"nowrap"}}>Sign Up</button>
-                <button onClick={()=>setPage("login")} style={{background:"transparent",border:`1px solid ${C.silver}33`,color:C.silver,borderRadius:8,padding:"9px 20px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>Sign In</button>
-              </div>
-            </>
-          )}
         </div>
       </div>
     </div>
@@ -389,7 +440,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
     }
   },[user,bookings]);
 
-  const allDates=getDates();
+  const allDates=getDates().filter(d=>d<BOOKING_CUTOFF_DATE);
   const weeks=[];
   for(let i=0;i<allDates.length;i+=4) weeks.push(allDates.slice(i,i+4));
   const visDates=weeks[weekOff]||[];
@@ -397,7 +448,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
   const effectiveCount = user&&selPlayerIds.length>0 ? selPlayerIds.length : count;
   const total=effectiveCount*PRICE_GROUP;
   const canNext1=selDate&&selSess;
-  const canNext2=form.name&&form.email;
+  const canNext2=form.name&&form.email&&waiverAgreed;
 
   function doLookup(){
     if(!lookEmail.trim()) return;
@@ -415,6 +466,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
 
   function clearLookup(){ setLookEmail(""); setLookSt("idle"); setRetClient(null); setForm({name:"",email:"",phone:"",notes:""}); }
 
+  const [waiverAgreed,setWaiverAgreed] = useState(false);
   const [bookingLoading,setBookingLoading] = useState(false);
 
   async function doBook(){
@@ -439,8 +491,8 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
       count:bookingCount,total:bookingTotal,
       name:bookingName,email:form.email,phone:form.phone,notes:bookingNotes,
       parentName:user?user.displayName||form.name:null,
-      returning:!!retClient,createdAt:new Date().toISOString(),
-      location:getLocation(dKey(selDate)),locationDetail:getLocationDetail(dKey(selDate)),locationMaps:getLocationMaps(dKey(selDate)),
+      returning:!!retClient,waiverAgreed:true,waiverSignedAt:new Date().toISOString(),
+      createdAt:new Date().toISOString(),location:getLocation(dKey(selDate)),locationDetail:getLocationDetail(dKey(selDate)),locationMaps:getLocationMaps(dKey(selDate)),
       ...(user?{userId:user.uid}:{}),
       ...(selPlayerIds.length>0?{playerIds:selPlayerIds}:{}),
     };
