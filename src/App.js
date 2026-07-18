@@ -6,7 +6,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { PrivatePage, Dashboard, ReviewsModeration } from "./Pages1";
 import { AuthPage, AccountPage, ContactPage, ReviewsPage, AboutPage, StripeCheckout, SessionsPage } from "./Pages2";
-import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, POSITIONS, DAY_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, stripePromise, TX, EMBER_GLOW, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles } from "./constants";
+import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, POSITIONS, DAY_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, SITE_READY, stripePromise, TX, EMBER_GLOW, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles } from "./constants";
 
 
 // ── BOOKING DATE CUTOFF — July 31 is last bookable day
@@ -589,6 +589,21 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
     await updateDoc(doc(db,"bookings",myBooking.id),{status:"confirmed",paymentMethod:"stripe"});
     await callEmailAPI(myBooking,"group");
   }
+
+  if(!SITE_READY) return(
+    <div style={{paddingTop:120,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"120px 24px 80px"}}>
+      <div style={{maxWidth:500,textAlign:"center"}}>
+        <div style={{fontSize:40,marginBottom:20}}>⚒️</div>
+        <div style={{fontSize:9,letterSpacing:5,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Coming Soon</div>
+        <h2 style={{fontSize:32,fontWeight:600,color:C.white,fontFamily:D.display,margin:"0 0 16px"}}>Booking Opens August 2025</h2>
+        <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:32}}>We're putting the final touches on everything. Group sessions, packages, and automated confirmations are all coming. Check back August 1st.</p>
+        <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 20px"}}>
+          <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,letterSpacing:2,textTransform:"uppercase",marginBottom:12}}>Want to train before then?</div>
+          <a href="mailto:laforjafutbol@gmail.com?subject=Training Inquiry" style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,color:C.white,borderRadius:9,padding:"13px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,textDecoration:"none",display:"block",textAlign:"center"}}>Email Coach Carlos →</a>
+        </div>
+      </div>
+    </div>
+  );
 
   return(
     <div style={{paddingTop:100}}>
