@@ -946,109 +946,98 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
 
   return(
     <div style={{paddingTop:88,background:C.black,minHeight:"100vh"}}>
-      <div style={{maxWidth:1280,margin:"0 auto",padding:"20px 20px 100px"}}>
+      <div style={{maxWidth:1320,margin:"0 auto",padding:"20px 20px 100px"}}>
 
         {/* ── HEADER ── */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18,flexWrap:"wrap",gap:12}}>
           <div>
-            <div style={{fontSize:8,letterSpacing:4,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:2}}>La Forja</div>
-            <h1 style={{margin:0,fontSize:20,fontWeight:600,color:C.white,fontFamily:D.display}}>Coach Dashboard</h1>
+            <div style={{fontSize:8,letterSpacing:5,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>La Forja · Coach Dashboard</div>
+            <h1 style={{margin:0,fontSize:26,fontWeight:600,color:C.white,fontFamily:D.display,letterSpacing:1}}>{new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</h1>
           </div>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-            {pendingCount>0&&<span style={{fontSize:9,padding:"4px 10px",borderRadius:12,background:C.redDark,border:`1px solid ${C.red}44`,color:C.red,fontFamily:D.body}}>⏳ {pendingCount} pending</span>}
-            {newInquiries>0&&<span style={{fontSize:9,padding:"4px 10px",borderRadius:12,background:C.goldDark,border:`1px solid ${C.gold}44`,color:C.gold,fontFamily:D.body}}>🔔 {newInquiries} 1-on-1</span>}
-            {requestCount>0&&<span style={{fontSize:9,padding:"4px 10px",borderRadius:12,background:"rgba(168,160,144,0.08)",border:`1px solid ${C.silver}33`,color:C.silver,fontFamily:D.body}}>⚠ {requestCount} request{requestCount>1?"s":""}</span>}
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+            {[
+              {show:todayItems.length>0,label:`🔥 ${todayItems.length} today`,bg:C.redDark,border:`1px solid ${C.red}33`,color:C.red},
+              {show:pendingCount+newInquiries>0,label:`⏳ ${pendingCount+newInquiries} pending`,bg:C.goldDark,border:`1px solid ${C.gold}33`,color:C.gold},
+              {show:requestCount>0,label:`⚠ ${requestCount} request${requestCount>1?"s":""}`,bg:"#1a1a1a",border:`1px solid ${C.silver}33`,color:C.silver},
+            ].filter(b=>b.show).map((b,i)=>(
+              <span key={i} style={{fontSize:9,padding:"5px 12px",borderRadius:12,background:b.bg,border:b.border,color:b.color,fontFamily:D.body,fontWeight:500,letterSpacing:1}}>{b.label}</span>
+            ))}
           </div>
         </div>
 
-        {/* ── STATS ── */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
+        {/* ── STATS ROW ── */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:16}}>
           {[
-            {label:"Today",value:todayItems.length,icon:"🔥",color:C.gold},
-            {label:"Week Sessions",value:weekSessions.length,icon:"✓",color:C.green},
-            {label:"Week Revenue",value:`$${weekRevenue}`,icon:"$",color:C.silverBright},
-            {label:"Total Sessions",value:(bookings||[]).filter(b=>b.status!=="cancelled"&&b.status!=="removed").length+(inquiries||[]).filter(i=>i.status!=="cancelled"&&i.status!=="removed").length,icon:"📋",color:C.gold},
+            {label:"Today",value:todayItems.length,color:C.gold},
+            {label:"This Week",value:weekSessions.length,color:C.green},
+            {label:"Week Revenue",value:`$${weekRevenue}`,color:C.silverBright},
+            {label:"All Time",value:(bookings||[]).filter(b=>b.status!=="cancelled").length+(inquiries||[]).filter(i=>i.status!=="cancelled").length,color:C.textMid},
           ].map((s,i)=>(
-            <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:30,height:30,borderRadius:7,background:`${s.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>{s.icon}</div>
-              <div>
-                <div style={{fontSize:18,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:1}}>{s.value}</div>
-                <div style={{fontSize:7,letterSpacing:1.5,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
-              </div>
+            <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"12px 16px",textAlign:"center"}}>
+              <div style={{fontSize:22,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:3}}>{s.value}</div>
+              <div style={{fontSize:7,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
             </div>
           ))}
         </div>
 
-        {/* ── COMPACT STRIP ── */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:12}}>
+        {/* ── INFO STRIP ── */}
+        <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:10,marginBottom:14}}>
 
           {/* Holding Area */}
-          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"12px 14px"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-              <div style={{fontSize:8,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body}}>⏰ Working Out a Time</div>
-              <button onClick={()=>setShowAddPending(v=>!v)} style={{background:`${C.gold}12`,border:`1px solid ${C.gold}22`,borderRadius:5,padding:"2px 8px",color:C.gold,fontSize:8,cursor:"pointer",fontFamily:D.body}}>+ Add</button>
+          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"14px 16px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <div style={{fontSize:8,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Working Out a Time</div>
+              <button onClick={()=>setShowAddPending(v=>!v)} style={{background:showAddPending?`${C.gold}20`:"transparent",border:`1px solid ${C.gold}33`,borderRadius:6,padding:"3px 10px",color:C.gold,fontSize:8,cursor:"pointer",fontFamily:D.body,letterSpacing:1}}>
+                {showAddPending?"✕ Cancel":"+ Add Client"}
+              </button>
             </div>
             {showAddPending&&(
-              <div style={{marginBottom:8,paddingBottom:8,borderBottom:`1px solid ${C.cardBorder}`}}>
-                {[{k:"name",ph:"Name *"},{k:"contact",ph:"Phone / email"},{k:"note",ph:"Note"}].map(f=>(
-                  <input key={f.k} placeholder={f.ph} value={pendingForm[f.k]} onChange={e=>setPendingForm(p=>({...p,[f.k]:e.target.value}))} style={{...IS,fontSize:10,marginBottom:4,width:"100%"}}/>
-                ))}
-                <div style={{display:"flex",gap:5}}>
-                  <button onClick={async()=>{
-                    if(!pendingForm.name.trim()) return;
-                    await addDoc(collection(db,"pending"),{...pendingForm,createdAt:new Date().toISOString(),status:"pending"});
-                    setPendingForm({name:"",contact:"",note:""});setShowAddPending(false);
-                  }} style={{flex:1,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:5,padding:"6px",color:"#0a0a0a",fontSize:8,cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save</button>
-                  <button onClick={()=>{setShowAddPending(false);setPendingForm({name:"",contact:"",note:""}); }} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:5,padding:"6px 8px",color:C.textDim,fontSize:8,cursor:"pointer",fontFamily:D.body}}>✕</button>
+              <div style={{marginBottom:10,paddingBottom:10,borderBottom:`1px solid ${C.cardBorder}`}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
+                  <input placeholder="Name *" value={pendingForm.name} onChange={e=>setPendingForm(p=>({...p,name:e.target.value}))} style={{...IS,fontSize:10}}/>
+                  <input placeholder="Phone / email" value={pendingForm.contact} onChange={e=>setPendingForm(p=>({...p,contact:e.target.value}))} style={{...IS,fontSize:10}}/>
                 </div>
+                <input placeholder="Note (optional)" value={pendingForm.note} onChange={e=>setPendingForm(p=>({...p,note:e.target.value}))} style={{...IS,fontSize:10,width:"100%",marginBottom:6}}/>
+                <button onClick={async()=>{
+                  if(!pendingForm.name.trim()) return;
+                  await addDoc(collection(db,"pending"),{...pendingForm,createdAt:new Date().toISOString(),status:"pending"});
+                  setPendingForm({name:"",contact:"",note:""});setShowAddPending(false);
+                }} style={{background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:6,padding:"7px 20px",color:"#0a0a0a",fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:700,letterSpacing:1}}>Save</button>
               </div>
             )}
-            <div style={{display:"flex",flexWrap:"wrap",gap:5,maxHeight:80,overflowY:"auto"}}>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,minHeight:32}}>
               {pendingClients.length===0?(
-                <div style={{fontSize:9,color:C.textDim,fontFamily:D.body,padding:"4px 0"}}>No one waiting — drag from calendar or add above</div>
+                <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,padding:"4px 0",fontStyle:"italic"}}>No one waiting — add a client or drag a chip here</div>
               ):pendingClients.map((p,i)=>(
                 <div key={i} draggable="true"
                   onDragStart={e=>onChipDragStart(e,{...p,_type:"pending",_coll:"pending"})}
                   onDragEnd={onChipDragEnd}
-                  style={{background:"#1e1a08",border:`1px solid ${C.gold}33`,borderRadius:6,padding:"4px 8px",cursor:"grab",userSelect:"none",display:"flex",alignItems:"center",gap:5}}
+                  style={{background:"linear-gradient(135deg,#1e1a08,#141008)",border:`1px solid ${C.gold}33`,borderRadius:8,padding:"5px 10px",cursor:"grab",userSelect:"none",display:"flex",alignItems:"center",gap:7}}
                 >
-                  <span style={{fontSize:9,color:"#e0d0b8",fontFamily:D.display,fontWeight:600}}>{p.name}</span>
-                  {p.note&&<span style={{fontSize:8,color:C.gold,fontFamily:D.body,fontStyle:"italic"}}>{p.note}</span>}
-                  <button onClick={async()=>await updateDoc(doc(db,"pending",p.id),{status:"scheduled"})} style={{background:"transparent",border:"none",color:C.green,fontSize:10,cursor:"pointer",padding:0,lineHeight:1}}>✓</button>
+                  <span style={{fontSize:10,color:"#e0d0b8",fontFamily:D.display,fontWeight:600}}>{p.name}</span>
+                  {p.note&&<span style={{fontSize:8,color:C.gold,fontFamily:D.body}}>{p.note}</span>}
+                  {p.contact&&<span style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>{p.contact}</span>}
+                  <button onClick={async()=>await updateDoc(doc(db,"pending",p.id),{status:"scheduled"})} style={{background:`${C.green}20`,border:`1px solid ${C.green}33`,borderRadius:4,color:C.green,fontSize:8,cursor:"pointer",padding:"2px 6px",fontFamily:D.body,lineHeight:1}}>✓</button>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Quick Stats */}
-          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"12px 14px",display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,alignContent:"center"}}>
-            {[
-              {label:"Today",value:todayItems.length,color:C.gold},
-              {label:"Week $",value:`$${weekRevenue}`,color:C.green},
-              {label:"Pending",value:pendingCount+newInquiries,color:pendingCount+newInquiries>0?C.red:C.textDim},
-            ].map((s,i)=>(
-              <div key={i} style={{textAlign:"center"}}>
-                <div style={{fontSize:20,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:2}}>{s.value}</div>
-                <div style={{fontSize:7,letterSpacing:1,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
-              </div>
-            ))}
-          </div>
-
           {/* Reschedule Requests */}
-          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"12px 14px"}}>
-            <div style={{fontSize:8,letterSpacing:3,color:requestCount>0?C.silver:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>
-              {requestCount>0?`⚠ ${requestCount} Reschedule Request${requestCount>1?"s":""}` :"No Pending Requests"}
+          <div style={{background:C.card,border:`1px solid ${requestCount>0?C.silver+"33":C.cardBorder}`,borderRadius:12,padding:"14px 16px"}}>
+            <div style={{fontSize:8,letterSpacing:3,color:requestCount>0?C.silver:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:10,fontWeight:600}}>
+              {requestCount>0?`⚠ ${requestCount} Request${requestCount>1?"s":""}` :"Client Requests"}
             </div>
             {requestCount===0?(
-              <div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>All clear — no client requests</div>
+              <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,fontStyle:"italic"}}>All clear</div>
             ):[...(bookings||[]),...(inquiries||[])].filter(x=>x.requestType).map((x,i)=>(
-              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5,padding:"4px 8px",background:"#0a0805",borderRadius:6,border:`1px solid ${C.silver}22`}}>
+              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,padding:"6px 10px",background:"#0a0805",borderRadius:8,border:`1px solid ${C.silver}18`}}>
                 <div>
-                  <div style={{fontSize:10,fontWeight:600,color:C.white,fontFamily:D.display}}>{x.name}</div>
-                  <div style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>{x.dateLabel}{x.requestedNewDate?` → ${x.requestedNewDate}`:""}</div>
+                  <div style={{fontSize:11,fontWeight:600,color:C.white,fontFamily:D.display}}>{x.name}</div>
+                  <div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{x.dateLabel}{x.requestedNewDate?` → ${x.requestedNewDate}`:""}</div>
                 </div>
-                <button onClick={()=>updateDoc(doc(db,x.sessTime?"bookings":"inquiries",x.id),{requestType:null,requestNote:null})}
-                  style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:4,padding:"2px 6px",color:C.silver,fontSize:8,cursor:"pointer",fontFamily:D.body}}>Clear</button>
+                <button onClick={()=>updateDoc(doc(db,x._type==="1on1"?"inquiries":"bookings",x.id),{requestType:null,requestNote:null})}
+                  style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:5,padding:"3px 8px",color:C.silver,fontSize:8,cursor:"pointer",fontFamily:D.body}}>Done</button>
               </div>
             ))}
           </div>
@@ -1242,64 +1231,64 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
         </div>
 
         {/* ── TODAY'S ROSTER ── */}
-        <div style={{marginBottom:14}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,paddingBottom:8,borderBottom:`1px solid ${C.cardBorder}`}}>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <div style={{width:7,height:7,borderRadius:"50%",background:C.green,animation:"pulse 1.5s infinite",flexShrink:0}}/>
-              <span style={{fontSize:10,letterSpacing:3,color:C.green,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Today's Roster</span>
-              <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>— {new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})} · {todayItems.length} player{todayItems.length!==1?"s":""}</span>
+        <div style={{marginBottom:20}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:6,height:6,borderRadius:"50%",background:C.green,animation:"pulse 1.5s infinite",flexShrink:0}}/>
+              <span style={{fontSize:11,letterSpacing:3,color:C.green,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Today's Roster</span>
+              <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>· {todayItems.length} player{todayItems.length!==1?"s":""}</span>
             </div>
-            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+            <div style={{display:"flex",gap:6}}>
               {todayItems.length>0&&(
                 <button onClick={()=>setReminderModal({group:true,players:todayItems,time:"Today"})}
-                  style={{background:`${C.gold}12`,border:`1px solid ${C.gold}33`,borderRadius:8,padding:"5px 12px",color:C.gold,fontSize:9,cursor:"pointer",fontFamily:D.body,letterSpacing:1}}>
-                  📧 Send All Reminders
+                  style={{background:`${C.gold}12`,border:`1px solid ${C.gold}33`,borderRadius:7,padding:"5px 14px",color:C.gold,fontSize:9,cursor:"pointer",fontFamily:D.body,letterSpacing:1}}>
+                  📧 Send All
                 </button>
               )}
               <button onClick={()=>setReminderModal("group")}
-                style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"5px 12px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body,letterSpacing:1}}>
-                📧 Group
+                style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"5px 14px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body,letterSpacing:1}}>
+                📧 Group Email
               </button>
             </div>
           </div>
           {todayItems.length===0?(
-            <div style={{textAlign:"center",padding:"24px",background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,color:C.textDim,fontSize:11,fontFamily:D.body}}>No sessions today</div>
+            <div style={{textAlign:"center",padding:"28px",background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,color:C.textDim,fontSize:12,fontFamily:D.body,fontStyle:"italic"}}>No sessions scheduled today</div>
           ):(()=>{
             const groups={};
             todayItems.forEach(s=>{const k=s._time||"x";if(!groups[k])groups[k]={time:s._time,type:s._type,players:[]};groups[k].players.push(s);});
             return(
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:10}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:12}}>
                 {Object.values(groups).map((group,gi)=>(
-                  <div key={gi} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,overflow:"hidden"}}>
-                    <div style={{background:group.type==="1on1"?`linear-gradient(135deg,#1a1308,#0f0c05)`:`linear-gradient(135deg,${C.redDark},#150804)`,padding:"8px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:6}}>
-                        <span style={{fontSize:14}}>{group.type==="1on1"?"⚒️":"🔥"}</span>
+                  <div key={gi} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,overflow:"hidden"}}>
+                    <div style={{padding:"10px 16px",borderBottom:`1px solid ${C.cardBorder}`,display:"flex",justifyContent:"space-between",alignItems:"center",background:group.type==="1on1"?"#120f08":"#100a08"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <span style={{fontSize:16}}>{group.type==="1on1"?"⚒️":"🔥"}</span>
                         <div>
-                          <div style={{fontSize:11,fontWeight:600,color:C.white,fontFamily:D.display}}>{group.type==="1on1"?"The Tempering":"The Furnace"}</div>
-                          <div style={{fontSize:9,color:group.type==="1on1"?C.gold:C.red,fontFamily:D.body}}>{group.time}</div>
+                          <div style={{fontSize:12,fontWeight:600,color:C.white,fontFamily:D.display}}>{group.type==="1on1"?"The Tempering":"The Furnace"}</div>
+                          <div style={{fontSize:9,color:group.type==="1on1"?C.gold:C.red,fontFamily:D.body,letterSpacing:1}}>{group.time} · {group.players.length} player{group.players.length!==1?"s":""}</div>
                         </div>
                       </div>
-                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                        <span style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{group.players.length} player{group.players.length!==1?"s":""}</span>
-                        <button onClick={()=>setReminderModal({group:true,players:group.players,time:group.time})} style={{background:`${C.gold}12`,border:`1px solid ${C.gold}33`,borderRadius:5,padding:"2px 7px",color:C.gold,fontSize:8,cursor:"pointer",fontFamily:D.body}} title="Send reminder to this session">📧</button>
-                      </div>
+                      <button onClick={()=>setReminderModal({group:true,players:group.players,time:group.time})} style={{background:"transparent",border:`1px solid ${C.gold}33`,borderRadius:6,padding:"4px 10px",color:C.gold,fontSize:8,cursor:"pointer",fontFamily:D.body}}>📧 Remind</button>
                     </div>
-                    <div style={{padding:"6px 10px",display:"grid",gap:5}}>
+                    <div style={{padding:"8px 12px",display:"grid",gap:6}}>
                       {group.players.map((s,si)=>(
-                        <div key={si} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 10px",background:"#080603",borderRadius:7,border:`1px solid ${s.status==="confirmed"?C.green+"22":C.cardBorder}`,borderLeft:`2px solid ${s.status==="confirmed"?C.green:C.gold}`}}>
+                        <div key={si} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:"#090705",borderRadius:8,border:`1px solid ${s.status==="confirmed"?C.green+"22":C.cardBorder}`,borderLeft:`3px solid ${s.status==="confirmed"?C.green:s.status==="pending"?C.gold:C.silverDark}`}}>
                           <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:12,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:2}}>{s.name}</div>
-                            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                              {s.ageGroup&&<span style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>👤 {s.ageGroup}</span>}
-                              {s.position&&<span style={{fontSize:8,color:C.gold,fontFamily:D.body}}>⚽ {s.position}</span>}
-                              {s.phone&&<span style={{fontSize:8,color:C.silverDim,fontFamily:D.body}}>{s.phone}</span>}
+                            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                              <span style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display}}>{s.name}</span>
+                              <span style={{fontSize:7,padding:"1px 6px",borderRadius:4,background:s.status==="confirmed"?`${C.green}18`:`${C.gold}18`,color:s.status==="confirmed"?C.green:C.gold,fontFamily:D.body}}>{s.status==="confirmed"?"✓":"Pending"}</span>
                             </div>
-                            {s.coachNote&&<div style={{fontSize:8,color:C.gold,marginTop:2,fontFamily:D.body}}>📝 {s.coachNote}</div>}
+                            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                              {s.position&&<span style={{fontSize:9,color:C.gold,fontFamily:D.body}}>⚽ {s.position}</span>}
+                              {s.phone&&<span style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{s.phone}</span>}
+                              {s.email&&<span style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{s.email}</span>}
+                            </div>
+                            {s.coachNote&&<div style={{fontSize:8,color:C.gold,marginTop:3,fontFamily:D.body,fontStyle:"italic"}}>📝 {s.coachNote}</div>}
                           </div>
-                          <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0}}>
-                            <button onClick={()=>setReminderModal(s)} style={{background:`${C.gold}10`,border:`1px solid ${C.gold}22`,borderRadius:5,padding:"3px 6px",color:C.gold,fontSize:8,cursor:"pointer",fontFamily:D.body}} title="Send reminder">📧</button>
-                            <button onClick={()=>{setNoteId(s.id);setNoteText(s.coachNote||"");setNoteColl(s._coll||"bookings");}} style={{background:"transparent",border:`1px solid ${s.coachNote?C.gold+"44":C.cardBorder}`,borderRadius:5,padding:"3px 6px",color:s.coachNote?C.gold:C.textDim,fontSize:8,cursor:"pointer",fontFamily:D.body}}>📝</button>
-                            {s.status==="pending"&&<button onClick={()=>confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings")} style={{background:`${C.green}15`,border:`1px solid ${C.green}44`,borderRadius:5,padding:"3px 8px",color:C.green,fontSize:8,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓</button>}
+                          <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0,marginLeft:8}}>
+                            <button onClick={()=>setReminderModal(s)} style={{background:"transparent",border:`1px solid ${C.gold}22`,borderRadius:5,padding:"4px 7px",color:C.gold,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📧</button>
+                            <button onClick={()=>{setNoteId(s.id);setNoteText(s.coachNote||"");setNoteColl(s._coll||"bookings");}} style={{background:s.coachNote?`${C.gold}12`:"transparent",border:`1px solid ${s.coachNote?C.gold+"44":C.cardBorder}`,borderRadius:5,padding:"4px 7px",color:s.coachNote?C.gold:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📝</button>
+                            {s.status==="pending"&&<button onClick={()=>confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings")} style={{background:`${C.green}18`,border:`1px solid ${C.green}44`,borderRadius:5,padding:"4px 10px",color:C.green,fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓</button>}
                           </div>
                         </div>
                       ))}
