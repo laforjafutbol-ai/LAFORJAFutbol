@@ -11,8 +11,8 @@ export const BRAND = { name:"La Forja", coach:"Carlos Cepeda", venmo:"carlos-cep
 // Set to true to show the "Pay by Card" option to clients. Keep false while testing Stripe.
 export const STRIPE_ENABLED = false;
 export const SITE_READY = true; // Set to false to show Coming Soon on booking pages
-export const MAX_PLAYERS = 4;
-export const PRICE_GROUP = 45;
+export const MAX_PLAYERS = 5;
+export const PRICE_GROUP = 40;
 export const PRICE_1ON1 = 65;
 
 export const POSITIONS = [
@@ -76,8 +76,8 @@ export const SKILL_COLORS = {
   "The Furnace":   {color:C.red,  bg:"#1f0a05"},
   "The Tempering": {color:C.gold, bg:"#241a08"},
 };
-export const DAY_ABBR = {1:"MON",2:"TUE",4:"THU",5:"FRI"};
-export const COACH_DAYS = [1,2,4,5]; // group days
+export const DAY_ABBR = {2:"TUE",5:"FRI"};
+export const COACH_DAYS = [2,5]; // Tue + Fri
 export const PRIVATE_DAYS = [3,6]; // wed + sat 1-on-1
 
 export function getDates(weeks=6){
