@@ -179,6 +179,7 @@ export default function App(){
       {page==="account"   && <div style={{paddingTop:62}}><AccountPage setPage={setPage} user={user} authChecked={authChecked} bookings={bookings} inquiries={inquiries} getDates={getDates} getPrivateDates={getPrivateDates}/></div>}
       {page==="contact"   && <ContactPage   setPage={setPage} user={user}/>}
       {page==="reviews"   && <ReviewsPage   setPage={setPage} user={user}/>}
+      {page==="packages"  && <PackagesPage  setPage={setPage} user={user}/>}
       <Footer setPage={setPage}/>
       <GStyles/>
 
@@ -272,14 +273,11 @@ function Nav({page,setPage,user}){
         <Crest size={30}/><span style={{fontSize:18,letterSpacing:4,color:C.gold,textTransform:"uppercase",fontFamily:D.display,fontWeight:600}}>La Forja</span>
       </button>
       <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
-        {[["home","Home"],["about","About"],["book","Book"],user?["account","My Account"]:["sessions","My Sessions"]].map(([key,lbl])=>(
+        {[["home","Home"],["about","About"],["book","Book"],["packages","Packages"],user?["account","My Account"]:["sessions","My Sessions"],user?null:["login","Sign In"]].filter(Boolean).map(([key,lbl])=>(
           <button key={key} onClick={()=>setPage(key)} style={{background:key==="book"&&page!=="book"?`linear-gradient(135deg,${C.red},${C.redDim})`:page===key?"rgba(201,168,76,0.1)":"transparent",border:key==="book"&&page!=="book"?`1px solid ${C.red}`:page===key?`1px solid ${C.silver}44`:"1px solid transparent",color:key==="book"&&page!=="book"?C.white:page===key?C.silverBright:C.textMid,borderRadius:8,padding:"6px 13px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",transition:"all 0.2s",fontFamily:D.body,fontWeight:500}}>
             {lbl}
           </button>
         ))}
-        <button onClick={()=>setPage(user?"account":"login")} style={{background:page==="account"||page==="login"?"rgba(201,168,76,0.1)":"transparent",border:page==="account"||page==="login"?`1px solid ${C.silver}44`:"1px solid transparent",color:page==="account"||page==="login"?C.silverBright:C.textMid,borderRadius:8,padding:"6px 13px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",transition:"all 0.2s",fontFamily:D.body,fontWeight:500,display:"flex",alignItems:"center",gap:5}}>
-          {user?<>👤 My Account</>:<>Sign In</>}
-        </button>
         <button onClick={()=>setPage("dashboard")} style={{background:page==="dashboard"?"rgba(201,168,76,0.1)":"transparent",border:page==="dashboard"?`1px solid ${C.silver}44`:"1px solid transparent",color:page==="dashboard"?C.silverBright:C.silverDark,borderRadius:8,padding:"6px 10px",fontSize:14,cursor:"pointer",transition:"all 0.2s",fontFamily:D.body,fontWeight:500}}>
           ⚙
         </button>
@@ -288,6 +286,117 @@ function Nav({page,setPage,user}){
   );
 }
 
+
+// ── PACKAGES ──────────────────────────────────────────────
+function PackagesPage({setPage,user}){
+  return(
+    <div style={{paddingTop:100,background:C.black,minHeight:"100vh"}}>
+      <div style={{maxWidth:720,margin:"0 auto",padding:"40px 24px 100px"}}>
+        <SH eyebrow="Invest in the Process" title="Training Packages"/>
+
+        <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:40,maxWidth:540}}>
+          Single sessions are great to start. Packages are for players who are serious about getting better. The more you commit, the better the rate — and the better the results.
+        </p>
+
+        {/* Package cards */}
+        <div style={{display:"grid",gap:14,marginBottom:40}}>
+          {[
+            {
+              name:"Single Session",
+              price:"$40",
+              rate:"$40/session",
+              sessions:"1 session",
+              desc:"Try it out. No commitment. Show up, work hard, see what La Forja is about.",
+              highlight:false,
+              cta:"Book Now",
+              action:()=>setPage("book"),
+            },
+            {
+              name:"Monthly Lite",
+              price:"$140",
+              rate:"$35/session",
+              sessions:"4 sessions",
+              save:"Save $20",
+              desc:"One session per week for a month. Good for players building a rhythm.",
+              highlight:false,
+              cta:"Get This Package",
+              action:()=>window.location.href="mailto:laforjafutbol@gmail.com?subject=Monthly Lite Package",
+            },
+            {
+              name:"Full Month",
+              price:"$280",
+              rate:"$35/session",
+              sessions:"8 sessions",
+              save:"Save $40",
+              desc:"Both Tuesdays and Fridays for a full month. This is where real development happens — you're seeing the field twice a week.",
+              highlight:true,
+              cta:"Get This Package",
+              action:()=>window.location.href="mailto:laforjafutbol@gmail.com?subject=Full Month Package",
+            },
+            {
+              name:"Season Pack",
+              price:"$480",
+              rate:"$30/session",
+              sessions:"16 sessions",
+              save:"Save $160",
+              desc:"Two full months, both days. For players who are locked in. Best value, biggest results.",
+              highlight:false,
+              cta:"Get This Package",
+              action:()=>window.location.href="mailto:laforjafutbol@gmail.com?subject=Season Pack Package",
+            },
+          ].map((p,i)=>(
+            <div key={i} style={{background:p.highlight?"linear-gradient(135deg,#1a1208,#120d06)":C.card,border:p.highlight?`1px solid ${C.gold}44`:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"22px 24px",position:"relative"}}>
+              {p.highlight&&(
+                <div style={{position:"absolute",top:-10,left:24,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,color:"#0a0a0a",fontSize:8,letterSpacing:2,fontWeight:700,textTransform:"uppercase",fontFamily:D.body,padding:"3px 12px",borderRadius:10}}>Most Popular</div>
+              )}
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16,marginBottom:12,flexWrap:"wrap"}}>
+                <div>
+                  <div style={{fontSize:18,fontWeight:600,color:p.highlight?C.gold:C.white,fontFamily:D.display,marginBottom:3}}>{p.name}</div>
+                  <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+                    <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>{p.sessions}</span>
+                    <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>·</span>
+                    <span style={{fontSize:11,color:p.highlight?C.gold:C.textMid,fontFamily:D.body}}>{p.rate}</span>
+                    {p.save&&<span style={{fontSize:9,padding:"2px 8px",borderRadius:6,background:p.highlight?`${C.gold}18`:"rgba(255,255,255,0.05)",color:p.highlight?C.gold:C.textDim,fontFamily:D.body}}>{p.save}</span>}
+                  </div>
+                </div>
+                <div style={{textAlign:"right",flexShrink:0}}>
+                  <div style={{fontSize:32,fontWeight:700,color:C.white,fontFamily:D.display,lineHeight:1}}>{p.price}</div>
+                </div>
+              </div>
+              <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.8,margin:"0 0 16px"}}>{p.desc}</p>
+              <button onClick={p.action} style={{background:p.highlight?`linear-gradient(135deg,${C.gold},${C.goldDim})`:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:p.highlight?"#0a0a0a":C.white,borderRadius:9,padding:"11px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>
+                {p.cta} →
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Note */}
+        <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"18px 22px",marginBottom:28}}>
+          <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>How Packages Work</div>
+          {[
+            "Email Coach Carlos to get started — he'll confirm your package and lock in your schedule.",
+            "Package sessions never expire within the purchased period.",
+            "Sessions can be rescheduled with 24 hours notice.",
+            "No cash refunds once a package begins — all value stays as session credit.",
+            "Emergencies are handled case-by-case directly with Coach Carlos.",
+          ].map((item,i)=>(
+            <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:i<4?8:0}}>
+              <div style={{width:4,height:4,borderRadius:"50%",background:C.gold,flexShrink:0,opacity:0.6,marginTop:6}}/>
+              <span style={{fontSize:11,color:C.textMid,fontFamily:D.body,lineHeight:1.7}}>{item}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{textAlign:"center"}}>
+          <a href="mailto:laforjafutbol@gmail.com?subject=Package Inquiry" style={{display:"inline-block",background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,color:"#0a0a0a",borderRadius:10,padding:"13px 36px",fontSize:11,letterSpacing:3,textTransform:"uppercase",fontFamily:D.body,fontWeight:700,textDecoration:"none"}}>
+            Email Coach Carlos →
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Footer({setPage}){
   return(
@@ -301,7 +410,7 @@ function Footer({setPage}){
           </div>
         </div>
         <div style={{display:"flex",gap:20,flexWrap:"wrap",justifyContent:"center"}}>
-          {[["home","Home"],["about","About"],["book","Book"],["reviews","Reviews"],["contact","Contact"]].map(([k,l])=>(
+          {[["home","Home"],["about","About"],["book","Book"],["packages","Packages"],["reviews","Reviews"],["contact","Contact"]].map(([k,l])=>(
             <button key={k} onClick={()=>setPage(k)} style={{background:"none",border:"none",color:C.textDim,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>{l}</button>
           ))}
         </div>
@@ -444,7 +553,7 @@ function HomePage({setPage,user,navigate}){
             </div>
             <p style={{fontSize:11,color:C.textDim,fontFamily:D.body,textAlign:"center",margin:"0 0 16px",lineHeight:1.7}}>Package sessions never expire within the purchased period. Contact Coach Carlos to get started.</p>
             <div style={{textAlign:"center"}}>
-              <a href="mailto:laforjafutbol@gmail.com?subject=Package Inquiry" style={{display:"inline-block",background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,color:"#0a0a0a",borderRadius:10,padding:"12px 32px",fontSize:10,letterSpacing:3,textTransform:"uppercase",fontFamily:D.body,fontWeight:700,textDecoration:"none"}}>Get a Package →</a>
+              <a href="#" onClick={e=>{e.preventDefault();setPage("packages");}} style={{display:"inline-block",background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,color:"#0a0a0a",borderRadius:10,padding:"12px 32px",fontSize:10,letterSpacing:3,textTransform:"uppercase",fontFamily:D.body,fontWeight:700,textDecoration:"none"}}>View All Packages →</a>
             </div>
           </div>
 
