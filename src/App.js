@@ -167,7 +167,7 @@ export default function App(){
   return(
     <div style={{minHeight:"100vh",background:C.black,backgroundImage:`${EMBER_GLOW}, ${TX}`,backgroundAttachment:"fixed",fontFamily:D.body}}>
       <Nav page={page} setPage={setPage} user={user}/>
-      {page==="home"      && <HomePage      setPage={setPage} user={user}/>}
+      {page==="home"      && <HomePage      setPage={setPage} user={user} navigate={navigateWithAnimation}/>}
       {page==="about"     && <AboutPage     setPage={setPage}/>}
       {page==="book"      && <BookPage      spotsLeft={spotsLeft} addBooking={addBooking} bookings={bookings} isBlocked={isBlocked} getLocation={getLocation} getLocationDetail={getLocationDetail} getLocationMaps={getLocationMaps} user={user} setPage={setPage}/>}
       {page==="private"   && <PrivatePage   addInquiry={addInquiry} inquiries={inquiries} isBlocked={isBlocked} blocked={blocked} getLocation={getLocation} getLocationDetail={getLocationDetail} getLocationMaps={getLocationMaps} user={user}/>}
@@ -272,7 +272,7 @@ function Nav({page,setPage,user}){
         <Crest size={30}/><span style={{fontSize:18,letterSpacing:4,color:C.gold,textTransform:"uppercase",fontFamily:D.display,fontWeight:600}}>La Forja</span>
       </button>
       <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
-        {[["home","Home"],["about","About"],["book","Book"],["private","1-on-1"],user?["account","My Account"]:["sessions","My Sessions"]].map(([key,lbl])=>(
+        {[["home","Home"],["about","About"],["book","Book"],user?["account","My Account"]:["sessions","My Sessions"]].map(([key,lbl])=>(
           <button key={key} onClick={()=>setPage(key)} style={{background:key==="book"&&page!=="book"?`linear-gradient(135deg,${C.red},${C.redDim})`:page===key?"rgba(201,168,76,0.1)":"transparent",border:key==="book"&&page!=="book"?`1px solid ${C.red}`:page===key?`1px solid ${C.silver}44`:"1px solid transparent",color:key==="book"&&page!=="book"?C.white:page===key?C.silverBright:C.textMid,borderRadius:8,padding:"6px 13px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",transition:"all 0.2s",fontFamily:D.body,fontWeight:500}}>
             {lbl}
           </button>
@@ -301,7 +301,7 @@ function Footer({setPage}){
           </div>
         </div>
         <div style={{display:"flex",gap:20,flexWrap:"wrap",justifyContent:"center"}}>
-          {[["home","Home"],["about","About"],["book","Book"],["private","1-on-1"],["reviews","Reviews"],["contact","Contact"]].map(([k,l])=>(
+          {[["home","Home"],["about","About"],["book","Book"],["reviews","Reviews"],["contact","Contact"]].map(([k,l])=>(
             <button key={k} onClick={()=>setPage(k)} style={{background:"none",border:"none",color:C.textDim,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>{l}</button>
           ))}
         </div>
@@ -316,14 +316,14 @@ function Footer({setPage}){
 }
 
 // ── HOME ──────────────────────────────────────────────────
-function HomePage({setPage,user}){
+function HomePage({setPage,user,navigate}){
   return(
     <div style={{fontFamily:D.body}}>
 
       {/* ── UPDATE BANNER ── */}
       <div style={{background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,padding:"10px 24px",textAlign:"center",position:"relative",zIndex:50}}>
         <span style={{fontSize:10,fontWeight:700,color:"#0a0a0a",fontFamily:D.body,letterSpacing:2,textTransform:"uppercase"}}>🔥 New Schedule Live — </span>
-        <span style={{fontSize:10,color:"#0a0a0a",fontFamily:D.body}}>Tuesdays & Fridays · 5 players max · $40/session · Packages now available</span>
+        <span style={{fontSize:10,color:"#0a0a0a",fontFamily:D.body}}>Tuesdays & Fridays · 5 players max · $40/session · Packages now available · 1-on-1 coming soon</span>
       </div>
 
       {/* ── HERO WITH VIDEO ── */}
@@ -339,8 +339,8 @@ function HomePage({setPage,user}){
           <p style={{fontSize:11,letterSpacing:5,color:C.gold,marginBottom:14,textTransform:"uppercase",fontFamily:D.body,fontWeight:300}}>{BRAND.tagline}</p>
           <p style={{fontSize:16,color:"rgba(240,235,226,0.65)",marginBottom:50,maxWidth:520,lineHeight:1.9,fontFamily:D.display,fontStyle:"italic",margin:"0 auto 50px"}}>You come in raw. You leave forged.</p>
           <div style={{display:"flex",gap:14,flexWrap:"wrap",justifyContent:"center"}}>
-            <button onClick={()=>navigateWithAnimation("anvil","book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:C.white,borderRadius:10,padding:"15px 44px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 8px 32px ${C.red}55`,fontFamily:D.body,fontWeight:600}}>Book a Session</button>
-            <button onClick={()=>navigateWithAnimation("swords","private")} style={{background:"transparent",border:"1px solid rgba(196,168,76,0.4)",color:C.gold,borderRadius:10,padding:"15px 44px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Request 1-on-1</button>
+            <button onClick={()=>navigate("anvil","book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:C.white,borderRadius:10,padding:"15px 44px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 8px 32px ${C.red}55`,fontFamily:D.body,fontWeight:600}}>Book a Session</button>
+            
           </div>
         </div>
         <div style={{position:"absolute",bottom:32,left:"50%",transform:"translateX(-50%)",zIndex:2,display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
@@ -507,8 +507,8 @@ function HomePage({setPage,user}){
           {/* CTA + Account */}
           <div style={{textAlign:"center"}}>
             <div style={{display:"flex",gap:14,flexWrap:"wrap",justifyContent:"center",marginBottom:20}}>
-              <button onClick={()=>navigateWithAnimation("anvil","book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 6px 24px ${C.red}33`,fontFamily:D.body,fontWeight:500}}>Book The Furnace</button>
-              <button onClick={()=>navigateWithAnimation("swords","private")} style={{background:"transparent",border:`1px solid ${C.silver}44`,color:C.gold,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>Book The Tempering</button>
+              <button onClick={()=>navigate("anvil","book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 6px 24px ${C.red}33`,fontFamily:D.body,fontWeight:500}}>Book The Furnace</button>
+              
             </div>
             <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"18px 22px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap",maxWidth:600,margin:"0 auto"}}>
               {user?(
