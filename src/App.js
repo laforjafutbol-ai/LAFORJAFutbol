@@ -753,7 +753,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
 
   function reset(){
     setStep(1);setSelDate(null);setSelSess(null);setCount(1);setMyId(null);setLookEmail("");setPayMethod(STRIPE_ENABLED?null:"venmo");setSelPlayerId(null);
-    setBookMode(null);setPackDates([]);setPackWeekOff(0);setPackMyIds([]);setSelPlayerIds([]);setAddingPlayer(false);setNewPlayerForm({name:"",age:"",position:""});
+    setBookMode(null);setPackDates([]);setPackWeekOff(0);setPackMyIds([]);setPackTier(null);setSelPlayerIds([]);setAddingPlayer(false);setNewPlayerForm({name:"",age:"",position:""});
     if(user){
       setForm({name:user.displayName||"",email:user.email||"",phone:retClient?.phone||"",notes:""});
       setLookSt(retClient?"found":"notfound");
@@ -768,8 +768,15 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
 
   // ── PACKAGE BOOKING STATE ──────────────────────────────
   const [bookMode,setBookMode]   = useState(null); // null | "single" | "package"
-  const PACK_SIZE = 4;
-  const PRICE_PACK = 160; // $40/session x 4
+  const PACKAGES = [
+    {id:"lite",   name:"Monthly Lite", sessions:4,  price:140, rate:35, save:20},
+    {id:"month",  name:"Full Month",   sessions:8,  price:280, rate:35, save:40},
+    {id:"season", name:"Season Pack",  sessions:16, price:480, rate:30, save:160},
+  ];
+  const [packTier,setPackTier] = useState(null); // null | "lite"|"month"|"season"
+  const selPack = PACKAGES.find(p=>p.id===packTier)||PACKAGES[0];
+  const PACK_SIZE = selPack.sessions;
+  const PRICE_PACK = selPack.price;
   const [packDates,setPackDates] = useState([]);
   const [packWeekOff,setPackWeekOff] = useState(0);
   const [packMyIds,setPackMyIds] = useState([]);
@@ -863,27 +870,47 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
         {!bookMode&&(
           <div style={{animation:"fadeUp 0.4s ease"}}>
             <p style={{fontSize:13,color:C.textDim,fontFamily:D.body,lineHeight:1.8,marginBottom:28}}>
-              Choose how you want to book. Single sessions are great for trying it out — packages lock in your spot for the month at a better rate.
+              Single session to try it out, or lock in a package for a better rate. Pick your sessions yourself — you're in control of your schedule.
             </p>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-              {/* Single */}
-              <button onClick={()=>setBookMode("single")} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"24px 20px",cursor:"pointer",textAlign:"left",transition:"all 0.2s",position:"relative",overflow:"hidden"}}>
-                <div style={{fontSize:28,marginBottom:10}}>⚽</div>
-                <div style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:4}}>Single Session</div>
-                <div style={{fontSize:22,fontWeight:700,color:C.gold,fontFamily:D.display,marginBottom:8}}>${PRICE_GROUP}</div>
-                <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.7}}>Pick one session. Pay per session.</div>
-              </button>
-              {/* Package */}
-              <button onClick={()=>setBookMode("package")} style={{background:`linear-gradient(135deg,${C.goldDark},#1c0e04)`,border:`1px solid ${C.gold}44`,borderRadius:16,padding:"24px 20px",cursor:"pointer",textAlign:"left",transition:"all 0.2s",position:"relative",overflow:"hidden"}}>
-                <div style={{position:"absolute",top:10,right:12,fontSize:9,letterSpacing:2,color:C.gold,fontFamily:D.body,textTransform:"uppercase",background:`${C.gold}22`,border:`1px solid ${C.gold}44`,borderRadius:20,padding:"2px 8px"}}>Best Value</div>
-                <div style={{fontSize:28,marginBottom:10}}>🔥</div>
-                <div style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:4}}>4-Session Pack</div>
-                <div style={{fontSize:22,fontWeight:700,color:C.gold,fontFamily:D.display,marginBottom:4}}>${PRICE_PACK}</div>
-                <div style={{fontSize:11,color:C.gold,fontFamily:D.body,opacity:0.7,marginBottom:8}}>${PRICE_PACK/PACK_SIZE}/session · Save $${PRICE_GROUP*PACK_SIZE-PRICE_PACK}</div>
-                <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.7}}>Pick any 4 dates. One payment. Spots held for the month.</div>
-              </button>
+
+            {/* Single */}
+            <button onClick={()=>setBookMode("single")} style={{display:"block",width:"100%",background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"18px 22px",cursor:"pointer",textAlign:"left",marginBottom:10,transition:"border 0.2s"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontSize:15,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:3}}>⚽ Single Session</div>
+                  <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Pick one date and time. No commitment.</div>
+                </div>
+                <div style={{textAlign:"right",flexShrink:0}}>
+                  <div style={{fontSize:22,fontWeight:700,color:C.white,fontFamily:D.display}}>${PRICE_GROUP}</div>
+                  <div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>per session</div>
+                </div>
+              </div>
+            </button>
+
+            {/* Packages */}
+            <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:10,marginTop:6}}>Packages — Lock In & Save</div>
+            <div style={{display:"grid",gap:8}}>
+              {PACKAGES.map((p,i)=>(
+                <button key={p.id} onClick={()=>{setPackTier(p.id);setBookMode("package");setPackDates([]);}}
+                  style={{background:i===1?"linear-gradient(135deg,#1a1208,#120d06)":C.card,border:i===1?`1px solid ${C.gold}44`:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"16px 22px",cursor:"pointer",textAlign:"left",position:"relative",transition:"border 0.2s"}}>
+                  {i===1&&<div style={{position:"absolute",top:-8,left:16,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,color:"#0a0a0a",fontSize:7,letterSpacing:2,fontWeight:700,textTransform:"uppercase",fontFamily:D.body,padding:"2px 10px",borderRadius:8}}>Most Popular</div>}
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div>
+                      <div style={{fontSize:14,fontWeight:600,color:i===1?C.gold:C.white,fontFamily:D.display,marginBottom:3}}>🔥 {p.name}</div>
+                      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                        <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>{p.sessions} sessions</span>
+                        <span style={{fontSize:11,color:i===1?C.gold:C.textMid,fontFamily:D.body}}>${p.rate}/session</span>
+                        <span style={{fontSize:9,padding:"1px 7px",borderRadius:6,background:i===1?`${C.gold}18`:"rgba(255,255,255,0.05)",color:i===1?C.gold:C.textDim,fontFamily:D.body}}>Save ${p.save}</span>
+                      </div>
+                    </div>
+                    <div style={{textAlign:"right",flexShrink:0}}>
+                      <div style={{fontSize:22,fontWeight:700,color:C.white,fontFamily:D.display}}>${p.price}</div>
+                    </div>
+                  </div>
+                </button>
+              ))}
             </div>
-            <div style={{marginTop:18,textAlign:"center",fontSize:11,color:C.silverDim,fontFamily:D.body}}>⚡ Spots fill fast — max 4 players per session</div>
+            <div style={{marginTop:14,textAlign:"center",fontSize:11,color:C.silverDim,fontFamily:D.body}}>Max {MAX_PLAYERS} players per session</div>
           </div>
         )}
 
@@ -1373,9 +1400,9 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
           <div style={{animation:"fadeUp 0.4s ease"}}>
             {step<3&&(
               <div style={{marginBottom:24}}>
-                <button onClick={()=>{setBookMode(null);setStep(1);setPackDates([]);setPackWeekOff(0);}} style={{background:"none",border:"none",color:C.textDim,fontSize:11,cursor:"pointer",fontFamily:D.body,marginBottom:16,padding:0}}>← Back to options</button>
+                <button onClick={()=>{setBookMode(null);setStep(1);setPackDates([]);setPackWeekOff(0);setPackTier(null);}} style={{background:"none",border:"none",color:C.textDim,fontSize:11,cursor:"pointer",fontFamily:D.body,marginBottom:16,padding:0}}>← Back to options</button>
                 <div style={{display:"flex",gap:8}}>
-                  {["Pick 4 Dates","Your Details","Payment"].map((lbl,i)=>(
+                  {[`Pick ${PACK_SIZE} Dates`,"Your Details","Payment"].map((lbl,i)=>(
                     <div key={i} style={{flex:1}}>
                       <div style={{height:2,borderRadius:2,marginBottom:5,background:step>i+1?C.gold:step===i+1?C.goldBright:C.cardBorder,transition:"background 0.4s"}}/>
                       <div style={{fontSize:9,color:step>=i+1?C.gold:C.silverDark,letterSpacing:2,textTransform:"uppercase",fontFamily:D.body}}>{lbl}</div>
@@ -1391,8 +1418,8 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
                 {/* Package header */}
                 <div style={{background:`linear-gradient(135deg,${C.goldDark},#1c0e04)`,border:`1px solid ${C.gold}33`,borderRadius:14,padding:"16px 20px",marginBottom:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div>
-                    <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>4-Session Package</div>
-                    <div style={{fontSize:28,fontWeight:700,color:C.white,fontFamily:D.display,lineHeight:1}}>${PRICE_PACK} <span style={{fontSize:13,color:C.gold,fontWeight:400}}>${PRICE_PACK/PACK_SIZE}/session</span></div>
+                    <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>{selPack.name}</div>
+                    <div style={{fontSize:28,fontWeight:700,color:C.white,fontFamily:D.display,lineHeight:1}}>${PRICE_PACK} <span style={{fontSize:13,color:C.gold,fontWeight:400}}>${selPack.rate}/session</span></div>
                   </div>
                   <div style={{textAlign:"right"}}>
                     <div style={{fontSize:32,fontWeight:700,color:packDates.length===PACK_SIZE?C.green:C.gold,fontFamily:D.display}}>{packDates.length}<span style={{fontSize:16,color:C.textDim}}>/{PACK_SIZE}</span></div>
@@ -1475,7 +1502,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
                 )}
 
                 <AB disabled={packDates.length<PACK_SIZE} onClick={()=>setStep(2)}>
-                  {packDates.length<PACK_SIZE?`Select ${PACK_SIZE-packDates.length} more date${PACK_SIZE-packDates.length!==1?"s":""}…`:"Continue →"}
+                  {packDates.length<PACK_SIZE?`Select ${PACK_SIZE-packDates.length} more session${PACK_SIZE-packDates.length!==1?"s":""}…`:"Continue →"}
                 </AB>
               </div>
             )}
