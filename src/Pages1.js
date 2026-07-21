@@ -744,6 +744,8 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
   const [sendingReminder,setSendingReminder] = useState(false);
   const [coachNoteId,setCoachNoteId]   = useState(null);
   const [coachNoteText,setCoachNoteText] = useState("");
+  const [actionItem,setActionItem] = useState(null); // item open in action modal
+  const [cancelConfirm,setCancelConfirm] = useState(false);
 
   useEffect(()=>{
     const unsub=onSnapshot(collection(db,"pending"),s=>{
@@ -1144,7 +1146,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                             <div key={si} draggable="true"
                               onDragStart={e=>onChipDragStart(e,item)}
                               onDragEnd={onChipDragEnd}
-                              onClick={e=>{e.stopPropagation();setNoteId(item.id);setNoteText(item.coachNote||"");setNoteColl(item._coll);}}
+                              onClick={e=>{e.stopPropagation();setActionItem(item);setNoteId(item.id);setNoteText(item.coachNote||"");setNoteColl(item._coll||"bookings");setCancelConfirm(false);}}
                               style={{background:item._type==="1on1"?"#241c06":"#220808",border:`1px solid ${item._type==="1on1"?"#c4a84c44":"#c8505033"}`,borderLeft:`2px solid ${item._type==="1on1"?"#c4a84c":"#c85050"}`,borderRadius:4,padding:"3px 5px",marginBottom:1,cursor:"grab",userSelect:"none",opacity:dragId===item.id?0.35:1,display:"flex",alignItems:"center",justifyContent:"space-between",gap:2}}
                               title="Click note · drag to move"
                             >
@@ -1179,7 +1181,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                         <div key={`u${ci}`} draggable="true"
                           onDragStart={e=>onChipDragStart(e,item)}
                           onDragEnd={onChipDragEnd}
-                          onClick={e=>{e.stopPropagation();setNoteId(item.id);setNoteText(item.coachNote||"");setNoteColl(item._coll);}}
+                          onClick={e=>{e.stopPropagation();setActionItem(item);setNoteId(item.id);setNoteText(item.coachNote||"");setNoteColl(item._coll||"bookings");setCancelConfirm(false);}}
                           style={{background:item._type==="1on1"?"#241c06":"#1e1208",border:`1px solid ${item._type==="1on1"?"#c4a84c44":"#c4704433"}`,borderLeft:`2px solid ${item._type==="1on1"?"#c4a84c":"#c47044"}`,borderRadius:4,padding:"3px 5px",marginBottom:2,cursor:"grab",userSelect:"none",opacity:dragId===item.id?0.35:1}}
                         >
                           {(item._time||item.sessTime)&&item.sessTime!=="Time TBD"&&(
@@ -1287,7 +1289,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                           </div>
                           <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0,marginLeft:8}}>
                             <button onClick={()=>setReminderModal(s)} style={{background:"transparent",border:`1px solid ${C.gold}22`,borderRadius:5,padding:"4px 7px",color:C.gold,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📧</button>
-                            <button onClick={()=>{setNoteId(s.id);setNoteText(s.coachNote||"");setNoteColl(s._coll||"bookings");}} style={{background:s.coachNote?`${C.gold}12`:"transparent",border:`1px solid ${s.coachNote?C.gold+"44":C.cardBorder}`,borderRadius:5,padding:"4px 7px",color:s.coachNote?C.gold:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📝</button>
+                            <button onClick={()=>{setActionItem(s);setNoteId(s.id);setNoteText(s.coachNote||"");setNoteColl(s._coll||"bookings");setCancelConfirm(false);}} style={{background:s.coachNote?`${C.gold}12`:"transparent",border:`1px solid ${s.coachNote?C.gold+"44":C.cardBorder}`,borderRadius:5,padding:"4px 7px",color:s.coachNote?C.gold:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📝</button>
                             {s.status==="pending"&&<button onClick={()=>confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings")} style={{background:`${C.green}18`,border:`1px solid ${C.green}44`,borderRadius:5,padding:"4px 10px",color:C.green,fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓</button>}
                           </div>
                         </div>
@@ -1457,18 +1459,80 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
           );
         })()}
 
-        {/* ── NOTE MODAL ── */}
-        {noteId&&(()=>{
+        {/* ── SESSION ACTION MODAL ── */}
+        {(noteId||actionItem)&&(()=>{
+          const item = actionItem || allItems.find(x=>x.id===noteId);
+          if(!item) return null;
+          const coll = item._coll||noteColl||"bookings";
+          const close = ()=>{ setNoteId(null); setActionItem(null); setCancelConfirm(false); };
           return(
-            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>setNoteId(null)}>
-              <div style={{background:"#111",border:`1px solid ${C.gold}44`,borderRadius:16,padding:"22px",maxWidth:400,width:"100%"}} onClick={e=>e.stopPropagation()}>
-                <div style={{fontSize:8,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Coach Note</div>
-                <textarea value={noteText} onChange={e=>setNoteText(e.target.value)} placeholder="Session notes, changes, player focus..." rows={4} style={{...IS,width:"100%",marginBottom:10,fontSize:12,resize:"vertical"}} autoFocus/>
-                <div style={{display:"flex",gap:8}}>
-                  <button onClick={async()=>{await updateDoc(doc(db,noteColl,noteId),{coachNote:noteText,coachNoteUpdated:new Date().toISOString()});setNoteId(null);}} style={{flex:1,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:8,padding:"11px",color:"#0a0a0a",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save Note</button>
-                  <button onClick={async()=>{await updateDoc(doc(db,noteColl,noteId),{coachNote:"",coachNoteUpdated:new Date().toISOString()});setNoteId(null);}} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:8,padding:"11px 12px",color:C.redDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Clear</button>
-                  <button onClick={()=>setNoteId(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"11px 12px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={close}>
+              <div style={{background:"#111",border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"22px",maxWidth:420,width:"100%"}} onClick={e=>e.stopPropagation()}>
+
+                {/* Header */}
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
+                  <div>
+                    <div style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:2}}>{item.name}</div>
+                    <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{item.dateLabel} · {item._time||item.sessTime||item.slotTime||"—"}</div>
+                    <div style={{fontSize:9,color:item.status==="confirmed"?C.green:C.gold,fontFamily:D.body,marginTop:2,letterSpacing:1,textTransform:"uppercase"}}>{item.status}</div>
+                  </div>
+                  <button onClick={close} style={{background:"transparent",border:"none",color:C.textDim,fontSize:18,cursor:"pointer",padding:"0 4px",lineHeight:1}}>✕</button>
                 </div>
+
+                {/* Coach Note */}
+                <div style={{marginBottom:16}}>
+                  <div style={{fontSize:8,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Coach Note</div>
+                  <textarea value={noteText} onChange={e=>setNoteText(e.target.value)} placeholder="Session notes, player focus, changes..." rows={3} style={{...IS,width:"100%",fontSize:12,resize:"vertical"}} autoFocus/>
+                  <div style={{display:"flex",gap:6,marginTop:8}}>
+                    <button onClick={async()=>{await updateDoc(doc(db,coll,item.id),{coachNote:noteText,coachNoteUpdated:new Date().toISOString()});close();}} style={{flex:1,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:8,padding:"10px",color:"#0a0a0a",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save Note</button>
+                    {noteText&&<button onClick={async()=>{await updateDoc(doc(db,coll,item.id),{coachNote:"",coachNoteUpdated:new Date().toISOString()});close();}} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"10px 12px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div style={{borderTop:`1px solid ${C.cardBorder}`,marginBottom:14}}/>
+
+                {/* Actions */}
+                <div style={{fontSize:8,letterSpacing:3,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Session Actions</div>
+
+                {/* Unconfirm — only if confirmed */}
+                {item.status==="confirmed"&&(
+                  <button onClick={async()=>{
+                    await updateDoc(doc(db,coll,item.id),{status:"pending",unconfirmedAt:new Date().toISOString()});
+                    close();
+                  }} style={{display:"block",width:"100%",background:"transparent",border:`1px solid ${C.gold}33`,borderRadius:9,padding:"10px",color:C.gold,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,marginBottom:8,textAlign:"center"}}>
+                    ↩ Unconfirm (move back to pending)
+                  </button>
+                )}
+
+                {/* Cancel session */}
+                {!cancelConfirm?(
+                  <button onClick={()=>setCancelConfirm(true)} style={{display:"block",width:"100%",background:"transparent",border:`1px solid ${C.redDim}44`,borderRadius:9,padding:"10px",color:C.redDim,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,marginBottom:8,textAlign:"center"}}>
+                    ✕ Cancel Session
+                  </button>
+                ):(
+                  <div style={{background:`${C.red}08`,border:`1px solid ${C.red}33`,borderRadius:9,padding:"12px 14px",marginBottom:8}}>
+                    <div style={{fontSize:11,color:C.white,fontFamily:D.body,marginBottom:10}}>Cancel this session for <strong>{item.name}</strong>? This cannot be undone.</div>
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={async()=>{
+                        await updateDoc(doc(db,coll,item.id),{status:"cancelled",cancelledAt:new Date().toISOString()});
+                        if(item.email) try{ await callEmailAPI({...item,sessTime:item._time||item.sessTime||item.slotTime},"reschedule"); }catch(e){}
+                        close();
+                      }} style={{flex:1,background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",borderRadius:7,padding:"9px",color:C.white,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>Yes, Cancel</button>
+                      <button onClick={()=>setCancelConfirm(false)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"9px 14px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Keep It</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Remove entirely */}
+                <button onClick={async()=>{
+                  if(!window.confirm(`Permanently delete ${item.name}'s booking? This cannot be undone.`)) return;
+                  await deleteDoc(doc(db,coll,item.id));
+                  close();
+                }} style={{display:"block",width:"100%",background:"transparent",border:"none",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body,padding:"6px",textAlign:"center",textDecoration:"underline"}}>
+                  Remove from records entirely
+                </button>
+
               </div>
             </div>
           );
