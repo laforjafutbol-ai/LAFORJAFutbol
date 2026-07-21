@@ -491,24 +491,37 @@ function HomePage({setPage,user,navigate}){
               </div>
             </div>
 
-            <div style={{background:"#0d0c08",border:"1px solid #201c10",borderTop:`3px solid ${C.gold}`,borderRadius:16,padding:"28px 24px"}}>
+            <div style={{background:"#0d0c08",border:"1px solid #201c10",borderTop:`3px solid ${C.gold}`,borderRadius:16,padding:"28px 24px",position:"relative"}}>
+              <div style={{position:"absolute",top:16,right:16,background:`${C.gold}18`,border:`1px solid ${C.gold}33`,borderRadius:20,padding:"3px 12px",fontSize:8,letterSpacing:2,color:C.gold,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Coming Soon</div>
               <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
                 <div style={{width:46,height:46,borderRadius:12,background:C.goldDark,border:`1px solid ${C.gold}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>⚒️</div>
                 <div>
                   <div style={{fontSize:18,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:2}}>The Tempering</div>
-                  <div style={{fontSize:8,letterSpacing:2,color:C.gold,textTransform:"uppercase",fontFamily:D.body}}>Wed · Sat · Private · By Request</div>
+                  <div style={{fontSize:8,letterSpacing:2,color:C.gold,textTransform:"uppercase",fontFamily:D.body}}>Private · 1-on-1</div>
                 </div>
               </div>
-              <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:16}}>One player. One coach. Built entirely around your game, your position, your weaknesses. Schedule directly with Coach Carlos.</p>
-              {["Position-specific curriculum","Film review of your actual game","Full coach attention every minute","Exactly what you need, nothing else"].map((pt,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
-                  <div style={{width:4,height:4,borderRadius:"50%",background:C.gold,flexShrink:0,opacity:0.7}}/>
-                  <span style={{fontSize:11,color:"#a89888",fontFamily:D.body}}>{pt}</span>
+              <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:20}}>Everything in The Furnace is designed for the group. The Tempering is designed entirely for you. One coach, one player, zero distractions — every single minute spent on exactly what your game needs right now.</p>
+              {[
+                {icon:"🎯",text:"Built around your position, your style, and your specific weaknesses — not a generic program"},
+                {icon:"📋",text:"A session-by-session development plan tailored to you and adjusted as you improve"},
+                {icon:"🔍",text:"Detailed rep-by-rep feedback — not just what went wrong, but exactly why and how to correct it"},
+                {icon:"📈",text:"Progress tracked every session so you always know where you started and how far you've come"},
+                {icon:"🤝",text:"Direct access to Coach Carlos between sessions — questions, film review, and focus areas set together"},
+              ].map((item,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:10}}>
+                  <span style={{fontSize:14,flexShrink:0,marginTop:1}}>{item.icon}</span>
+                  <span style={{fontSize:11,color:"#a89888",fontFamily:D.body,lineHeight:1.8}}>{item.text}</span>
                 </div>
               ))}
-              <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid #201c10",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>Private 75-min session</span>
-                <span style={{fontSize:16,fontWeight:700,color:C.white,fontFamily:D.display}}>${PRICE_1ON1}<span style={{fontSize:10,color:C.textDim,fontWeight:400}}>/session</span></span>
+              <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid #201c10"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                  <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>Private · 75-min session</span>
+                  <span style={{fontSize:16,fontWeight:700,color:C.white,fontFamily:D.display}}>${PRICE_1ON1}<span style={{fontSize:10,color:C.textDim,fontWeight:400}}>/session</span></span>
+                </div>
+                <div style={{background:"rgba(196,168,76,0.05)",border:"1px solid rgba(196,168,76,0.12)",borderRadius:10,padding:"14px 16px",textAlign:"center"}}>
+                  <div style={{fontSize:11,color:C.textMid,fontFamily:D.body,lineHeight:1.8,marginBottom:10}}>1-on-1 sessions are coming. Get on the list early — email Coach Carlos and you'll be first to know when scheduling opens.</div>
+                  <a href="mailto:laforjafutbol@gmail.com?subject=1-on-1 Interest — The Tempering" style={{display:"inline-block",background:"transparent",border:`1px solid ${C.gold}44`,color:C.gold,borderRadius:8,padding:"9px 22px",fontSize:9,letterSpacing:3,textTransform:"uppercase",fontFamily:D.body,fontWeight:600,textDecoration:"none"}}>Get Notified →</a>
+                </div>
               </div>
             </div>
           </div>
