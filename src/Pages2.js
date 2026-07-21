@@ -286,16 +286,18 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
   const [showPlayers,setShowPlayers] = useState(false);
 
   return(
-    <div style={{maxWidth:640,margin:"0 auto",padding:"110px 20px 80px"}}>
+    <div style={{maxWidth:600,margin:"0 auto",padding:"100px 20px 80px"}}>
 
       {/* ── HEADER ── */}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
         <div>
-          <div style={{fontSize:9,letterSpacing:4,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>La Forja</div>
-          <div style={{fontSize:24,fontWeight:600,color:C.white,fontFamily:D.display}}>{user.displayName?.split(" ")[0]||"Welcome back"}</div>
-          <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,marginTop:2}}>{email}</div>
+          <div style={{fontSize:8,letterSpacing:5,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:5}}>La Forja</div>
+          <div style={{fontSize:26,fontWeight:600,color:C.white,fontFamily:D.display,letterSpacing:1,marginBottom:3}}>
+            {user.displayName?.split(" ")[0]||"Welcome back"}
+          </div>
+          <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>{email}</div>
         </div>
-        <button onClick={handleSignOut} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:8,padding:"8px 16px",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Sign Out</button>
+        <button onClick={handleSignOut} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:8,padding:"8px 16px",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,marginTop:4}}>Sign Out</button>
       </div>
 
       {/* ── STATS ── */}
@@ -305,8 +307,8 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
           {label:"Completed",value:completedCount,color:C.green},
           {label:"Players",value:players.length,color:C.silverBright},
         ].map((s,i)=>(
-          <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"14px 12px",textAlign:"center"}}>
-            <div style={{fontSize:28,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:4}}>{s.value}</div>
+          <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"16px 12px",textAlign:"center"}}>
+            <div style={{fontSize:30,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:5}}>{s.value}</div>
             <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
           </div>
         ))}
@@ -314,59 +316,55 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
 
       {/* ── NEXT SESSION ── */}
       {nextSession?(
-        <div style={{background:`linear-gradient(135deg,#1a1208,#0f0c06)`,border:`1px solid ${C.gold}33`,borderRadius:14,padding:"20px 22px",marginBottom:20}}>
-          <div style={{fontSize:8,letterSpacing:4,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Next Session</div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
+        <div style={{background:"linear-gradient(135deg,#1a1208,#100d06)",border:`1px solid ${C.gold}33`,borderRadius:14,padding:"20px 22px",marginBottom:16}}>
+          <div style={{fontSize:8,letterSpacing:4,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:14,fontWeight:600}}>Next Session</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:14}}>
             <div>
-              <div style={{fontSize:22,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:4}}>{nextSession.dateLabel}</div>
-              <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
+              <div style={{fontSize:22,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:6,letterSpacing:0.5}}>{nextSession.dateLabel}</div>
+              <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"center"}}>
                 <span style={{fontSize:12,color:C.gold,fontFamily:D.body}}>🕐 {nextSession._time||nextSession.sessTime||nextSession.slotTime||"TBD"}</span>
                 <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>{nextSession.type==="1on1"?"⚒️ The Tempering":"🔥 The Furnace"}</span>
-                {nextSession.location&&<span style={{fontSize:12,color:C.textDim,fontFamily:D.body}}>📍 {nextSession.location}</span>}
+                {nextSession.location&&<span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>📍 {nextSession.location}</span>}
               </div>
               {nextSession.status==="tentative"&&<div style={{marginTop:8,fontSize:10,color:C.gold,fontFamily:D.body}}>⏰ Time TBD — Coach Carlos will confirm</div>}
               {nextSession.requestType&&<div style={{marginTop:8,fontSize:10,color:C.silver,fontFamily:D.body}}>Reschedule requested — awaiting confirmation</div>}
             </div>
-            <span style={{fontSize:8,padding:"3px 10px",borderRadius:8,letterSpacing:1,textTransform:"uppercase",fontFamily:D.body,background:nextSession.status==="confirmed"?`${C.green}18`:`${C.gold}18`,color:nextSession.status==="confirmed"?C.green:C.gold,border:`1px solid ${nextSession.status==="confirmed"?C.green+"33":C.gold+"33"}`,flexShrink:0}}>
+            <span style={{fontSize:8,padding:"4px 10px",borderRadius:8,background:nextSession.status==="confirmed"?`${C.green}18`:`${C.gold}18`,color:nextSession.status==="confirmed"?C.green:C.gold,border:`1px solid ${nextSession.status==="confirmed"?C.green+"33":C.gold+"33"}`,fontFamily:D.body,flexShrink:0,letterSpacing:1}}>
               {statusLabel[nextSession.status]||nextSession.status}
             </span>
           </div>
           {!nextSession.requestType&&(
-            <div style={{marginTop:16,paddingTop:14,borderTop:`1px solid ${C.gold}18`}}>
-              <button onClick={()=>setRequestModal({session:nextSession,action:"reschedule"})} style={{background:"transparent",border:`1px solid ${C.silver}44`,color:C.silver,borderRadius:8,padding:"8px 18px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
-                Reschedule
-              </button>
-            </div>
+            <button onClick={()=>setRequestModal({session:nextSession,action:"reschedule"})} style={{background:"transparent",border:`1px solid ${C.silver}33`,color:C.silver,borderRadius:8,padding:"8px 20px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
+              Reschedule
+            </button>
           )}
         </div>
       ):(
-        <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"28px 22px",marginBottom:20,textAlign:"center"}}>
-          <div style={{fontSize:13,color:C.textDim,fontFamily:D.body,marginBottom:4}}>No upcoming sessions</div>
-          <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Booking opens August 2026</div>
+        <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"28px 22px",marginBottom:16,textAlign:"center"}}>
+          <div style={{fontSize:14,color:C.textDim,fontFamily:D.body,marginBottom:4}}>No upcoming sessions</div>
+          <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Book a session to get started</div>
         </div>
       )}
 
-      {/* ── UPCOMING SESSIONS ── */}
+      {/* ── REMAINING UPCOMING ── */}
       {upcoming.length>1&&(
-        <div style={{marginBottom:20}}>
-          <div style={{fontSize:8,letterSpacing:4,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>All Upcoming</div>
-          <div style={{display:"grid",gap:8}}>
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:8,letterSpacing:4,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:10,fontWeight:600}}>All Upcoming</div>
+          <div style={{display:"grid",gap:6}}>
             {upcoming.slice(1).map((s,i)=>(
-              <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:`3px solid ${statusColor[s.status]||C.silverDark}`,borderRadius:10,padding:"14px 16px"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                  <div>
-                    <div style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:3}}>{s.dateLabel}</div>
-                    <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                      <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>🕐 {s._time||s.sessTime||s.slotTime||"TBD"}</span>
-                      <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>{s.type==="1on1"?"⚒️ Tempering":"🔥 Furnace"}</span>
-                    </div>
-                    {s.status==="tentative"&&<div style={{fontSize:9,color:C.gold,fontFamily:D.body,marginTop:4}}>⏰ Time TBD</div>}
-                    {s.requestType&&<div style={{fontSize:9,color:C.silver,fontFamily:D.body,marginTop:4}}>Reschedule requested</div>}
+              <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:`3px solid ${statusColor[s.status]||C.silverDark}`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                <div>
+                  <div style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:4}}>{s.dateLabel}</div>
+                  <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                    <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>🕐 {s._time||s.sessTime||s.slotTime||"TBD"}</span>
+                    <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>{s.type==="1on1"?"⚒️ Tempering":"🔥 Furnace"}</span>
                   </div>
-                  <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
-                    <span style={{fontSize:8,padding:"2px 8px",borderRadius:6,background:s.status==="confirmed"?`${C.green}18`:`${C.gold}18`,color:s.status==="confirmed"?C.green:C.gold,fontFamily:D.body}}>{statusLabel[s.status]||s.status}</span>
-                    {!s.requestType&&<button onClick={()=>setRequestModal({session:s,action:"reschedule"})} style={{background:"transparent",border:`1px solid ${C.silver}33`,color:C.silver,borderRadius:7,padding:"5px 10px",fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Reschedule</button>}
-                  </div>
+                  {s.status==="tentative"&&<div style={{fontSize:9,color:C.gold,fontFamily:D.body,marginTop:3}}>⏰ Time TBD</div>}
+                  {s.requestType&&<div style={{fontSize:9,color:C.silver,fontFamily:D.body,marginTop:3}}>Reschedule requested</div>}
+                </div>
+                <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+                  <span style={{fontSize:8,padding:"2px 8px",borderRadius:6,background:s.status==="confirmed"?`${C.green}18`:`${C.gold}18`,color:s.status==="confirmed"?C.green:C.gold,fontFamily:D.body,letterSpacing:1}}>{statusLabel[s.status]||s.status}</span>
+                  {!s.requestType&&<button onClick={()=>setRequestModal({session:s,action:"reschedule"})} style={{background:"transparent",border:`1px solid ${C.silver}33`,color:C.silver,borderRadius:7,padding:"5px 12px",fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Reschedule</button>}
                 </div>
               </div>
             ))}
@@ -374,27 +372,25 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
         </div>
       )}
 
-      {/* ── PAST SESSIONS (collapsed) ── */}
+      {/* ── PAST SESSIONS ── */}
       {past.length>0&&(
-        <div style={{marginBottom:20}}>
-          <button onClick={()=>setShowPast(v=>!v)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"transparent",border:"none",cursor:"pointer",padding:"0 0 10px",borderBottom:`1px solid ${C.cardBorder}`}}>
-            <div style={{fontSize:8,letterSpacing:4,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>Past Sessions ({past.length})</div>
-            <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{showPast?"▲":"▼"}</span>
+        <div style={{marginBottom:16}}>
+          <button onClick={()=>setShowPast(v=>!v)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"transparent",border:"none",cursor:"pointer",padding:"10px 0",borderBottom:`1px solid ${C.cardBorder}`}}>
+            <div style={{fontSize:8,letterSpacing:4,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Past Sessions ({past.length})</div>
+            <span style={{fontSize:11,color:C.textDim}}>{showPast?"▲":"▼"}</span>
           </button>
           {showPast&&(
-            <div style={{display:"grid",gap:6,marginTop:10}}>
+            <div style={{display:"grid",gap:5,marginTop:10}}>
               {past.map((s,i)=>(
-                <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:`3px solid #2a2520`,borderRadius:10,padding:"12px 16px",opacity:0.75}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
-                    <div>
-                      <div style={{fontSize:13,fontWeight:600,color:C.textMid,fontFamily:D.display,marginBottom:2}}>{s.dateLabel}</div>
-                      <div style={{display:"flex",gap:10}}>
-                        <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>🕐 {s._time||s.sessTime||s.slotTime||"—"}</span>
-                        <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{s.type==="1on1"?"⚒️ Tempering":"🔥 Furnace"}</span>
-                      </div>
+                <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:"3px solid #2a2520",borderRadius:10,padding:"10px 14px",opacity:0.7,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:600,color:C.textMid,fontFamily:D.display,marginBottom:2}}>{s.dateLabel}</div>
+                    <div style={{display:"flex",gap:10}}>
+                      <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>🕐 {s._time||s.sessTime||s.slotTime||"—"}</span>
+                      <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{s.type==="1on1"?"⚒️ Tempering":"🔥 Furnace"}</span>
                     </div>
-                    <span style={{fontSize:8,padding:"2px 8px",borderRadius:6,background:`${C.green}12`,color:C.green,fontFamily:D.body,flexShrink:0}}>{statusLabel[s.status]||s.status}</span>
                   </div>
+                  <span style={{fontSize:8,padding:"2px 8px",borderRadius:6,background:`${C.green}10`,color:C.green,fontFamily:D.body,flexShrink:0}}>Done</span>
                 </div>
               ))}
             </div>
@@ -402,14 +398,14 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
         </div>
       )}
 
-      {/* ── PLAYER PROFILES (collapsed) ── */}
-      <div style={{marginBottom:20}}>
-        <button onClick={()=>setShowPlayers(v=>!v)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"transparent",border:"none",cursor:"pointer",padding:"0 0 10px",borderBottom:`1px solid ${C.cardBorder}`}}>
-          <div style={{fontSize:8,letterSpacing:4,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>Player Profiles ({players.length})</div>
-          <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{showPlayers?"▲":"▼"}</span>
+      {/* ── PLAYER PROFILES ── */}
+      <div style={{marginBottom:24}}>
+        <button onClick={()=>setShowPlayers(v=>!v)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"transparent",border:"none",cursor:"pointer",padding:"10px 0",borderBottom:`1px solid ${C.cardBorder}`}}>
+          <div style={{fontSize:8,letterSpacing:4,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Player Profiles ({players.length})</div>
+          <span style={{fontSize:11,color:C.textDim}}>{showPlayers?"▲":"▼"}</span>
         </button>
         {showPlayers&&(
-          <div style={{marginTop:10}}>
+          <div style={{marginTop:12}}>
             <PlayersTab user={user} players={players} playersLoaded={playersLoaded}/>
           </div>
         )}
@@ -421,7 +417,7 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
         <button onClick={()=>setPage("contact")} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:10,padding:"13px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>📧 Contact Coach</button>
       </div>
 
-      {/* Request modal */}
+      {/* ── REQUEST MODAL ── */}
       {requestModal&&<RequestModal
         session={requestModal.session}
         action={requestModal.action}
@@ -439,7 +435,6 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
   );
 }
 
-// ── REQUEST MODAL (Reschedule only) ──────────────────────
 export function RequestModal({session,action,onClose,onSubmit,getDates,getPrivateDates,reschedDate,setReschedDate,reschedSess,setReschedSess}){
   const [note,setNote] = useState("");
   const [busy,setBusy] = useState(false);
