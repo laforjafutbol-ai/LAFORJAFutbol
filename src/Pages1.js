@@ -744,8 +744,9 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
   const [sendingReminder,setSendingReminder] = useState(false);
   const [coachNoteId,setCoachNoteId]   = useState(null);
   const [coachNoteText,setCoachNoteText] = useState("");
-  const [actionItem,setActionItem] = useState(null); // item open in action modal
+  const [actionItem,setActionItem] = useState(null);
   const [cancelConfirm,setCancelConfirm] = useState(false);
+  const [dashTab,setDashTab] = useState("calendar"); // "calendar" | "finance"
 
   useEffect(()=>{
     const unsub=onSnapshot(collection(db,"pending"),s=>{
@@ -966,6 +967,18 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
             ))}
           </div>
         </div>
+
+        {/* ── DASH TABS ── */}
+        <div style={{display:"flex",gap:0,marginBottom:16,borderBottom:`1px solid ${C.cardBorder}`}}>
+          {[["calendar","🗓 Calendar"],["finance","💰 Finance"]].map(([key,lbl])=>(
+            <button key={key} onClick={()=>setDashTab(key)} style={{background:"none",border:"none",borderBottom:`2px solid ${dashTab===key?C.gold:"transparent"}`,color:dashTab===key?C.gold:C.textDim,padding:"8px 20px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:dashTab===key?600:400,transition:"all 0.2s"}}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+
+        {dashTab==="finance"&&<FinanceTab bookings={bookings} inquiries={inquiries}/>}
+        {dashTab==="calendar"&&<>
 
         {/* ── STATS ROW ── */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:16}}>
@@ -1302,6 +1315,8 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
           })()}
         </div>
 
+        </> /* end calendar tab */}
+
         {/* ── DROP MODAL ── */}
         {dropTarget&&(()=>{
           const b=dropTarget.item;
@@ -1595,6 +1610,386 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
 }
 
 // ── REVIEWS MODERATION (Dashboard) ───────────────────────
+// ── FINANCE TAB ────────────────────────────────────────────
+export function FinanceTab({bookings,inquiries}){
+  const IRS_RATE = 0.67;
+  const [finTab,setFinTab] = useState("overview");
+  const [entries,setEntries] = useState([]);
+  const [mileage,setMileage] = useState([]);
+  const [draws,setDraws]     = useState([]);
+  const [finLoaded,setFinLoaded] = useState(false);
+  const [incForm,setIncForm] = useState(false);
+  const [expForm,setExpForm] = useState(false);
+  const [incF,setIncF] = useState({date:new Date().toISOString().split("T")[0],category:"",description:"",amount:""});
+  const [expF,setExpF] = useState({date:new Date().toISOString().split("T")[0],category:"",description:"",amount:""});
+  const [miF,setMiF]   = useState({date:new Date().toISOString().split("T")[0],from:"Home",to:"Bayview Park",miles:"",purpose:"Training session"});
+  const [drF,setDrF]   = useState({date:new Date().toISOString().split("T")[0],amount:"",note:""});
+  const [incSearch,setIncSearch] = useState("");
+  const [expSearch,setExpSearch] = useState("");
+
+  // Load from Firestore
+  useEffect(()=>{
+    const u1=onSnapshot(collection(db,"finance_entries"),s=>{ setEntries(s.docs.map(d=>({id:d.id,...d.data()}))); });
+    const u2=onSnapshot(collection(db,"finance_mileage"),s=>{ setMileage(s.docs.map(d=>({id:d.id,...d.data()}))); });
+    const u3=onSnapshot(collection(db,"finance_draws"),  s=>{ setDraws(s.docs.map(d=>({id:d.id,...d.data()}))); setFinLoaded(true); });
+    return ()=>{ u1(); u2(); u3(); };
+  },[]);
+
+  // Auto-import Stripe payments from bookings
+  useEffect(()=>{
+    if(!finLoaded) return;
+    (bookings||[]).filter(b=>b.paymentMethod==="stripe"&&b.status==="confirmed"&&b.total>0).forEach(async b=>{
+      const alreadyImported=entries.some(e=>e.stripeBookingId===b.id);
+      if(!alreadyImported){
+        await addDoc(collection(db,"finance_entries"),{
+          type:"income",date:b.dateKey||new Date().toISOString().split("T")[0],
+          category:"Session — Single",description:`${b.name} · ${b.dateLabel||""}`,
+          amount:b.total,stripeBookingId:b.id,auto:true,
+          createdAt:new Date().toISOString(),
+        });
+      }
+    });
+  },[bookings,finLoaded]);
+
+  function fmt(n){ return "$"+(n||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function fmtD(d){ try{ return new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); }catch(e){ return d; } }
+
+  // Totals
+  const inc   = entries.filter(e=>e.type==="income");
+  const exp   = entries.filter(e=>e.type==="expense");
+  const totalInc  = inc.reduce((s,e)=>s+e.amount,0);
+  const totalExp  = exp.reduce((s,e)=>s+e.amount,0);
+  const totalDraw = draws.reduce((s,d)=>s+d.amount,0);
+  const totalMiles= mileage.reduce((s,m)=>s+m.miles,0);
+  const mileDed   = totalMiles*IRS_RATE;
+  const netProfit = totalInc-totalExp;
+  const taxRes    = Math.max(0,netProfit)*0.28;
+  const avail     = netProfit-totalDraw-taxRes;
+  const now       = new Date();
+  const mInc = inc.filter(e=>{ const d=new Date(e.date+"T12:00:00"); return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear(); }).reduce((s,e)=>s+e.amount,0);
+  const mExp = exp.filter(e=>{ const d=new Date(e.date+"T12:00:00"); return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear(); }).reduce((s,e)=>s+e.amount,0);
+
+  const INC_CATS = ["Session — Single","Session — Package","1-on-1","Other Income"];
+  const EXP_CATS = ["Insurance","Equipment","Website / Tech","Field / Permit","Marketing","Education / Certifications","Other Expense"];
+
+  async function saveInc(){
+    if(!incF.category||!incF.amount||!incF.date) return;
+    await addDoc(collection(db,"finance_entries"),{type:"income",date:incF.date,category:incF.category,description:incF.description,amount:parseFloat(incF.amount),createdAt:new Date().toISOString()});
+    setIncF({date:now.toISOString().split("T")[0],category:"",description:"",amount:""});
+    setIncForm(false);
+  }
+  async function saveExp(){
+    if(!expF.category||!expF.amount||!expF.date) return;
+    await addDoc(collection(db,"finance_entries"),{type:"expense",date:expF.date,category:expF.category,description:expF.description,amount:parseFloat(expF.amount),createdAt:new Date().toISOString()});
+    setExpF({date:now.toISOString().split("T")[0],category:"",description:"",amount:""});
+    setExpForm(false);
+  }
+  async function saveMileage(){
+    if(!miF.miles||!miF.date) return;
+    await addDoc(collection(db,"finance_mileage"),{...miF,miles:parseFloat(miF.miles),createdAt:new Date().toISOString()});
+    setMiF(f=>({...f,miles:""}));
+  }
+  async function saveDraw(){
+    if(!drF.amount||!drF.date) return;
+    await addDoc(collection(db,"finance_draws"),{date:drF.date,amount:parseFloat(drF.amount),note:drF.note,createdAt:new Date().toISOString()});
+    setDrF({date:now.toISOString().split("T")[0],amount:"",note:""});
+  }
+  async function delEntry(id){ await deleteDoc(doc(db,"finance_entries",id)); }
+  async function delMileage(id){ await deleteDoc(doc(db,"finance_mileage",id)); }
+  async function delDraw(id){ await deleteDoc(doc(db,"finance_draws",id)); }
+
+  const finTabs=[["overview","Overview"],["income","Income"],["expenses","Expenses"],["mileage","Mileage"],["taxes","Taxes"],["draws","Draws"]];
+
+  const tabBtn=(key,lbl)=>(
+    <button key={key} onClick={()=>setFinTab(key)} style={{background:"none",border:"none",borderBottom:`2px solid ${finTab===key?C.gold:"transparent"}`,color:finTab===key?C.gold:C.textDim,padding:"6px 14px",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:finTab===key?600:400,whiteSpace:"nowrap"}}>
+      {lbl}
+    </button>
+  );
+
+  return(
+    <div style={{paddingBottom:40}}>
+      {/* Sub-nav */}
+      <div style={{display:"flex",gap:0,marginBottom:20,borderBottom:`1px solid ${C.cardBorder}`,overflowX:"auto"}}>
+        {finTabs.map(([k,l])=>tabBtn(k,l))}
+      </div>
+
+      {/* ── OVERVIEW ── */}
+      {finTab==="overview"&&(
+        <div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
+            {[
+              {label:"Total Revenue",value:fmt(totalInc),color:C.green},
+              {label:"Net Profit",value:fmt(netProfit),color:netProfit>=0?C.gold:C.red},
+              {label:"Tax Reserve 28%",value:fmt(taxRes),color:C.silver},
+              {label:"Available to Draw",value:fmt(avail),color:avail>=0?C.gold:C.red},
+            ].map((s,i)=>(
+              <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"14px 16px"}}>
+                <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",marginBottom:6}}>{s.label}</div>
+                <div style={{fontSize:22,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:3}}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>
+            {[
+              {label:"This Month Income",value:fmt(mInc),color:C.green},
+              {label:"This Month Expenses",value:fmt(mExp),color:C.red},
+              {label:"Mileage Deduction",value:fmt(mileDed),color:C.gold,sub:`${totalMiles.toFixed(1)} mi @ $${IRS_RATE}`},
+            ].map((s,i)=>(
+              <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"14px 16px"}}>
+                <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",marginBottom:6}}>{s.label}</div>
+                <div style={{fontSize:20,fontWeight:700,color:s.color,fontFamily:D.display}}>{s.value}</div>
+                {s.sub&&<div style={{fontSize:9,color:C.textDim,marginTop:3}}>{s.sub}</div>}
+              </div>
+            ))}
+          </div>
+          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"14px 16px"}}>
+            <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Recent Entries</div>
+            {[...entries,...draws.map(d=>({...d,type:"draw"}))].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,8).map((e,i,arr)=>(
+              <div key={e.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:i<arr.length-1?`1px solid ${C.cardBorder}`:"none"}}>
+                <div>
+                  <div style={{fontSize:11,fontWeight:500,color:C.white,marginBottom:1}}>{e.description||e.category||"Draw"}{e.auto?<span style={{fontSize:7,color:C.gold,marginLeft:6,letterSpacing:1}}>AUTO</span>:null}</div>
+                  <div style={{fontSize:9,color:C.textDim}}>{fmtD(e.date)} · {e.category||"Owner's Draw"}</div>
+                </div>
+                <div style={{fontSize:13,fontWeight:600,color:e.type==="income"?C.green:C.red,fontFamily:D.display}}>{e.type==="income"?"+":"-"}{fmt(e.amount)}</div>
+              </div>
+            ))}
+            {entries.length===0&&draws.length===0&&<div style={{fontSize:11,color:C.textDim,fontStyle:"italic"}}>No entries yet</div>}
+          </div>
+        </div>
+      )}
+
+      {/* ── INCOME ── */}
+      {finTab==="income"&&(
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <div>
+              <div style={{fontSize:9,letterSpacing:3,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>Total Income</div>
+              <div style={{fontSize:24,fontWeight:700,color:C.green,fontFamily:D.display}}>{fmt(totalInc)}</div>
+            </div>
+            <button onClick={()=>setIncForm(v=>!v)} style={{background:`${C.green}12`,border:`1px solid ${C.green}33`,borderRadius:8,padding:"7px 16px",color:C.green,fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>+ Add Income</button>
+          </div>
+          {incForm&&(
+            <div style={{background:C.card,border:`1px solid ${C.green}22`,borderRadius:10,padding:"16px",marginBottom:14}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,marginBottom:10}}>
+                {[
+                  {label:"Date",el:<input type="date" value={incF.date} onChange={e=>setIncF(f=>({...f,date:e.target.value}))} style={{...IS}}/>},
+                  {label:"Category",el:<select value={incF.category} onChange={e=>setIncF(f=>({...f,category:e.target.value}))} style={{...IS}}><option value="">Select…</option>{INC_CATS.map(c=><option key={c}>{c}</option>)}</select>},
+                  {label:"Description",el:<input placeholder="e.g. John Smith · Tue 7/22" value={incF.description} onChange={e=>setIncF(f=>({...f,description:e.target.value}))} style={{...IS}}/>},
+                  {label:"Amount ($)",el:<input type="number" placeholder="0.00" min="0" step="0.01" value={incF.amount} onChange={e=>setIncF(f=>({...f,amount:e.target.value}))} style={{...IS}} onKeyDown={e=>e.key==="Enter"&&saveInc()}/>},
+                ].map((f,i)=>(
+                  <div key={i}><div style={{fontSize:8,color:C.textDim,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>{f.label}</div>{f.el}</div>
+                ))}
+              </div>
+              <button onClick={saveInc} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:7,padding:"8px 20px",color:"#0a0a0a",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save</button>
+              <button onClick={()=>setIncForm(false)} style={{marginLeft:8,background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"8px 12px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+            </div>
+          )}
+          <input placeholder="Search…" value={incSearch} onChange={e=>setIncSearch(e.target.value)} style={{...IS,width:200,marginBottom:10,fontSize:11}}/>
+          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,overflow:"hidden"}}>
+            <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 90px 40px",background:"#0d0b08",padding:"7px 14px",borderBottom:`1px solid ${C.cardBorder}`}}>
+              {["Date","Category","Description","Amount",""].map((h,i)=><div key={i} style={{fontSize:7,letterSpacing:2,color:C.textDim,textTransform:"uppercase"}}>{h}</div>)}
+            </div>
+            {inc.filter(e=>!incSearch||e.description?.toLowerCase().includes(incSearch.toLowerCase())||e.category.toLowerCase().includes(incSearch.toLowerCase())).sort((a,b)=>new Date(b.date)-new Date(a.date)).map((e,i,arr)=>(
+              <div key={e.id} style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 90px 40px",padding:"9px 14px",borderBottom:i<arr.length-1?`1px solid ${C.cardBorder}`:"none",alignItems:"center"}}>
+                <div style={{fontSize:10,color:C.textDim}}>{fmtD(e.date)}</div>
+                <div style={{fontSize:11,color:C.white,fontWeight:500}}>{e.category}{e.auto&&<span style={{fontSize:7,color:C.gold,marginLeft:5,letterSpacing:1}}>AUTO</span>}</div>
+                <div style={{fontSize:10,color:C.textDim}}>{e.description||"—"}</div>
+                <div style={{fontSize:13,fontWeight:600,color:C.green,fontFamily:D.display}}>{fmt(e.amount)}</div>
+                {!e.auto&&<button onClick={()=>delEntry(e.id)} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:4,padding:"2px 6px",color:C.redDim,fontSize:8,cursor:"pointer"}}>✕</button>}
+                {e.auto&&<span style={{fontSize:7,color:C.textDim}}>auto</span>}
+              </div>
+            ))}
+            {inc.length===0&&<div style={{padding:"24px",textAlign:"center",fontSize:11,color:C.textDim,fontStyle:"italic"}}>No income yet</div>}
+          </div>
+        </div>
+      )}
+
+      {/* ── EXPENSES ── */}
+      {finTab==="expenses"&&(
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <div>
+              <div style={{fontSize:9,letterSpacing:3,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>Total Expenses</div>
+              <div style={{fontSize:24,fontWeight:700,color:C.red,fontFamily:D.display}}>{fmt(totalExp)}</div>
+            </div>
+            <button onClick={()=>setExpForm(v=>!v)} style={{background:`${C.red}12`,border:`1px solid ${C.red}33`,borderRadius:8,padding:"7px 16px",color:C.red,fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>+ Add Expense</button>
+          </div>
+          {expForm&&(
+            <div style={{background:C.card,border:`1px solid ${C.red}22`,borderRadius:10,padding:"16px",marginBottom:14}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,marginBottom:10}}>
+                {[
+                  {label:"Date",el:<input type="date" value={expF.date} onChange={e=>setExpF(f=>({...f,date:e.target.value}))} style={{...IS}}/>},
+                  {label:"Category",el:<select value={expF.category} onChange={e=>setExpF(f=>({...f,category:e.target.value}))} style={{...IS}}><option value="">Select…</option>{EXP_CATS.map(c=><option key={c}>{c}</option>)}</select>},
+                  {label:"Description",el:<input placeholder="Optional note" value={expF.description} onChange={e=>setExpF(f=>({...f,description:e.target.value}))} style={{...IS}}/>},
+                  {label:"Amount ($)",el:<input type="number" placeholder="0.00" min="0" step="0.01" value={expF.amount} onChange={e=>setExpF(f=>({...f,amount:e.target.value}))} style={{...IS}} onKeyDown={e=>e.key==="Enter"&&saveExp()}/>},
+                ].map((f,i)=>(
+                  <div key={i}><div style={{fontSize:8,color:C.textDim,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>{f.label}</div>{f.el}</div>
+                ))}
+              </div>
+              <button onClick={saveExp} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",borderRadius:7,padding:"8px 20px",color:C.white,fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save</button>
+              <button onClick={()=>setExpForm(false)} style={{marginLeft:8,background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"8px 12px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+            </div>
+          )}
+          <input placeholder="Search…" value={expSearch} onChange={e=>setExpSearch(e.target.value)} style={{...IS,width:200,marginBottom:10,fontSize:11}}/>
+          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,overflow:"hidden"}}>
+            <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 90px 40px",background:"#0d0b08",padding:"7px 14px",borderBottom:`1px solid ${C.cardBorder}`}}>
+              {["Date","Category","Description","Amount",""].map((h,i)=><div key={i} style={{fontSize:7,letterSpacing:2,color:C.textDim,textTransform:"uppercase"}}>{h}</div>)}
+            </div>
+            {exp.filter(e=>!expSearch||e.description?.toLowerCase().includes(expSearch.toLowerCase())||e.category.toLowerCase().includes(expSearch.toLowerCase())).sort((a,b)=>new Date(b.date)-new Date(a.date)).map((e,i,arr)=>(
+              <div key={e.id} style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 90px 40px",padding:"9px 14px",borderBottom:i<arr.length-1?`1px solid ${C.cardBorder}`:"none",alignItems:"center"}}>
+                <div style={{fontSize:10,color:C.textDim}}>{fmtD(e.date)}</div>
+                <div style={{fontSize:11,color:C.white,fontWeight:500}}>{e.category}</div>
+                <div style={{fontSize:10,color:C.textDim}}>{e.description||"—"}</div>
+                <div style={{fontSize:13,fontWeight:600,color:C.red,fontFamily:D.display}}>{fmt(e.amount)}</div>
+                <button onClick={()=>delEntry(e.id)} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:4,padding:"2px 6px",color:C.redDim,fontSize:8,cursor:"pointer"}}>✕</button>
+              </div>
+            ))}
+            {exp.length===0&&<div style={{padding:"24px",textAlign:"center",fontSize:11,color:C.textDim,fontStyle:"italic"}}>No expenses yet</div>}
+          </div>
+        </div>
+      )}
+
+      {/* ── MILEAGE ── */}
+      {finTab==="mileage"&&(
+        <div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>
+            {[
+              {label:"Total Miles",value:totalMiles.toFixed(1)+" mi",color:C.gold},
+              {label:"IRS Rate 2024",value:"$"+IRS_RATE+"/mile",color:C.silver},
+              {label:"Deduction",value:fmt(mileDed),color:C.green},
+            ].map((s,i)=>(
+              <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"14px 16px",textAlign:"center"}}>
+                <div style={{fontSize:22,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:5}}>{s.value}</div>
+                <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase"}}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{background:C.card,border:`1px solid ${C.gold}18`,borderRadius:10,padding:"16px",marginBottom:14}}>
+            <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Log a Trip</div>
+            <div style={{display:"grid",gridTemplateColumns:"110px 1fr 1fr 80px 1fr",gap:8,marginBottom:10}}>
+              {[
+                {label:"Date",el:<input type="date" value={miF.date} onChange={e=>setMiF(f=>({...f,date:e.target.value}))} style={{...IS}}/>},
+                {label:"From",el:<input value={miF.from} onChange={e=>setMiF(f=>({...f,from:e.target.value}))} style={{...IS}}/>},
+                {label:"To",el:<input value={miF.to} onChange={e=>setMiF(f=>({...f,to:e.target.value}))} style={{...IS}}/>},
+                {label:"Miles",el:<input type="number" value={miF.miles} onChange={e=>setMiF(f=>({...f,miles:e.target.value}))} placeholder="0.0" min="0" step="0.1" style={{...IS}} onKeyDown={e=>e.key==="Enter"&&saveMileage()}/>},
+                {label:"Purpose",el:<input value={miF.purpose} onChange={e=>setMiF(f=>({...f,purpose:e.target.value}))} style={{...IS}}/>},
+              ].map((f,i)=>(
+                <div key={i}><div style={{fontSize:8,color:C.textDim,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>{f.label}</div>{f.el}</div>
+              ))}
+            </div>
+            <button onClick={saveMileage} style={{background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:7,padding:"8px 20px",color:"#0a0a0a",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Log Trip</button>
+          </div>
+          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,overflow:"hidden"}}>
+            <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 70px 80px 30px",background:"#0d0b08",padding:"7px 14px",borderBottom:`1px solid ${C.cardBorder}`}}>
+              {["Date","From","To / Purpose","Miles","Deduction",""].map((h,i)=><div key={i} style={{fontSize:7,letterSpacing:2,color:C.textDim,textTransform:"uppercase"}}>{h}</div>)}
+            </div>
+            {[...mileage].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((m,i,arr)=>(
+              <div key={m.id} style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 70px 80px 30px",padding:"9px 14px",borderBottom:i<arr.length-1?`1px solid ${C.cardBorder}`:"none",alignItems:"center"}}>
+                <div style={{fontSize:10,color:C.textDim}}>{fmtD(m.date)}</div>
+                <div style={{fontSize:11,color:C.white}}>{m.from}</div>
+                <div style={{fontSize:11,color:C.white}}>{m.to}{m.purpose&&<span style={{color:C.textDim}}> · {m.purpose}</span>}</div>
+                <div style={{fontSize:11,color:C.gold,fontFamily:D.display,fontWeight:600}}>{m.miles.toFixed(1)} mi</div>
+                <div style={{fontSize:11,color:C.green,fontFamily:D.display}}>{fmt(m.miles*IRS_RATE)}</div>
+                <button onClick={()=>delMileage(m.id)} style={{background:"transparent",border:"none",color:C.redDim,fontSize:11,cursor:"pointer"}}>✕</button>
+              </div>
+            ))}
+            {mileage.length===0&&<div style={{padding:"24px",textAlign:"center",fontSize:11,color:C.textDim,fontStyle:"italic"}}>No trips logged yet</div>}
+            {mileage.length>0&&(
+              <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 70px 80px 30px",padding:"9px 14px",background:"#0d0b08",borderTop:`1px solid ${C.cardBorder}`}}>
+                <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",gridColumn:"1/4"}}>Total</div>
+                <div style={{fontSize:13,color:C.gold,fontFamily:D.display,fontWeight:700}}>{totalMiles.toFixed(1)} mi</div>
+                <div style={{fontSize:13,color:C.green,fontFamily:D.display,fontWeight:700}}>{fmt(mileDed)}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── TAXES ── */}
+      {finTab==="taxes"&&(
+        <div>
+          <div style={{fontSize:9,letterSpacing:4,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>La Forja</div>
+          <h2 style={{fontSize:22,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:16}}>Tax Estimator — {now.getFullYear()}</h2>
+          <div style={{background:"linear-gradient(135deg,#100c06,#0a0804)",border:`1px solid ${C.gold}22`,borderRadius:12,padding:"20px",marginBottom:16}}>
+            <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:14}}>Full Year Estimate</div>
+            {[
+              {label:"Gross Revenue",value:fmt(totalInc),color:C.green},
+              {label:"Business Expenses",value:"-"+fmt(totalExp),color:C.red},
+              {label:"Mileage Deduction",value:"-"+fmt(mileDed),color:C.red},
+              {label:"Taxable Income",value:fmt(Math.max(0,netProfit-mileDed)),color:C.gold},
+            ].map((s,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${C.cardBorder}`}}>
+                <span style={{fontSize:11,color:C.textMid}}>{s.label}</span>
+                <span style={{fontSize:13,fontWeight:600,color:s.color,fontFamily:D.display}}>{s.value}</span>
+              </div>
+            ))}
+            <div style={{background:"rgba(0,0,0,0.3)",borderRadius:8,padding:"12px 14px",marginTop:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:11,color:C.textMid}}>Self-Employment Tax (15.3%)</span><span style={{fontSize:12,color:C.silver,fontFamily:D.display}}>{fmt(Math.max(0,netProfit)*0.153)}</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><span style={{fontSize:11,color:C.textMid}}>Federal Income Tax (est. 12%)</span><span style={{fontSize:12,color:C.silver,fontFamily:D.display}}>{fmt(Math.max(0,netProfit-mileDed)*0.12)}</span></div>
+              <div style={{display:"flex",justifyContent:"space-between",paddingTop:10,borderTop:`1px solid ${C.cardBorder}`}}>
+                <span style={{fontSize:12,fontWeight:600,color:C.white}}>Total Estimate</span>
+                <span style={{fontSize:18,fontWeight:700,color:C.red,fontFamily:D.display}}>{fmt(Math.max(0,netProfit)*0.153+Math.max(0,netProfit-mileDed)*0.12)}</span>
+              </div>
+            </div>
+            <div style={{fontSize:9,color:C.textDim,marginTop:10,fontStyle:"italic"}}>* Estimate only. Talk to a CPA for your actual filing.</div>
+          </div>
+          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 18px"}}>
+            <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Quarterly Due Dates</div>
+            {[["Q1 (Jan–Mar)","April 15"],["Q2 (Apr–May)","June 16"],["Q3 (Jun–Aug)","September 15"],["Q4 (Sep–Dec)","January 15"]].map(([q,due],i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:i<3?`1px solid ${C.cardBorder}`:"none"}}>
+                <span style={{fontSize:11,color:C.textMid}}>{q}</span>
+                <span style={{fontSize:11,color:C.silver,fontFamily:D.display}}>{due}</span>
+              </div>
+            ))}
+            <div style={{marginTop:12,fontSize:10,color:C.textDim,lineHeight:1.7}}>Pay at <strong style={{color:C.white}}>irs.gov/payments</strong> → IRS Direct Pay → "Estimated Tax (1040-ES)"</div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DRAWS ── */}
+      {finTab==="draws"&&(
+        <div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
+            {[
+              {label:"Net Profit",value:fmt(netProfit),color:C.gold},
+              {label:"Tax Reserve",value:fmt(taxRes),color:C.silver},
+              {label:"Total Drawn",value:fmt(totalDraw),color:C.red},
+              {label:"Available",value:fmt(avail),color:avail>=0?C.green:C.red},
+            ].map((s,i)=>(
+              <div key={i} style={{background:C.card,border:`1px solid ${i===3?s.color+"33":C.cardBorder}`,borderRadius:10,padding:"14px 16px"}}>
+                <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",marginBottom:6}}>{s.label}</div>
+                <div style={{fontSize:20,fontWeight:700,color:s.color,fontFamily:D.display}}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{background:C.card,border:`1px solid ${C.gold}18`,borderRadius:10,padding:"16px",marginBottom:14}}>
+            <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Record a Draw</div>
+            <div style={{display:"grid",gridTemplateColumns:"120px 1fr 1fr",gap:8,marginBottom:10}}>
+              <div><div style={{fontSize:8,color:C.textDim,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>Date</div><input type="date" value={drF.date} onChange={e=>setDrF(f=>({...f,date:e.target.value}))} style={{...IS}}/></div>
+              <div><div style={{fontSize:8,color:C.textDim,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>Amount ($)</div><input type="number" placeholder="0.00" min="0" step="0.01" value={drF.amount} onChange={e=>setDrF(f=>({...f,amount:e.target.value}))} style={{...IS}} onKeyDown={e=>e.key==="Enter"&&saveDraw()}/></div>
+              <div><div style={{fontSize:8,color:C.textDim,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>Note</div><input placeholder="Optional" value={drF.note} onChange={e=>setDrF(f=>({...f,note:e.target.value}))} style={{...IS}}/></div>
+            </div>
+            <button onClick={saveDraw} style={{background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",borderRadius:7,padding:"8px 20px",color:"#0a0a0a",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Record Draw</button>
+          </div>
+          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,overflow:"hidden"}}>
+            <div style={{padding:"10px 14px",background:"#0d0b08",borderBottom:`1px solid ${C.cardBorder}`,fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase"}}>Draw History</div>
+            {[...draws].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((d,i,arr)=>(
+              <div key={d.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",borderBottom:i<arr.length-1?`1px solid ${C.cardBorder}`:"none"}}>
+                <div><div style={{fontSize:11,fontWeight:500,color:C.white,marginBottom:1}}>{d.note||"Owner's Draw"}</div><div style={{fontSize:9,color:C.textDim}}>{fmtD(d.date)}</div></div>
+                <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                  <div style={{fontSize:14,fontWeight:600,color:C.gold,fontFamily:D.display}}>{fmt(d.amount)}</div>
+                  <button onClick={()=>delDraw(d.id)} style={{background:"transparent",border:"none",color:C.redDim,fontSize:12,cursor:"pointer"}}>✕</button>
+                </div>
+              </div>
+            ))}
+            {draws.length===0&&<div style={{padding:"24px",textAlign:"center",fontSize:11,color:C.textDim,fontStyle:"italic"}}>No draws recorded yet</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ReviewsModeration(){
   const [reviews,setReviews] = useState([]);
   const [loaded,setLoaded]   = useState(false);
