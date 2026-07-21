@@ -320,6 +320,12 @@ function HomePage({setPage,user}){
   return(
     <div style={{fontFamily:D.body}}>
 
+      {/* ── UPDATE BANNER ── */}
+      <div style={{background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,padding:"10px 24px",textAlign:"center",position:"relative",zIndex:50}}>
+        <span style={{fontSize:10,fontWeight:700,color:"#0a0a0a",fontFamily:D.body,letterSpacing:2,textTransform:"uppercase"}}>🔥 New Schedule Live — </span>
+        <span style={{fontSize:10,color:"#0a0a0a",fontFamily:D.body}}>Tuesdays & Fridays · 5 players max · $40/session · Packages now available</span>
+      </div>
+
       {/* ── HERO WITH VIDEO ── */}
       <div style={{position:"relative",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"120px 24px 80px",textAlign:"center",overflow:"hidden"}}>
         <video autoPlay muted loop playsInline style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}>
@@ -360,7 +366,7 @@ function HomePage({setPage,user}){
                 <div style={{width:46,height:46,borderRadius:12,background:C.redDark,border:`1px solid ${C.red}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🔥</div>
                 <div>
                   <div style={{fontSize:18,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:2}}>The Furnace</div>
-                  <div style={{fontSize:8,letterSpacing:2,color:C.red,textTransform:"uppercase",fontFamily:D.body}}>Mon · Tue · Thu · Fri · Group · U11+</div>
+                  <div style={{fontSize:8,letterSpacing:2,color:C.red,textTransform:"uppercase",fontFamily:D.body}}>Tue · Fri · Group · U11+</div>
                 </div>
               </div>
               <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:16}}>High-pressure group training built for players who want to be dangerous in tight spaces. Real defenders, real decisions, full speed.</p>
@@ -413,26 +419,33 @@ function HomePage({setPage,user}){
             ))}
           </div>
 
-          {/* Packages - Coming Soon */}
-          <div style={{background:"#0e0b08",border:"1px solid #1e1810",borderRadius:16,padding:"32px 28px",marginBottom:60,textAlign:"center"}}>
-            <div style={{fontSize:8,letterSpacing:4,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Training Packages</div>
-            <h3 style={{fontSize:22,color:C.white,fontFamily:D.display,fontWeight:600,margin:"0 0 10px"}}>Monthly & Season Packages</h3>
-            <p style={{fontSize:12,color:C.textDim,fontFamily:D.body,marginBottom:24,lineHeight:1.8}}>Lock in your spot and save. Packages launching August 2026.</p>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:22}}>
+          {/* Packages - LIVE */}
+          <div style={{background:"linear-gradient(135deg,#1a1208,#0f0c06)",border:`1px solid ${C.gold}33`,borderRadius:16,padding:"32px 28px",marginBottom:60}}>
+            <div style={{textAlign:"center",marginBottom:28}}>
+              <div style={{fontSize:8,letterSpacing:4,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Training Packages</div>
+              <h3 style={{fontSize:22,color:C.white,fontFamily:D.display,fontWeight:600,margin:"0 0 8px"}}>Lock In Your Spot & Save</h3>
+              <p style={{fontSize:12,color:C.textDim,fontFamily:D.body,lineHeight:1.8,margin:0}}>Commit to the process. The more sessions, the better the rate.</p>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:24}}>
               {[
-                {name:"Monthly Lite",sessions:"4 sessions",price:"$140",save:"Save $40"},
-                {name:"Full Month",sessions:"8 sessions",price:"$280",save:"Save $80"},
-                {name:"Season Pack",sessions:"16 sessions",price:"$480",save:"Save $240"},
+                {name:"Monthly Lite",sessions:"4 sessions",price:"$140",rate:"$35/session",save:"Save $20",highlight:false},
+                {name:"Full Month",sessions:"8 sessions",price:"$280",rate:"$35/session",save:"Save $40",highlight:true},
+                {name:"Season Pack",sessions:"16 sessions",price:"$480",rate:"$30/session",save:"Save $160",highlight:false},
               ].map((p,i)=>(
-                <div key={i} style={{background:"rgba(196,168,76,0.04)",border:"1px dashed rgba(196,168,76,0.15)",borderRadius:10,padding:"16px 12px",opacity:0.75}}>
-                  <div style={{fontSize:12,fontWeight:600,color:"#c8bca8",fontFamily:D.display,marginBottom:6}}>{p.name}</div>
-                  <div style={{fontSize:20,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:2}}>{p.price}</div>
-                  <div style={{fontSize:9,color:C.textDim,fontFamily:D.body,marginBottom:3}}>{p.sessions}</div>
-                  <div style={{fontSize:9,color:C.gold,fontFamily:D.body}}>{p.save}</div>
+                <div key={i} style={{background:p.highlight?"linear-gradient(135deg,#241a08,#1a1208)":"#0e0b08",border:p.highlight?`1px solid ${C.gold}55`:"1px solid #1e1810",borderRadius:12,padding:"20px 16px",textAlign:"center",position:"relative"}}>
+                  {p.highlight&&<div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,color:"#0a0a0a",fontSize:7,letterSpacing:2,fontWeight:700,textTransform:"uppercase",fontFamily:D.body,padding:"3px 12px",borderRadius:10,whiteSpace:"nowrap"}}>Most Popular</div>}
+                  <div style={{fontSize:13,fontWeight:600,color:p.highlight?C.gold:"#c8bca8",fontFamily:D.display,marginBottom:8}}>{p.name}</div>
+                  <div style={{fontSize:28,fontWeight:700,color:C.white,fontFamily:D.display,lineHeight:1,marginBottom:4}}>{p.price}</div>
+                  <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginBottom:2}}>{p.sessions}</div>
+                  <div style={{fontSize:10,color:p.highlight?C.gold:C.textDim,fontFamily:D.body,marginBottom:10}}>{p.rate}</div>
+                  <div style={{fontSize:9,padding:"3px 10px",borderRadius:8,background:p.highlight?`${C.gold}18`:"rgba(255,255,255,0.05)",color:p.highlight?C.gold:C.textDim,fontFamily:D.body,display:"inline-block"}}>{p.save}</div>
                 </div>
               ))}
             </div>
-            <div style={{display:"inline-block",background:"rgba(196,168,76,0.08)",border:"1px solid rgba(196,168,76,0.2)",borderRadius:20,padding:"6px 20px",fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body}}>Coming August 2026</div>
+            <p style={{fontSize:11,color:C.textDim,fontFamily:D.body,textAlign:"center",margin:"0 0 16px",lineHeight:1.7}}>Package sessions never expire within the purchased period. Contact Coach Carlos to get started.</p>
+            <div style={{textAlign:"center"}}>
+              <a href="mailto:laforjafutbol@gmail.com?subject=Package Inquiry" style={{display:"inline-block",background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,color:"#0a0a0a",borderRadius:10,padding:"12px 32px",fontSize:10,letterSpacing:3,textTransform:"uppercase",fontFamily:D.body,fontWeight:700,textDecoration:"none"}}>Get a Package →</a>
+            </div>
           </div>
 
           {/* Location */}
@@ -480,7 +493,7 @@ function HomePage({setPage,user}){
                 {q:"What if it rains?",a:"Light rain we train. Lightning or severe weather we reschedule at no charge. You'll get a message before the session if conditions force a change."},
                 {q:"How do I pay?",a:"Through Venmo to @carlos-cepeda-41 once your spot is reserved. Card payments are coming August 2026."},
                 {q:"Can I reschedule?",a:"Yes — with 24 hours notice. Log into your account, tap Reschedule on your session, and pick a new date. Same-day cancellations are forfeited."},
-                {q:"How many players per session?",a:`Maximum ${MAX_PLAYERS} players. Small on purpose — every player gets real reps and real feedback.`},
+                {q:"How many players per session?",a:`Maximum 5 players per session. Small on purpose — every player gets real attention and real reps.`},
                 {q:"What should my player bring?",a:"Cleats or turf shoes, water, and their own ball if they have one. No equipment rental needed."},
               ].map((item,i)=>(
                 <div key={i} style={{background:"#0e0b08",border:"1px solid #1e1810",borderRadius:10,padding:"16px 20px"}}>
