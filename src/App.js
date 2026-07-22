@@ -486,9 +486,12 @@ function HomePage({setPage,user,navigate}){
                   <span style={{fontSize:11,color:"#a89888",fontFamily:D.body,lineHeight:1.8}}>{item.text}</span>
                 </div>
               ))}
-              <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid #241a10",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>Up to {MAX_PLAYERS} players per session</span>
-                <span style={{fontSize:16,fontWeight:700,color:C.white,fontFamily:D.display}}>${PRICE_GROUP}<span style={{fontSize:10,color:C.textDim,fontWeight:400}}>/session</span></span>
+              <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid #241a10"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                  <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>Up to {MAX_PLAYERS} players per session</span>
+                  <span style={{fontSize:16,fontWeight:700,color:C.white,fontFamily:D.display}}>${PRICE_GROUP}<span style={{fontSize:10,color:C.textDim,fontWeight:400}}>/session</span></span>
+                </div>
+                <button onClick={()=>navigate("anvil","book")} style={{display:"block",width:"100%",background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:C.white,borderRadius:9,padding:"12px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Book The Furnace →</button>
               </div>
             </div>
 
