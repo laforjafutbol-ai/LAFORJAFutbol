@@ -248,9 +248,9 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
   const statusLabel = {confirmed:"Confirmed", pending:"Pending Payment", cancelled:"Cancelled", removed:"Cancelled", scheduled:"Confirmed", change_requested:"Change Requested"};
 
   const statusColor = {
-    confirmed:C.green, pending:C.gold, scheduled:C.green,
+    confirmed:C.green, pending:C.silver, scheduled:C.green,
     cancelled:C.red, removed:C.red, change_requested:C.silver,
-    tentative:C.gold,
+    tentative:C.silver,
   };
 
   async function handleSignOut(){
@@ -291,7 +291,7 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
       {/* ── HEADER ── */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
         <div>
-          <div style={{fontSize:8,letterSpacing:5,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:5}}>La Forja</div>
+          <div style={{fontSize:8,letterSpacing:5,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:5}}>La Forja</div>
           <div style={{fontSize:26,fontWeight:600,color:C.white,fontFamily:D.display,letterSpacing:1,marginBottom:3}}>
             {user.displayName?.split(" ")[0]||"Welcome back"}
           </div>
@@ -303,7 +303,7 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
       {/* ── STATS ── */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:24}}>
         {[
-          {label:"Upcoming",value:upcoming.length,color:C.gold},
+          {label:"Upcoming",value:upcoming.length,color:C.silver},
           {label:"Completed",value:completedCount,color:C.green},
           {label:"Players",value:players.length,color:C.silverBright},
         ].map((s,i)=>(
@@ -316,20 +316,20 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
 
       {/* ── NEXT SESSION ── */}
       {nextSession?(
-        <div style={{background:"linear-gradient(135deg,#1a1208,#100d06)",border:`1px solid ${C.gold}33`,borderRadius:14,padding:"20px 22px",marginBottom:16}}>
-          <div style={{fontSize:8,letterSpacing:4,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:14,fontWeight:600}}>Next Session</div>
+        <div style={{background:"linear-gradient(135deg,#141416,#100d06)",border:`1px solid ${C.silver}33`,borderRadius:14,padding:"20px 22px",marginBottom:16}}>
+          <div style={{fontSize:8,letterSpacing:4,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:14,fontWeight:600}}>Next Session</div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:14}}>
             <div>
               <div style={{fontSize:22,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:6,letterSpacing:0.5}}>{nextSession.dateLabel}</div>
               <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"center"}}>
-                <span style={{fontSize:12,color:C.gold,fontFamily:D.body}}>🕐 {nextSession._time||nextSession.sessTime||nextSession.slotTime||"TBD"}</span>
+                <span style={{fontSize:12,color:C.silver,fontFamily:D.body}}>🕐 {nextSession._time||nextSession.sessTime||nextSession.slotTime||"TBD"}</span>
                 <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>{nextSession.type==="1on1"?"⚒️ The Tempering":"🔥 The Furnace"}</span>
                 {nextSession.location&&<span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>📍 {nextSession.location}</span>}
               </div>
-              {nextSession.status==="tentative"&&<div style={{marginTop:8,fontSize:10,color:C.gold,fontFamily:D.body}}>⏰ Time TBD — Coach Carlos will confirm</div>}
+              {nextSession.status==="tentative"&&<div style={{marginTop:8,fontSize:10,color:C.silver,fontFamily:D.body}}>⏰ Time TBD — Coach Carlos will confirm</div>}
               {nextSession.requestType&&<div style={{marginTop:8,fontSize:10,color:C.silver,fontFamily:D.body}}>Reschedule requested — awaiting confirmation</div>}
             </div>
-            <span style={{fontSize:8,padding:"4px 10px",borderRadius:8,background:nextSession.status==="confirmed"?`${C.green}18`:`${C.gold}18`,color:nextSession.status==="confirmed"?C.green:C.gold,border:`1px solid ${nextSession.status==="confirmed"?C.green+"33":C.gold+"33"}`,fontFamily:D.body,flexShrink:0,letterSpacing:1}}>
+            <span style={{fontSize:8,padding:"4px 10px",borderRadius:8,background:nextSession.status==="confirmed"?`${C.green}18`:`${C.silver}18`,color:nextSession.status==="confirmed"?C.green:C.silver,border:`1px solid ${nextSession.status==="confirmed"?C.green+"33":C.gold+"33"}`,fontFamily:D.body,flexShrink:0,letterSpacing:1}}>
               {statusLabel[nextSession.status]||nextSession.status}
             </span>
           </div>
@@ -359,11 +359,11 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
                     <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>🕐 {s._time||s.sessTime||s.slotTime||"TBD"}</span>
                     <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>{s.type==="1on1"?"⚒️ Tempering":"🔥 Furnace"}</span>
                   </div>
-                  {s.status==="tentative"&&<div style={{fontSize:9,color:C.gold,fontFamily:D.body,marginTop:3}}>⏰ Time TBD</div>}
+                  {s.status==="tentative"&&<div style={{fontSize:9,color:C.silver,fontFamily:D.body,marginTop:3}}>⏰ Time TBD</div>}
                   {s.requestType&&<div style={{fontSize:9,color:C.silver,fontFamily:D.body,marginTop:3}}>Reschedule requested</div>}
                 </div>
                 <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
-                  <span style={{fontSize:8,padding:"2px 8px",borderRadius:6,background:s.status==="confirmed"?`${C.green}18`:`${C.gold}18`,color:s.status==="confirmed"?C.green:C.gold,fontFamily:D.body,letterSpacing:1}}>{statusLabel[s.status]||s.status}</span>
+                  <span style={{fontSize:8,padding:"2px 8px",borderRadius:6,background:s.status==="confirmed"?`${C.green}18`:`${C.silver}18`,color:s.status==="confirmed"?C.green:C.silver,fontFamily:D.body,letterSpacing:1}}>{statusLabel[s.status]||s.status}</span>
                   {!s.requestType&&<button onClick={()=>setRequestModal({session:s,action:"reschedule"})} style={{background:"transparent",border:`1px solid ${C.silver}33`,color:C.silver,borderRadius:7,padding:"5px 12px",fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Reschedule</button>}
                 </div>
               </div>
@@ -455,25 +455,25 @@ export function RequestModal({session,action,onClose,onSubmit,getDates,getPrivat
         {/* Header */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
           <div>
-            <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>Request Reschedule</div>
+            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>Request Reschedule</div>
             <div style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display}}>{session.dateLabel} · {session._time}</div>
           </div>
           <button onClick={onClose} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,width:30,height:30,color:C.textDim,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
         </div>
 
         {/* Info */}
-        <div style={{background:`${C.gold}10`,border:`1px solid ${C.gold}22`,borderRadius:10,padding:"12px 14px",marginBottom:16}}>
+        <div style={{background:`${C.silver}10`,border:`1px solid ${C.silver}22`,borderRadius:10,padding:"12px 14px",marginBottom:16}}>
           <div style={{fontSize:11,color:C.textMid,fontFamily:D.body,lineHeight:1.7}}>Pick your preferred new date below. Coach Carlos will review and confirm by email within 24 hours.</div>
         </div>
 
         {/* Date picker */}
-        <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Select Preferred Date</div>
+        <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Select Preferred Date</div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:14}}>
           {availDates.map((d,i)=>{
             const sel=reschedDate&&dKey(d)===dKey(reschedDate);
             return(
               <button key={i} onClick={()=>{setReschedDate(d);setReschedSess(null);}}
-                style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:8,padding:"8px 4px",cursor:"pointer",textAlign:"center",color:C.white}}>
+                style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.silver}`:`1px solid #222`,borderRadius:8,padding:"8px 4px",cursor:"pointer",textAlign:"center",color:C.white}}>
                 <div style={{fontSize:8,color:sel?C.gold:C.silverDim,fontFamily:D.body}}>{is1on1?d.toLocaleDateString("en-US",{weekday:"short"}).slice(0,3).toUpperCase():(DAY_ABBR[d.getDay()]||d.toLocaleDateString("en-US",{weekday:"short"}).slice(0,3).toUpperCase())}</div>
                 <div style={{fontSize:15,fontWeight:700,fontFamily:D.display}}>{d.getDate()}</div>
                 <div style={{fontSize:8,color:sel?C.gold:C.silverDim,fontFamily:D.body}}>{d.toLocaleDateString("en-US",{month:"short"})}</div>
@@ -487,13 +487,13 @@ export function RequestModal({session,action,onClose,onSubmit,getDates,getPrivat
           const sched=DAY_SCHEDULE[reschedDate.getDay()];
           if(!sched) return null;
           return(<>
-            <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Select Session Time</div>
+            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Select Session Time</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:14}}>
               {sched.sessions.map(sess=>{
                 const sel=reschedSess?.id===sess.id;
                 return(
                   <button key={sess.id} onClick={()=>setReschedSess(sess)}
-                    style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:8,padding:"10px 10px",cursor:"pointer",textAlign:"left"}}>
+                    style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.silver}`:`1px solid #222`,borderRadius:8,padding:"10px 10px",cursor:"pointer",textAlign:"left"}}>
                     <div style={{fontSize:11,fontWeight:600,color:sel?C.gold:C.white,fontFamily:D.display}}>{sess.time}</div>
                     <div style={{fontSize:10,color:sel?C.gold:C.textDim,fontFamily:D.body}}>{sess.ageGroup}</div>
                   </button>
@@ -507,15 +507,15 @@ export function RequestModal({session,action,onClose,onSubmit,getDates,getPrivat
           const sched=PRIVATE_SCHEDULE[reschedDate.getDay()];
           if(!sched) return null;
           return(<>
-            <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Select Time Slot</div>
+            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Select Time Slot</div>
             <div style={{display:"grid",gap:6,marginBottom:14}}>
               {sched.slots.map(slot=>{
                 const sel=reschedSess?.id===slot.id;
                 return(
                   <button key={slot.id} onClick={()=>setReschedSess(slot)}
-                    style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.gold}`:`1px solid #222`,borderRadius:8,padding:"10px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    style={{background:sel?"#1c130a":"#0d0d0d",border:sel?`1px solid ${C.silver}`:`1px solid #222`,borderRadius:8,padding:"10px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                     <span style={{fontSize:12,fontWeight:600,color:sel?C.gold:C.white,fontFamily:D.display}}>{slot.time}</span>
-                    {sel&&<span style={{fontSize:10,color:C.gold,fontFamily:D.body}}>Selected ✓</span>}
+                    {sel&&<span style={{fontSize:10,color:C.silver,fontFamily:D.body}}>Selected ✓</span>}
                   </button>
                 );
               })}
@@ -539,7 +539,7 @@ export function RequestModal({session,action,onClose,onSubmit,getDates,getPrivat
         {/* Submit */}
         <div style={{display:"flex",gap:10}}>
           <button onClick={handleSubmit} disabled={busy||!reschedDate||!reschedSess}
-            style={{flex:1,background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,border:"none",color:"#0a0a0a",borderRadius:10,padding:"13px",fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:(busy||!reschedDate||!reschedSess)?"not-allowed":"pointer",fontFamily:D.body,fontWeight:600,opacity:(busy||!reschedDate||!reschedSess)?0.5:1}}>
+            style={{flex:1,background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,border:"none",color:"#0a0a0a",borderRadius:10,padding:"13px",fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:(busy||!reschedDate||!reschedSess)?"not-allowed":"pointer",fontFamily:D.body,fontWeight:600,opacity:(busy||!reschedDate||!reschedSess)?0.5:1}}>
             {busy?"Sending…":"Send Reschedule Request"}
           </button>
           <button onClick={onClose} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:10,padding:"13px 16px",fontSize:11,cursor:"pointer",fontFamily:D.body}}>
@@ -804,9 +804,9 @@ export function ReviewsPage({setPage,user}){
 
       {avgRating&&(
         <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:24,background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"18px 22px"}}>
-          <div style={{fontSize:36,fontWeight:700,color:C.gold,fontFamily:D.display}}>{avgRating}</div>
+          <div style={{fontSize:36,fontWeight:700,color:C.silver,fontFamily:D.display}}>{avgRating}</div>
           <div>
-            <div style={{color:C.gold,fontSize:16,letterSpacing:2,marginBottom:3}}>{"★".repeat(Math.round(avgRating))}{"☆".repeat(5-Math.round(avgRating))}</div>
+            <div style={{color:C.silver,fontSize:16,letterSpacing:2,marginBottom:3}}>{"★".repeat(Math.round(avgRating))}{"☆".repeat(5-Math.round(avgRating))}</div>
             <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Based on {approved.length} review{approved.length!==1?"s":""}</div>
           </div>
         </div>
@@ -871,7 +871,7 @@ export function ReviewsPage({setPage,user}){
           <div key={r.id} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 18px"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8,flexWrap:"wrap",gap:8}}>
               <span style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display}}>{r.name}</span>
-              <span style={{color:C.gold,fontSize:13,letterSpacing:1}}>{"★".repeat(r.rating)}{"☆".repeat(5-r.rating)}</span>
+              <span style={{color:C.silver,fontSize:13,letterSpacing:1}}>{"★".repeat(r.rating)}{"☆".repeat(5-r.rating)}</span>
             </div>
             <div style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.7}}>{r.text}</div>
           </div>
@@ -988,7 +988,7 @@ export function SessionsPage({setPage,user}){
 
       {/* Hero */}
       <div style={{textAlign:"center",marginBottom:40}}>
-        <div style={{fontSize:9,letterSpacing:5,color:C.goldDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>La Forja Futbol</div>
+        <div style={{fontSize:9,letterSpacing:5,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>La Forja Futbol</div>
         <h1 style={{margin:"0 0 16px",fontSize:32,fontWeight:600,color:C.white,fontFamily:D.display}}>Manage Your Sessions</h1>
         <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:1.8,maxWidth:440,margin:"0 auto"}}>Create a free account to view your upcoming sessions, request reschedules, add player profiles, and book faster every time.</p>
       </div>
@@ -1002,7 +1002,7 @@ export function SessionsPage({setPage,user}){
           {icon:"👥", title:"Multiple Players", desc:"Add profiles for each of your kids. Select who's training when you book — the count updates automatically."},
         ].map((item,i)=>(
           <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 18px",display:"flex",gap:14,alignItems:"flex-start"}}>
-            <div style={{width:40,height:40,borderRadius:10,background:`${C.gold}12`,border:`1px solid ${C.gold}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{item.icon}</div>
+            <div style={{width:40,height:40,borderRadius:10,background:`${C.silver}12`,border:`1px solid ${C.silver}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{item.icon}</div>
             <div>
               <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:4}}>{item.title}</div>
               <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.7}}>{item.desc}</div>
@@ -1022,8 +1022,8 @@ export function SessionsPage({setPage,user}){
       </div>
 
       {/* Guest note */}
-      <div style={{background:`${C.gold}08`,border:`1px solid ${C.gold}22`,borderRadius:10,padding:"14px 16px",textAlign:"center"}}>
-        <div style={{fontSize:12,color:C.gold,fontFamily:D.display,fontWeight:600,marginBottom:6}}>Booked as a guest?</div>
+      <div style={{background:`${C.silver}08`,border:`1px solid ${C.silver}22`,borderRadius:10,padding:"14px 16px",textAlign:"center"}}>
+        <div style={{fontSize:12,color:C.silver,fontFamily:D.display,fontWeight:600,marginBottom:6}}>Booked as a guest?</div>
         <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.7}}>Create an account using the same email address you booked with. Your existing sessions will appear in your account automatically.</div>
       </div>
 
@@ -1037,16 +1037,16 @@ export function AboutPage({setPage}){
       <div style={{maxWidth:800,margin:"0 auto",padding:"50px 24px 80px"}}>
         <SH eyebrow="La Forja" title="Coaching Staff"/>
         <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:18,overflow:"hidden",marginBottom:28}}>
-          <div style={{height:3,background:`linear-gradient(90deg,${C.red} 0%,${C.gold} 50%,${C.silver} 100%)`}}/>
+          <div style={{height:3,background:`linear-gradient(90deg,${C.red} 0%,${C.silver} 50%,${C.silver} 100%)`}}/>
           <div style={{padding:"32px 28px"}}>
             <div style={{display:"flex",alignItems:"flex-start",gap:24,flexWrap:"wrap",marginBottom:26}}>
-              <div style={{width:108,height:108,borderRadius:"50%",flexShrink:0,border:`2px solid ${C.gold}`,boxShadow:`0 0 30px ${C.gold}22`,overflow:"hidden"}}>
+              <div style={{width:108,height:108,borderRadius:"50%",flexShrink:0,border:`2px solid ${C.silver}`,boxShadow:`0 0 30px ${C.silver}22`,overflow:"hidden"}}>
                 <img src="/carlos.jpg" alt="Carlos Cepeda" style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center top"}}/>
               </div>
               <div style={{paddingTop:8}}>
                 <div style={{fontSize:10,letterSpacing:4,color:C.silverDim,textTransform:"uppercase",marginBottom:5,fontFamily:D.body}}>Head Coach & Founder</div>
                 <h2 style={{margin:"0 0 5px",fontSize:30,fontWeight:600,color:C.white,fontFamily:D.display,letterSpacing:1}}>Carlos Cepeda</h2>
-                <div style={{fontSize:12,color:C.gold,letterSpacing:3,fontFamily:D.body,fontWeight:300,marginBottom:5}}>La Forja · Private Training</div>
+                <div style={{fontSize:12,color:C.silver,letterSpacing:3,fontFamily:D.body,fontWeight:300,marginBottom:5}}>La Forja · Private Training</div>
                 <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>📍 Charleston · James Island · Summerville Area</div>
               </div>
             </div>
@@ -1055,17 +1055,17 @@ export function AboutPage({setPage}){
               "I've stood on pitches across Europe and seen firsthand what separates good players from great ones. My mission is to bring that standard here."
             </p>
             <p style={{margin:"0 0 13px",fontSize:13,color:C.textMid,lineHeight:1.9,fontFamily:D.body}}>
-              My name is Carlos Cepeda. I'm 24 years old and have been playing soccer for over 20 years. From a young age the game took me places most players only dream of — including the <span style={{color:C.gold}}>Chicago Fire Academy</span>, one of the most prestigious youth programs in the United States.
+              My name is Carlos Cepeda. I'm 24 years old and have been playing soccer for over 20 years. From a young age the game took me places most players only dream of — including the <span style={{color:C.silver}}>Chicago Fire Academy</span>, one of the most prestigious youth programs in the United States.
             </p>
             <p style={{margin:"0 0 13px",fontSize:13,color:C.textMid,lineHeight:1.9,fontFamily:D.body}}>
-              My pursuit of the game took me across Europe, where I competed professionally at multiple levels — <span style={{color:C.silver}}>3rd Division in Portugal</span>, <span style={{color:C.silver}}>2nd Division in Malta</span>, and <span style={{color:C.silver}}>1st Division in Andorra</span>. I also developed at <span style={{color:C.gold}}>Marcet Soccer School in Barcelona</span>, where I trained and competed directly against La Liga and Liga 2 clubs, facing national team players and professionals on a regular basis.
+              My pursuit of the game took me across Europe, where I competed professionally at multiple levels — <span style={{color:C.silver}}>3rd Division in Portugal</span>, <span style={{color:C.silver}}>2nd Division in Malta</span>, and <span style={{color:C.silver}}>1st Division in Andorra</span>. I also developed at <span style={{color:C.silver}}>Marcet Soccer School in Barcelona</span>, where I trained and competed directly against La Liga and Liga 2 clubs, facing national team players and professionals on a regular basis.
             </p>
             <p style={{margin:"0 0 24px",fontSize:13,color:C.textMid,lineHeight:1.9,fontFamily:D.body}}>
-              That experience overseas — seeing firsthand the technical level, mentality, and work ethic of players at the highest level — is what drives everything I do at <span style={{color:C.gold}}>La Forja</span>. I created these sessions because I believe every young player deserves access to that standard of training. My goal is simple: to forge players who are technically sharp, mentally tough, and ready to compete at the next level.
+              That experience overseas — seeing firsthand the technical level, mentality, and work ethic of players at the highest level — is what drives everything I do at <span style={{color:C.silver}}>La Forja</span>. I created these sessions because I believe every young player deserves access to that standard of training. My goal is simple: to forge players who are technically sharp, mentally tough, and ready to compete at the next level.
             </p>
 
             <div style={{background:"#0c0c0c",border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"18px 20px"}}>
-              <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",marginBottom:14,fontFamily:D.body}}>Career Highlights</div>
+              <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",marginBottom:14,fontFamily:D.body}}>Career Highlights</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                 {[
                   {flag:"🇺🇸",club:"Chicago Fire Academy",    detail:"Elite Youth · USA",           division:""},
@@ -1079,7 +1079,7 @@ export function AboutPage({setPage}){
                     <span style={{fontSize:18,flexShrink:0}}>{item.flag}</span>
                     <div>
                       <div style={{fontSize:12,color:C.white,fontFamily:D.body,fontWeight:500,marginBottom:2}}>{item.club}</div>
-                      <div style={{fontSize:10,color:C.gold,fontFamily:D.body,marginBottom:1}}>{item.detail}</div>
+                      <div style={{fontSize:10,color:C.silver,fontFamily:D.body,marginBottom:1}}>{item.detail}</div>
                       {item.division&&<div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{item.division}</div>}
                     </div>
                   </div>
@@ -1093,28 +1093,28 @@ export function AboutPage({setPage}){
           <div>
             <div style={{fontSize:9,letterSpacing:4,color:C.silverDim,textTransform:"uppercase",marginBottom:5,fontFamily:D.body}}>Questions?</div>
             <div style={{fontSize:16,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:4}}>Get in Touch</div>
-            <a href="mailto:laforjafutbol@gmail.com" style={{fontSize:13,color:C.gold,fontFamily:D.body,textDecoration:"none"}}>laforjafutbol@gmail.com</a>
+            <a href="mailto:laforjafutbol@gmail.com" style={{fontSize:13,color:C.silver,fontFamily:D.body,textDecoration:"none"}}>laforjafutbol@gmail.com</a>
             <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,marginTop:3}}>Responses within 24–48 hours</div>
           </div>
-          <a href="mailto:laforjafutbol@gmail.com" style={{background:`linear-gradient(135deg,${C.goldDark},#150c04)`,border:`1px solid ${C.silver}44`,color:C.gold,borderRadius:10,padding:"11px 22px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,textDecoration:"none",whiteSpace:"nowrap"}}>Send Email →</a>
+          <a href="mailto:laforjafutbol@gmail.com" style={{background:`linear-gradient(135deg,${C.silverDark},#121214)`,border:`1px solid ${C.silver}44`,color:C.silver,borderRadius:10,padding:"11px 22px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,textDecoration:"none",whiteSpace:"nowrap"}}>Send Email →</a>
         </div>
 
         {/* Coaching Staff */}
         <div style={{marginBottom:28}}>
-          <div style={{display:"flex",gap:4,marginBottom:20}}><div style={{width:30,height:2,background:C.gold,borderRadius:1}}/><div style={{width:8,height:2,background:C.red,borderRadius:1}}/></div>
+          <div style={{display:"flex",gap:4,marginBottom:20}}><div style={{width:30,height:2,background:C.silver,borderRadius:1}}/><div style={{width:8,height:2,background:C.red,borderRadius:1}}/></div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
             {[
               {name:"Waldo Cepeda Jr.", role:"Coach", img:"/waldo-jr.jpg"},
               {name:"Waldo Cepeda Sr.", role:"Coach", img:"/waldo-sr.jpg"},
             ].map((coach,i)=>(
               <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:16,overflow:"hidden"}}>
-                <div style={{height:3,background:`linear-gradient(90deg,${C.red},${C.gold})`}}/>
+                <div style={{height:3,background:`linear-gradient(90deg,${C.red},${C.silver})`}}/>
                 <div style={{padding:"20px 18px",display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center"}}>
-                  <div style={{width:96,height:96,borderRadius:"50%",overflow:"hidden",border:`2px solid ${C.gold}`,boxShadow:`0 0 20px ${C.gold}22`,marginBottom:14}}>
+                  <div style={{width:96,height:96,borderRadius:"50%",overflow:"hidden",border:`2px solid ${C.silver}`,boxShadow:`0 0 20px ${C.silver}22`,marginBottom:14}}>
                     <img src={coach.img} alt={coach.name} style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center top"}}/>
                   </div>
                   <div style={{fontSize:15,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:4}}>{coach.name}</div>
-                  <div style={{fontSize:10,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body}}>{coach.role}</div>
+                  <div style={{fontSize:10,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body}}>{coach.role}</div>
                 </div>
               </div>
             ))}
@@ -1130,7 +1130,7 @@ export function AboutPage({setPage}){
           ].map(item=>(
             <div key={item.title} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"20px 18px"}}>
               <div style={{fontSize:22,marginBottom:8}}>{item.icon}</div>
-              <div style={{fontSize:12,color:C.gold,marginBottom:6,letterSpacing:1,fontFamily:D.body,fontWeight:500}}>{item.title}</div>
+              <div style={{fontSize:12,color:C.silver,marginBottom:6,letterSpacing:1,fontFamily:D.body,fontWeight:500}}>{item.title}</div>
               <div style={{fontSize:11,color:C.textDim,lineHeight:1.8,fontFamily:D.body}}>{item.desc}</div>
             </div>
           ))}
