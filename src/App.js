@@ -474,11 +474,16 @@ function HomePage({setPage,user,navigate}){
                   <div style={{fontSize:8,letterSpacing:2,color:C.red,textTransform:"uppercase",fontFamily:D.body}}>Tue · Thu · Fri · Group · U11+</div>
                 </div>
               </div>
-              <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:16}}>High-pressure group training built for players who want to be dangerous in tight spaces. Real defenders, real decisions, full speed.</p>
-              {["1v1 dominance in tight spaces","Receiving under pressure","Split-second decision making","Finishing with composure"].map((pt,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
-                  <div style={{width:4,height:4,borderRadius:"50%",background:C.red,flexShrink:0,opacity:0.7}}/>
-                  <span style={{fontSize:11,color:"#a89888",fontFamily:D.body}}>{pt}</span>
+              <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:20}}>Most players fall apart when the game speeds up. The Furnace is built for players who want to be dangerous when it matters — tight spaces, real defenders, real decisions, full speed. Every session is a game situation.</p>
+              {[
+                {icon:"⚔️",text:"1v1 dominance in tight spaces — beat defenders with technique, not pace"},
+                {icon:"🎯",text:"Receiving under pressure — first touch that puts you in control, not in trouble"},
+                {icon:"⚡",text:"Split-second decision making — the right move at the right time, every time"},
+                {icon:"🥅",text:"Finishing with composure — clinical in front of goal regardless of pressure"},
+              ].map((item,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:10}}>
+                  <span style={{fontSize:14,flexShrink:0,marginTop:1}}>{item.icon}</span>
+                  <span style={{fontSize:11,color:"#a89888",fontFamily:D.body,lineHeight:1.8}}>{item.text}</span>
                 </div>
               ))}
               <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid #241a10",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -768,6 +773,8 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
   const selPack = PACKAGES.find(p=>p.id===packTier)||PACKAGES[0];
   const PACK_SIZE = selPack.sessions;
   const PRICE_PACK = selPack.price;
+  const packPlayerCount = selPlayerIds.length>0 ? selPlayerIds.length : 1;
+  const PRICE_PACK_TOTAL = PRICE_PACK * packPlayerCount; // total for all selected players
   const [packDates,setPackDates] = useState([]);
   const [packWeekOff,setPackWeekOff] = useState(0);
   const [packMyIds,setPackMyIds] = useState([]);
@@ -811,7 +818,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
         parentName:user?user.displayName||form.name:null,
         returning:!!retClient,createdAt:new Date().toISOString(),
         location:pd.location,locationDetail:pd.locationDetail,locationMaps:pd.locationMaps,
-        packageBooking:true,packageTotal:PRICE_PACK,packageSize:PACK_SIZE,
+        packageBooking:true,packageTotal:PRICE_PACK_TOTAL,packageSize:PACK_SIZE,packagePlayers:packPlayerCount,
         ...(user?{userId:user.uid}:{}),
         ...(selPlayerIds.length>0?{playerIds:selPlayerIds}:{}),
       };
@@ -828,7 +835,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
       await updateDoc(doc(db,"bookings",id),{status:"confirmed",paymentMethod:"stripe"});
     }
     const first=bookings.find(b=>b.id===packMyIds[0]);
-    if(first) await callEmailAPI({...first,packageBooking:true,packageDates:packDates.map(p=>p.dateLabel).join(", "),total:PRICE_PACK},"group");
+    if(first) await callEmailAPI({...first,packageBooking:true,packageDates:packDates.map(p=>p.dateLabel).join(", "),total:PRICE_PACK_TOTAL},"group");
   }
 
   async function handleStripeSuccess(){
@@ -1409,8 +1416,11 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
                 {/* Package header */}
                 <div style={{background:`linear-gradient(135deg,${C.goldDark},#1c0e04)`,border:`1px solid ${C.gold}33`,borderRadius:14,padding:"16px 20px",marginBottom:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div>
-                    <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>{selPack.name}</div>
-                    <div style={{fontSize:28,fontWeight:700,color:C.white,fontFamily:D.display,lineHeight:1}}>${PRICE_PACK} <span style={{fontSize:13,color:C.gold,fontWeight:400}}>${selPack.rate}/session</span></div>
+                    <div style={{fontSize:9,letterSpacing:3,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>{selPack.name}{packPlayerCount>1?` · ${packPlayerCount} players`:""}</div>
+                    <div style={{fontSize:28,fontWeight:700,color:C.white,fontFamily:D.display,lineHeight:1}}>
+                      ${PRICE_PACK_TOTAL}
+                      <span style={{fontSize:13,color:C.gold,fontWeight:400}}> {packPlayerCount>1?`($${PRICE_PACK} × ${packPlayerCount} players)`:`$${selPack.rate}/session`}</span>
+                    </div>
                   </div>
                   <div style={{textAlign:"right"}}>
                     <div style={{fontSize:32,fontWeight:700,color:packDates.length===PACK_SIZE?C.green:C.gold,fontFamily:D.display}}>{packDates.length}<span style={{fontSize:16,color:C.textDim}}>/{PACK_SIZE}</span></div>
