@@ -328,7 +328,7 @@ function PackagesPage({setPage,user}){
               rate:"$35/session",
               sessions:"8 sessions",
               save:"Save $40",
-              desc:"Both Tuesdays and Fridays for a full month. This is where real development happens — you're seeing the field twice a week.",
+              desc:"Tuesdays, Thursdays, and Fridays for a full month. This is where real development happens — three sessions a week.",
               highlight:true,
               cta:"Get This Package",
               action:()=>window.location.href="mailto:laforjafutbol@gmail.com?subject=Full Month Package",
@@ -432,7 +432,7 @@ function HomePage({setPage,user,navigate}){
       {/* ── UPDATE BANNER ── */}
       <div style={{background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,padding:"10px 24px",textAlign:"center",position:"relative",zIndex:50}}>
         <span style={{fontSize:10,fontWeight:700,color:"#0a0a0a",fontFamily:D.body,letterSpacing:2,textTransform:"uppercase"}}>🔥 New Schedule Live — </span>
-        <span style={{fontSize:10,color:"#0a0a0a",fontFamily:D.body}}>Tuesdays & Fridays · 5 players max · $40/session · Packages now available · 1-on-1 coming soon</span>
+        <span style={{fontSize:10,color:"#0a0a0a",fontFamily:D.body}}>Tuesdays, Thursdays & Fridays · 5 players max · $40/session · Packages now available · 1-on-1 coming soon</span>
       </div>
 
       {/* ── HERO WITH VIDEO ── */}
@@ -475,7 +475,7 @@ function HomePage({setPage,user,navigate}){
                 <div style={{width:46,height:46,borderRadius:12,background:C.redDark,border:`1px solid ${C.red}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🔥</div>
                 <div>
                   <div style={{fontSize:18,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:2}}>The Furnace</div>
-                  <div style={{fontSize:8,letterSpacing:2,color:C.red,textTransform:"uppercase",fontFamily:D.body}}>Tue · Fri · Group · U11+</div>
+                  <div style={{fontSize:8,letterSpacing:2,color:C.red,textTransform:"uppercase",fontFamily:D.body}}>Tue · Thu · Fri · Group · U11+</div>
                 </div>
               </div>
               <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:16}}>High-pressure group training built for players who want to be dangerous in tight spaces. Real defenders, real decisions, full speed.</p>
