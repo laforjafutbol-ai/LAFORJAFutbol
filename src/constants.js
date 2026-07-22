@@ -28,17 +28,17 @@ export const POSITIONS = [
 ];
 
 export const C = {
-  // Base — forge dark, slight warm undertone
-  black:"#0a0908", card:"#15130f", cardBorder:"#2a251c",
-  // Steel silver — dominant accent (from logo shield border)
-  silver:"#b4aea0", silverDim:"#6e6859", silverDark:"#332f26",
+  // Base — forge dark, cool near-black
+  black:"#09090b", card:"#111116", cardBorder:"#25242a",
+  // Steel silver — primary accent
+  silver:"#b4aea0", silverDim:"#6e6859", silverDark:"#332f3a",
   silverBright:"#e6dfd2", silverGlow:"#b4aea022",
-  // Gold/Ember — heat accent, brighter and warmer
-  gold:"#e8a93c", goldBright:"#ffc966", goldDim:"#8a5e1f", goldDark:"#241407",
-  // Red/Ember-red — fire accent, hotter and more saturated
+  // Silver aliases — keep C.gold references working, mapped to silver tones
+  gold:"#c8c0b8", goldBright:"#e6dfd2", goldDim:"#7a7470", goldDark:"#1e1c22",
+  // Red — primary action color
   red:"#ff4d2e", redDim:"#a8341e", redDark:"#1f0a05",
-  // Text — warm off-whites and greys
-  white:"#f5efe6", textDim:"#7a7468", textMid:"#a8a194",
+  // Text
+  white:"#f0eee8", textDim:"#7a7468", textMid:"#a8a194",
   // Status
   green:"#3ddc84", greenDark:"#0a1f12",
 };
@@ -67,13 +67,13 @@ export const PRIVATE_SCHEDULE = {
 };
 
 export const AGE_COLORS = {
-  "u11+": {bg:"#1c160c",border:C.gold,text:C.gold,badge:"#241a08"},
-  "9-11": {bg:"#1c160c",border:C.gold,text:C.gold,badge:"#241a08"},
-  "12-14":{bg:"#1c160c",border:C.gold,text:C.gold,badge:"#241a08"},
+  "u11+": {bg:"#1c160c",border:C.silver,text:C.silver,badge:"#1a181c"},
+  "9-11": {bg:"#1c160c",border:C.silver,text:C.silver,badge:"#1a181c"},
+  "12-14":{bg:"#1c160c",border:C.silver,text:C.silver,badge:"#1a181c"},
 };
 export const SKILL_COLORS = {
   "The Furnace":   {color:C.red,  bg:"#1f0a05"},
-  "The Tempering": {color:C.gold, bg:"#241a08"},
+  "The Tempering": {color:C.silver, bg:"#1a181c"},
 };
 export const DAY_ABBR = {2:"TUE",4:"THU",5:"FRI"};
 export const COACH_DAYS = [2,4,5]; // Tue + Thu + Fri
@@ -140,7 +140,7 @@ export function Crest({size=48}){
 export function SH({eyebrow,title}){
   return(
     <div style={{marginBottom:28}}>
-      <div style={{display:"flex",gap:4,marginBottom:12}}><div style={{width:30,height:2,background:C.gold,borderRadius:1}}/><div style={{width:8,height:2,background:C.red,borderRadius:1}}/></div>
+      <div style={{display:"flex",gap:4,marginBottom:12}}><div style={{width:30,height:2,background:C.silver,borderRadius:1}}/><div style={{width:8,height:2,background:C.red,borderRadius:1}}/></div>
       {eyebrow&&<div style={{fontSize:9,letterSpacing:4,color:C.silverDim,textTransform:"uppercase",marginBottom:6,fontFamily:D.body}}>{eyebrow}</div>}
       <h1 style={{margin:0,fontSize:30,fontWeight:600,color:C.white,fontFamily:D.display,letterSpacing:1}}>{title}</h1>
     </div>
@@ -162,7 +162,7 @@ export function SC({title,rows}){
 }
 export function AB({children,onClick,disabled}){ return <button onClick={onClick} disabled={disabled} style={{flex:1,background:disabled?C.card:`linear-gradient(135deg,${C.red},${C.redDim})`,color:disabled?C.silverDark:C.white,border:disabled?`1px solid ${C.cardBorder}`:`1px solid ${C.red}`,borderRadius:10,padding:"13px 22px",fontSize:11,cursor:disabled?"not-allowed":"pointer",letterSpacing:3,textTransform:"uppercase",boxShadow:disabled?"none":`0 4px 20px ${C.red}33`,transition:"all 0.2s",fontFamily:D.body,fontWeight:500}}>{children}</button>; }
 export function GB({children,onClick}){ return <button onClick={onClick} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:10,padding:"12px 18px",fontSize:11,cursor:"pointer",letterSpacing:2,textTransform:"uppercase",fontFamily:D.body}}>{children}</button>; }
-export function NB({children,onClick,disabled}){ return <button onClick={onClick} disabled={disabled} style={{background:"transparent",border:"none",color:disabled?C.silverDark:C.gold,cursor:disabled?"not-allowed":"pointer",fontSize:11,letterSpacing:1,padding:"4px 8px",fontFamily:D.body}}>{children}</button>; }
+export function NB({children,onClick,disabled}){ return <button onClick={onClick} disabled={disabled} style={{background:"transparent",border:"none",color:disabled?C.silverDark:C.silver,cursor:disabled?"not-allowed":"pointer",fontSize:11,letterSpacing:1,padding:"4px 8px",fontFamily:D.body}}>{children}</button>; }
 export const IS = {width:"100%",background:"#161310",border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"11px 13px",color:C.white,fontSize:14,fontFamily:D.body,outline:"none"};
 export function GStyles(){ return <style>{`
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
