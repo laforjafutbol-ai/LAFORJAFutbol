@@ -45,10 +45,9 @@ export const C = {
 export const D = { display:"'Cormorant Garamond',Georgia,serif", body:"'Montserrat',sans-serif" };
 
 export const DAY_SCHEDULE = {
-  1:{ skill:"The Furnace", skillDesc:"1v1 dominance · Tight space control · Decision making under pressure", skillIcon:"🔥", sessions:[{id:"s1",label:"Session 1",time:"5:00 PM – 6:15 PM",ageGroup:"U11+", ageTag:"u11+"},{id:"s2",label:"Session 2",time:"6:30 PM – 7:45 PM",ageGroup:"U11+", ageTag:"u11+"}]},
-  2:{ skill:"The Furnace", skillDesc:"1v1 dominance · Tight space control · Decision making under pressure", skillIcon:"🔥", sessions:[{id:"s1",label:"Session 1",time:"5:00 PM – 6:15 PM",ageGroup:"U11+", ageTag:"u11+"},{id:"s2",label:"Session 2",time:"6:30 PM – 7:45 PM",ageGroup:"U11+", ageTag:"u11+"}]},
-  4:{ skill:"The Furnace", skillDesc:"1v1 dominance · Tight space control · Decision making under pressure", skillIcon:"🔥", sessions:[{id:"s1",label:"Session 1",time:"5:00 PM – 6:15 PM",ageGroup:"U11+", ageTag:"u11+"},{id:"s2",label:"Session 2",time:"6:30 PM – 7:45 PM",ageGroup:"U11+", ageTag:"u11+"}]},
-  5:{ skill:"The Furnace", skillDesc:"1v1 dominance · Tight space control · Decision making under pressure", skillIcon:"🔥", sessions:[{id:"s1",label:"Session 1",time:"5:00 PM – 6:15 PM",ageGroup:"U11+", ageTag:"u11+"},{id:"s2",label:"Session 2",time:"6:30 PM – 7:45 PM",ageGroup:"U11+", ageTag:"u11+"}]},
+  2:{ skill:"The Furnace", skillDesc:"1v1 dominance · Tight space control · Decision making under pressure", skillIcon:"🔥", sessions:[{id:"s1",label:"Session 1",time:"5:15 PM – 6:30 PM",ageGroup:"U11+",ageTag:"u11+"}]},
+  4:{ skill:"The Furnace", skillDesc:"1v1 dominance · Tight space control · Decision making under pressure", skillIcon:"🔥", sessions:[{id:"s1",label:"Session 1",time:"7:00 PM – 8:15 PM",ageGroup:"U11+",ageTag:"u11+"}]},
+  5:{ skill:"The Furnace", skillDesc:"1v1 dominance · Tight space control · Decision making under pressure", skillIcon:"🔥", sessions:[{id:"s1",label:"Session 1",time:"5:00 PM – 6:15 PM",ageGroup:"U11+",ageTag:"u11+"},{id:"s2",label:"Session 2",time:"6:30 PM – 7:45 PM",ageGroup:"U11+",ageTag:"u11+"}]},
 };
 export const PRIVATE_SCHEDULE = {
   3: { // Wednesday
@@ -76,8 +75,8 @@ export const SKILL_COLORS = {
   "The Furnace":   {color:C.red,  bg:"#1f0a05"},
   "The Tempering": {color:C.gold, bg:"#241a08"},
 };
-export const DAY_ABBR = {2:"TUE",5:"FRI"};
-export const COACH_DAYS = [2,5]; // Tue + Fri
+export const DAY_ABBR = {2:"TUE",4:"THU",5:"FRI"};
+export const COACH_DAYS = [2,4,5]; // Tue + Thu + Fri
 export const PRIVATE_DAYS = [3,6]; // wed + sat 1-on-1
 
 export function getDates(weeks=6){
