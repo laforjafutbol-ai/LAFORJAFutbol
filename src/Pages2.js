@@ -848,7 +848,7 @@ export function ReviewsPage({setPage,user}){
               <textarea required rows={4} value={text} onChange={e=>setText(e.target.value)} placeholder="Tell us about your experience training with La Forja..." style={IS}/>
             </div>
             <div style={{display:"flex",gap:10}}>
-              <button onClick={handleSave} disabled={busy} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"12px 24px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:500,opacity:busy?0.6:1}}>
+              <button type="submit" disabled={busy} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"12px 24px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:500,opacity:busy?0.6:1}}>
                 {busy?"Submitting…":"Submit Review"}
               </button>
               <button onClick={()=>setShowForm(false)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:10,padding:"12px 24px",fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
