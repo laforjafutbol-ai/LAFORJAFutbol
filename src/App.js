@@ -273,7 +273,7 @@ function Nav({page,setPage,user}){
         <Crest size={30}/><span style={{fontSize:18,letterSpacing:4,color:C.gold,textTransform:"uppercase",fontFamily:D.display,fontWeight:600}}>La Forja</span>
       </button>
       <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
-        {[["home","Home"],["about","About"],["book","Book"],["packages","Packages"],user?["account","My Account"]:["sessions","My Sessions"],user?null:["login","Sign In"]].filter(Boolean).map(([key,lbl])=>(
+        {[["home","Home"],["about","About"],["book","Book"],user?["account","My Account"]:["sessions","My Sessions"],user?null:["login","Sign In"]].filter(Boolean).map(([key,lbl])=>(
           <button key={key} onClick={()=>setPage(key)} style={{background:key==="book"&&page!=="book"?`linear-gradient(135deg,${C.red},${C.redDim})`:page===key?"rgba(201,168,76,0.1)":"transparent",border:key==="book"&&page!=="book"?`1px solid ${C.red}`:page===key?`1px solid ${C.silver}44`:"1px solid transparent",color:key==="book"&&page!=="book"?C.white:page===key?C.silverBright:C.textMid,borderRadius:8,padding:"6px 13px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",transition:"all 0.2s",fontFamily:D.body,fontWeight:500}}>
             {lbl}
           </button>
@@ -339,7 +339,7 @@ function PackagesPage({setPage,user}){
               rate:"$30/session",
               sessions:"16 sessions",
               save:"Save $160",
-              desc:"Two full months, both days. For players who are locked in. Best value, biggest results.",
+              desc:"Two full months of Tue/Thu/Fri sessions. For players who are fully locked in. Best value, biggest results.",
               highlight:false,
               cta:"Get This Package",
               action:()=>window.location.href="mailto:laforjafutbol@gmail.com?subject=Season Pack Package",
@@ -429,11 +429,7 @@ function HomePage({setPage,user,navigate}){
   return(
     <div style={{fontFamily:D.body}}>
 
-      {/* ── UPDATE BANNER ── */}
-      <div style={{background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,padding:"10px 24px",textAlign:"center",position:"relative",zIndex:50}}>
-        <span style={{fontSize:10,fontWeight:700,color:"#0a0a0a",fontFamily:D.body,letterSpacing:2,textTransform:"uppercase"}}>🔥 New Schedule Live — </span>
-        <span style={{fontSize:10,color:"#0a0a0a",fontFamily:D.body}}>Tuesdays, Thursdays & Fridays · 5 players max · $40/session · Packages now available · 1-on-1 coming soon</span>
-      </div>
+
 
       {/* ── HERO WITH VIDEO ── */}
       <div style={{position:"relative",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"120px 24px 80px",textAlign:"center",overflow:"hidden"}}>
@@ -541,33 +537,15 @@ function HomePage({setPage,user,navigate}){
             ))}
           </div>
 
-          {/* Packages - LIVE */}
-          <div style={{background:"linear-gradient(135deg,#1a1208,#0f0c06)",border:`1px solid ${C.gold}33`,borderRadius:16,padding:"32px 28px",marginBottom:60}}>
-            <div style={{textAlign:"center",marginBottom:28}}>
+          {/* Packages teaser */}
+          <div style={{background:"linear-gradient(135deg,#1a1208,#0f0c06)",border:`1px solid ${C.gold}33`,borderRadius:16,padding:"28px 28px",marginBottom:60,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:20}}>
+            <div>
               <div style={{fontSize:8,letterSpacing:4,color:C.gold,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Training Packages</div>
-              <h3 style={{fontSize:22,color:C.white,fontFamily:D.display,fontWeight:600,margin:"0 0 8px"}}>Lock In Your Spot & Save</h3>
-              <p style={{fontSize:12,color:C.textDim,fontFamily:D.body,lineHeight:1.8,margin:0}}>Commit to the process. The more sessions, the better the rate.</p>
+              <h3 style={{fontSize:20,color:C.white,fontFamily:D.display,fontWeight:600,margin:"0 0 8px"}}>Lock In Your Spot & Save</h3>
+              <p style={{fontSize:12,color:C.textDim,fontFamily:D.body,lineHeight:1.8,margin:"0 0 6px"}}>4, 8, or 16 sessions at $35–$30 per session.</p>
+              <p style={{fontSize:11,color:C.textDim,fontFamily:D.body,margin:0}}>Monthly Lite · Full Month · Season Pack</p>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:24}}>
-              {[
-                {name:"Monthly Lite",sessions:"4 sessions",price:"$140",rate:"$35/session",save:"Save $20",highlight:false},
-                {name:"Full Month",sessions:"8 sessions",price:"$280",rate:"$35/session",save:"Save $40",highlight:true},
-                {name:"Season Pack",sessions:"16 sessions",price:"$480",rate:"$30/session",save:"Save $160",highlight:false},
-              ].map((p,i)=>(
-                <div key={i} style={{background:p.highlight?"linear-gradient(135deg,#241a08,#1a1208)":"#0e0b08",border:p.highlight?`1px solid ${C.gold}55`:"1px solid #1e1810",borderRadius:12,padding:"20px 16px",textAlign:"center",position:"relative"}}>
-                  {p.highlight&&<div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,color:"#0a0a0a",fontSize:7,letterSpacing:2,fontWeight:700,textTransform:"uppercase",fontFamily:D.body,padding:"3px 12px",borderRadius:10,whiteSpace:"nowrap"}}>Most Popular</div>}
-                  <div style={{fontSize:13,fontWeight:600,color:p.highlight?C.gold:"#c8bca8",fontFamily:D.display,marginBottom:8}}>{p.name}</div>
-                  <div style={{fontSize:28,fontWeight:700,color:C.white,fontFamily:D.display,lineHeight:1,marginBottom:4}}>{p.price}</div>
-                  <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginBottom:2}}>{p.sessions}</div>
-                  <div style={{fontSize:10,color:p.highlight?C.gold:C.textDim,fontFamily:D.body,marginBottom:10}}>{p.rate}</div>
-                  <div style={{fontSize:9,padding:"3px 10px",borderRadius:8,background:p.highlight?`${C.gold}18`:"rgba(255,255,255,0.05)",color:p.highlight?C.gold:C.textDim,fontFamily:D.body,display:"inline-block"}}>{p.save}</div>
-                </div>
-              ))}
-            </div>
-            <p style={{fontSize:11,color:C.textDim,fontFamily:D.body,textAlign:"center",margin:"0 0 16px",lineHeight:1.7}}>Package sessions never expire within the purchased period. Contact Coach Carlos to get started.</p>
-            <div style={{textAlign:"center"}}>
-              <a href="#" onClick={e=>{e.preventDefault();setPage("packages");}} style={{display:"inline-block",background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,color:"#0a0a0a",borderRadius:10,padding:"12px 32px",fontSize:10,letterSpacing:3,textTransform:"uppercase",fontFamily:D.body,fontWeight:700,textDecoration:"none"}}>View All Packages →</a>
-            </div>
+            <a href="#" onClick={e=>{e.preventDefault();setPage("packages");}} style={{display:"inline-block",background:`linear-gradient(135deg,${C.gold},${C.goldDim})`,color:"#0a0a0a",borderRadius:10,padding:"13px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",fontFamily:D.body,fontWeight:700,textDecoration:"none",flexShrink:0}}>View Packages →</a>
           </div>
 
           {/* Location */}
