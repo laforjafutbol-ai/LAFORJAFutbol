@@ -751,7 +751,11 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
       ...(selPlayerIds.length>0?{playerIds:selPlayerIds}:{}),
     };
     const ref=await addBooking(booking);
-    if(ref?.id) setMyId(ref.id);
+    if(ref?.id){
+      setMyId(ref.id);
+      // Send confirmation email immediately (Stripe not required)
+      if(booking.email) await callEmailAPI(booking,"group");
+    }
     setBookingLoading(false);
     setStep(3);
   }
@@ -835,6 +839,9 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,getLocation,getLocati
       if(ref?.id) refs.push(ref.id);
     }
     setPackMyIds(refs);
+    // Send confirmation email for first session immediately
+    const firstBooking={...booking,packageBooking:true,packageDates:packDates.map(p=>p.dateLabel).join(", "),total:PRICE_PACK_TOTAL};
+    if(firstBooking.email) await callEmailAPI(firstBooking,"group");
     setBookingLoading(false);
     setStep(3);
   }
