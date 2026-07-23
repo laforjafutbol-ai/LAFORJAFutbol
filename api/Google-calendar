@@ -1,0 +1,198 @@
+// ── GOOGLE CALENDAR INTEGRATION ───────────────────────────
+// Creates/deletes Google Calendar events when bookings are confirmed/cancelled
+
+const https = require("https");
+const CALENDAR_ID = "ccepeda737@gmail.com";
+const SERVICE_ACCOUNT = {
+  client_email: "laforja-calendar@laforja-4be1d.iam.gserviceaccount.com",
+  private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+};
+
+// ── JWT TOKEN ──────────────────────────────────────────────
+async function getAccessToken() {
+  const { SignJWT } = await import("jose");
+  const { createPrivateKey } = await import("crypto");
+
+  const now = Math.floor(Date.now() / 1000);
+  const key = createPrivateKey(SERVICE_ACCOUNT.private_key);
+
+  const jwt = await new SignJWT({
+    iss: SERVICE_ACCOUNT.client_email,
+    scope: "https://www.googleapis.com/auth/calendar",
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600,
+  })
+    .setProtectedHeader({ alg: "RS256" })
+    .sign(key);
+
+  return new Promise((resolve, reject) => {
+    const body = `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`;
+    const req = https.request(
+      {
+        hostname: "oauth2.googleapis.com",
+        path: "/token",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Content-Length": Buffer.byteLength(body),
+        },
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (c) => (data += c));
+        res.on("end", () => {
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.access_token) resolve(parsed.access_token);
+            else reject(new Error("No access token: " + data));
+          } catch (e) {
+            reject(e);
+          }
+        });
+      }
+    );
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+// ── CREATE EVENT ───────────────────────────────────────────
+async function createCalendarEvent(booking) {
+  const token = await getAccessToken();
+
+  // Build start/end times
+  const dateStr = booking.dateKey; // "2026-07-22"
+  const timeStr = booking.sessTime || booking.slotTime || "17:00";
+
+  // Parse time like "5:15 PM" → "17:15"
+  function parseTime(t) {
+    if (!t) return "17:00";
+    const m = t.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!m) return "17:00";
+    let h = parseInt(m[1]);
+    const min = m[2];
+    const ampm = m[3].toUpperCase();
+    if (ampm === "PM" && h !== 12) h += 12;
+    if (ampm === "AM" && h === 12) h = 0;
+    return `${String(h).padStart(2, "0")}:${min}`;
+  }
+
+  // Parse end time from slot like "5:15 PM – 6:30 PM"
+  function parseEndTime(t) {
+    if (!t) return null;
+    const parts = t.split("–");
+    if (parts.length < 2) return null;
+    return parseTime(parts[1].trim());
+  }
+
+  const startTime = parseTime(timeStr.split("–")[0].trim());
+  const endTime = parseEndTime(timeStr) || 
+    `${String(parseInt(startTime.split(":")[0]) + 1).padStart(2, "0")}:${startTime.split(":")[1]}`;
+
+  const event = {
+    summary: `${booking.skill || "The Furnace"} — ${booking.name}`,
+    location: "Bayview Complex, James Island, SC",
+    description: [
+      `Player: ${booking.name}`,
+      booking.email ? `Email: ${booking.email}` : "",
+      booking.phone ? `Phone: ${booking.phone}` : "",
+      booking.count > 1 ? `Players: ${booking.count}` : "",
+      booking.coachNote ? `Note: ${booking.coachNote}` : "",
+    ].filter(Boolean).join("\n"),
+    start: {
+      dateTime: `${dateStr}T${startTime}:00`,
+      timeZone: "America/New_York",
+    },
+    end: {
+      dateTime: `${dateStr}T${endTime}:00`,
+      timeZone: "America/New_York",
+    },
+    colorId: booking.skill === "The Tempering" ? "5" : "6", // banana=yellow, tomato=red
+  };
+
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify(event);
+    const path = `/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events`;
+    const req = https.request(
+      {
+        hostname: "www.googleapis.com",
+        path,
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(body),
+        },
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (c) => (data += c));
+        res.on("end", () => {
+          try {
+            const parsed = JSON.parse(data);
+            resolve(parsed.id || null);
+          } catch (e) {
+            reject(e);
+          }
+        });
+      }
+    );
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+// ── DELETE EVENT ───────────────────────────────────────────
+async function deleteCalendarEvent(eventId) {
+  if (!eventId) return;
+  const token = await getAccessToken();
+
+  return new Promise((resolve, reject) => {
+    const path = `/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events/${eventId}`;
+    const req = https.request(
+      {
+        hostname: "www.googleapis.com",
+        path,
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+      (res) => {
+        res.on("data", () => {});
+        res.on("end", () => resolve());
+      }
+    );
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+// ── API HANDLER ────────────────────────────────────────────
+module.exports = async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  try {
+    const { action, booking, eventId } = req.body;
+
+    if (action === "create") {
+      const id = await createCalendarEvent(booking);
+      return res.status(200).json({ success: true, eventId: id });
+    }
+
+    if (action === "delete") {
+      await deleteCalendarEvent(eventId);
+      return res.status(200).json({ success: true });
+    }
+
+    return res.status(400).json({ error: "Unknown action" });
+  } catch (err) {
+    console.error("Calendar error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+};
