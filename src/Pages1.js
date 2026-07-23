@@ -3,7 +3,7 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, order
 import { db, auth, googleProvider } from "./firebase";
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signOut, updateProfile, sendPasswordResetEmail } from "firebase/auth";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, POSITIONS, DAY_SCHEDULE, PRIVATE_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, SITE_READY, stripePromise, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles } from "./constants";
+import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, POSITIONS, DAY_SCHEDULE, PRIVATE_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, SITE_READY, stripePromise, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, createCalendarEvent, deleteCalendarEvent, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles } from "./constants";
 
 export function PrivatePage({addInquiry, inquiries, isBlocked, blocked, getLocation, getLocationDetail, getLocationMaps, user}){
   const [step,setStep]           = useState(1);
@@ -1531,6 +1531,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                     <div style={{display:"flex",gap:8}}>
                       <button onClick={async()=>{
                         await updateDoc(doc(db,coll,item.id),{status:"cancelled",cancelledAt:new Date().toISOString()});
+                        if(item.calendarEventId) await deleteCalendarEvent(item.calendarEventId);
                         if(item.email) try{ await callEmailAPI({...item,sessTime:item._time||item.sessTime||item.slotTime},"reschedule"); }catch(e){}
                         close();
                       }} style={{flex:1,background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",borderRadius:7,padding:"9px",color:C.white,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>Yes, Cancel</button>
