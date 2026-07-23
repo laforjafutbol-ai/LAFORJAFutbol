@@ -6,7 +6,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { PrivatePage, Dashboard, ReviewsModeration } from "./Pages1";
 import { AuthPage, AccountPage, ContactPage, ReviewsPage, AboutPage, StripeCheckout, SessionsPage } from "./Pages2";
-import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, POSITIONS, DAY_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, SITE_READY, stripePromise, TX, EMBER_GLOW, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles } from "./constants";
+import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, POSITIONS, DAY_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, SITE_READY, stripePromise, TX, EMBER_GLOW, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, createCalendarEvent, deleteCalendarEvent, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles } from "./constants";
 
 
 // ── BOOKING DATE CUTOFF — July 31 is last bookable day
@@ -126,10 +126,16 @@ export default function App(){
         ageGroup: "Private",
         ageTag: "u11+",
       }, "1on1_paid");
+      // Create Google Calendar event
+      const eventId = await createCalendarEvent({...inq,sessTime:inq.slotTime,skill:"The Tempering"});
+      if(eventId) await updateDoc(doc(db,"inquiries",id),{calendarEventId:eventId});
     } else {
       const b = bookings.find(x=>x.id===id);
       await updateDoc(doc(db,"bookings",id),{status:"confirmed"});
       if(b?.email) callEmailAPI(b,"group");
+      // Create Google Calendar event
+      const eventId = await createCalendarEvent(b);
+      if(eventId) await updateDoc(doc(db,"bookings",id),{calendarEventId:eventId});
     }
   }
   async function removeBooking(id){ await deleteDoc(doc(db,"bookings",id)); }
