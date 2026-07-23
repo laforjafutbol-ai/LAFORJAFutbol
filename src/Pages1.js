@@ -1592,7 +1592,19 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sched
                     try{
                       const msg=reminderMsg||defaultMsg;
                       for(const r of recipients){
-                        if(r.email) await callEmailAPI({...r,message:msg,sessTime:r.sessTime||r.slotTime,skill:r.skill||"La Forja Session",skillIcon:r.skillIcon||"⚒️",count:r.count||1,total:r.total||r.price||0,ageGroup:r.ageGroup||"",ageTag:r.ageTag||"9-11"},"reminder");
+                        if(!r.email){ console.log("No email for",r.name); continue; }
+                        await callEmailAPI({
+                          ...r,
+                          message:msg,
+                          sessTime:r.sessTime||r.slotTime||r._time||"",
+                          dateLabel:r.dateLabel||r.dateKey||"",
+                          skill:r.skill||"La Forja Session",
+                          skillIcon:r.skillIcon||"🔥",
+                          count:r.count||1,
+                          total:r.total||r.price||0,
+                          ageGroup:"U11+",
+                          ageTag:"u11+",
+                        },"reminder");
                       }
                     }finally{setSendingReminder(false);setReminderModal(null);setReminderMsg("");}
                   }} style={{flex:1,background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,border:"none",borderRadius:9,padding:"12px",color:"#0a0a0a",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:sendingReminder?"not-allowed":"pointer",fontFamily:D.body,fontWeight:700,opacity:sendingReminder?0.6:1}}>
