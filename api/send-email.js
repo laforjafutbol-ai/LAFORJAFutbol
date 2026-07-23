@@ -92,21 +92,25 @@ module.exports = async function handler(req, res) {
   var subject, html;
 
   if (type === "group") {
-    // Group booking confirmed — payment already sent
-    subject = "✅ Your La Forja Session is Confirmed!";
+    subject = "✅ You're Booked — La Forja Session Confirmed!";
     var rows = [
       row("Date", booking.dateLabel),
       row("Time", booking.sessTime),
-      row("Age Group", booking.ageGroup),
-      row("Skill Focus", (booking.skillIcon || "") + " " + (booking.skill || "")),
+      row("Session", (booking.skillIcon || "🔥") + " " + (booking.skill || "The Furnace")),
       row("Players", booking.count + " player" + (booking.count > 1 ? "s" : "")),
-      row("Amount Paid", "$" + booking.total),
+      row("Location", booking.locationDetail || "Bayview Complex · James Island"),
+      row("Amount Due", "$" + booking.total),
     ].join("");
     html = wrap(
-      '<h1 style="text-align:center;font-size:28px;font-weight:normal;color:#c9a84c;letter-spacing:2px;margin-bottom:20px;">Booking Confirmed ✓</h1>' +
+      '<h1 style="text-align:center;font-size:28px;font-weight:normal;color:#c9a84c;letter-spacing:2px;margin-bottom:20px;">You\'re In The Forge ⚒️</h1>' +
       '<div style="background:#141414;border:1px solid #222;border-radius:14px;padding:24px;margin-bottom:20px;">' +
-      '<p style="margin:0 0 16px;font-size:14px;color:#999;line-height:1.8;">Hi <strong style="color:#f0f0f0;">' + booking.name + '</strong>,<br/>Coach Carlos has confirmed your payment. You\'re locked in — see you on the field! ⚽</p>' +
-      '<div style="border-top:1px solid #222;padding-top:14px;"><div style="font-size:9px;letter-spacing:3px;color:#c9a84c;text-transform:uppercase;margin-bottom:12px;">Session Details</div>' + rows + '</div></div>'
+      '<p style="margin:0 0 16px;font-size:14px;color:#999;line-height:1.8;">Hi <strong style="color:#f0f0f0;">' + booking.name + '</strong>,<br/>Your spot is confirmed. Send payment via Venmo to lock it in, then we\'ll see you on the field! ⚽</p>' +
+      '<div style="border-top:1px solid #222;padding-top:14px;"><div style="font-size:9px;letter-spacing:3px;color:#c9a84c;text-transform:uppercase;margin-bottom:12px;">Session Details</div>' + rows + '</div></div>' +
+      venmoBtn +
+      '<div style="background:#0f0f0f;border-radius:10px;padding:16px;margin-top:16px;">' +
+      '<div style="font-size:9px;letter-spacing:3px;color:#c9a84c;text-transform:uppercase;margin-bottom:10px;">What to Bring</div>' +
+      '<p style="font-size:12px;color:#888;line-height:1.8;margin:0;">👟 Cleats or turf shoes &nbsp;·&nbsp; 💧 Water bottle &nbsp;·&nbsp; ⚽ Your own ball if you have one<br/>Arrive 5-10 minutes early to warm up.</p>' +
+      '</div>'
     );
 
   } else if (type === "1on1_booking") {
