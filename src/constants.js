@@ -164,6 +164,21 @@ export function AB({children,onClick,disabled}){ return <button onClick={onClick
 export function GB({children,onClick}){ return <button onClick={onClick} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:10,padding:"12px 18px",fontSize:11,cursor:"pointer",letterSpacing:2,textTransform:"uppercase",fontFamily:D.body}}>{children}</button>; }
 export function NB({children,onClick,disabled}){ return <button onClick={onClick} disabled={disabled} style={{background:"transparent",border:"none",color:disabled?C.silverDark:C.silver,cursor:disabled?"not-allowed":"pointer",fontSize:11,letterSpacing:1,padding:"4px 8px",fontFamily:D.body}}>{children}</button>; }
 export const IS = {width:"100%",background:"#161310",border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"11px 13px",color:C.white,fontSize:14,fontFamily:D.body,outline:"none"};
+// ── GOOGLE CALENDAR ───────────────────────────────────────
+export async function createCalendarEvent(booking){
+  try{
+    const r=await fetch("/api/google-calendar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"create",booking})});
+    const d=await r.json();
+    return d.eventId||null;
+  }catch(e){ console.log("Calendar create error:",e); return null; }
+}
+export async function deleteCalendarEvent(eventId){
+  if(!eventId) return;
+  try{
+    await fetch("/api/google-calendar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"delete",eventId})});
+  }catch(e){ console.log("Calendar delete error:",e); }
+}
+
 export function GStyles(){ return <style>{`
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
