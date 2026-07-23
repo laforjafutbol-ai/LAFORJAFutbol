@@ -8,7 +8,12 @@ module.exports = async function handler(req, res) {
   var body = req.body;
   var booking = body.booking;
   var type = body.type;
-  if (!booking || !booking.email) return res.status(400).json({ error: "Missing data" });
+  if (!booking) return res.status(400).json({ error: "Missing booking data" });
+  if (!booking.email && type !== "contact") return res.status(400).json({ error: "No email address for this booking" });
+
+  // Normalize common field aliases
+  booking.sessTime = booking.sessTime || booking.slotTime || booking._time || "";
+  booking.dateLabel = booking.dateLabel || booking.dateKey || "";
 
   var RESEND_KEY = "re_f4W7jRdA_MLzowTmFhFyvEnNT32BjhXQX";
   var FROM = "La Forja <laforjafutbol@laforjafutbol.com>";
