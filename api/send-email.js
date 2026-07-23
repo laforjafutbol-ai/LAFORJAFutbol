@@ -8,8 +8,9 @@ module.exports = async function handler(req, res) {
   var body = req.body;
   var booking = body.booking;
   var type = body.type;
+  console.log("send-email called:", type, booking?.email, booking?.name);
   if (!booking) return res.status(400).json({ error: "Missing booking data" });
-  if (!booking.email && type !== "contact") return res.status(400).json({ error: "No email address for this booking" });
+  if (!booking.email && type !== "contact") return res.status(400).json({ error: "No email for: " + booking?.name });
 
   // Normalize common field aliases
   booking.sessTime = booking.sessTime || booking.slotTime || booking._time || "";
