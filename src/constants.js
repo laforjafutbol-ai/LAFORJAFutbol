@@ -105,22 +105,30 @@ export function dKey(d){ return d.toISOString().split("T")[0]; }
 
 export async function callEmailAPI(booking, type){
   try{
-    await fetch("/api/send-email",{
+    const res = await fetch("/api/send-email",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({booking,type}),
     });
-  }catch(e){ console.error("Email error:",e); }
+    const data = await res.json();
+    if(!res.ok) console.error("Email API error:",res.status, data);
+    else console.log("Email sent:",type, booking?.email);
+    return data;
+  }catch(e){ console.error("Email fetch error:",e); }
 }
 
 export async function sendReminderEmail(booking, type){
   try{
-    await fetch("/api/send-email",{
+    const res = await fetch("/api/send-email",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({booking, type: type==="1on1"?"reminder_1on1":"reminder_group"}),
     });
-  }catch(e){ console.error("Reminder error:",e); }
+    const data = await res.json();
+    if(!res.ok) console.error("Reminder API error:",res.status, data);
+    else console.log("Reminder sent:",type, booking?.email);
+    return data;
+  }catch(e){ console.error("Reminder fetch error:",e); }
 }
 
 export const TX = `url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 60L60 0M-5 5L5-5M55 65L65 55' stroke='%23ff4d2e05' stroke-width='1'/%3E%3C/svg%3E")`;
