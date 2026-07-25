@@ -383,7 +383,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
             {[
               {name:"Single Session",price:"$40",rate:"$40/session",sessions:"1 session",desc:"Try it out. No commitment.",highlight:false},
               {name:"4 Sessions",price:"$140",rate:"$35/session",sessions:"4 sessions",save:"Save $20",desc:"One Friday per week for a month.",highlight:false},
-              {name:"Full Month",price:"$260",rate:"$32/session",sessions:"8 sessions",save:"Save $60",desc:"Both Friday sessions for a full month. Best value.",highlight:true},
+              {name:"8 Sessions",price:"$260",rate:"$32/session",sessions:"8 sessions",save:"Save $60",desc:"Two months of Fridays. Commit to the process.",highlight:true},
             ].map((p,i)=>(
               <div key={i} style={{background:p.highlight?"linear-gradient(135deg,#1a1618,#141416)":C.card,border:p.highlight?`1px solid ${C.silver}44`:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"18px 22px",position:"relative",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap"}}>
                 {p.highlight&&<div style={{position:"absolute",top:-9,left:20,background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,color:"#0a0a0a",fontSize:7,letterSpacing:2,fontWeight:700,textTransform:"uppercase",fontFamily:D.body,padding:"2px 10px",borderRadius:8}}>Best Value</div>}
