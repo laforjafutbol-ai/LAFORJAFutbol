@@ -1,2159 +1,371 @@
 import { useState, useEffect } from "react";
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "firebase/firestore";
-import { db, auth, googleProvider } from "./firebase";
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signOut, updateProfile, sendPasswordResetEmail } from "firebase/auth";
-import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, POSITIONS, DAY_SCHEDULE, PRIVATE_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, SITE_READY, stripePromise, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, createCalendarEvent, deleteCalendarEvent, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles } from "./constants";
-
-export function PrivatePage({addInquiry, inquiries, isBlocked, blocked, getLocation, getLocationDetail, getLocationMaps, user}){
-  const [step,setStep]           = useState(1);
-  const [selDate,setSelDate]     = useState(null);
-  const [selSlot,setSelSlot]     = useState(null);
-  const [myId,setMyId]           = useState(null);
-  const [loading,setLoading]     = useState(false);
-  const [weekOff,setWeekOff]     = useState(0);
-  const [rememberMe,setRememberMe] = useState(false);
-  const [form,setForm] = useState({name:"",email:"",phone:"",age:"",position:"",goals:"",notes:""});
-  const [lookEmail,setLookEmail] = useState("");
-  const [lookSt,setLookSt]       = useState("idle"); // idle | found | notfound
-  const [retClient,setRetClient] = useState(null);
-  const [players,setPlayers]     = useState([]);
-  const [selPlayerId,setSelPlayerId] = useState(null);
-
-  const allDates = getPrivateDates();
-  const weeks = [];
-  for(let i=0;i<allDates.length;i+=2) weeks.push(allDates.slice(i,i+2));
-  const visDates = weeks[weekOff]||[];
-
-  const myBooking = inquiries.find(b=>b.id===myId);
-
-  useEffect(()=>{
-    try{
-      const saved = localStorage.getItem("laforja_1on1");
-      if(saved){ const p=JSON.parse(saved); setForm(f=>({...f,...p})); setRememberMe(true); }
-    }catch(e){}
-  },[]);
-
-  // If logged in, load saved players and auto-fill from account / past inquiries
-  useEffect(()=>{
-    if(!user) return;
-    setForm(f=>({...f, name: f.name||user.displayName||"", email: f.email||user.email||""}));
-    const q = collection(db,"users",user.uid,"players");
-    const unsub = onSnapshot(q, s=>{
-      setPlayers(s.docs.map(d=>({id:d.id,...d.data()})));
-    });
-    return unsub;
-  },[user]);
-
-  useEffect(()=>{
-    if(!user || lookSt!=="idle") return;
-    const matches = [...(inquiries||[])].filter(b=>b.email?.toLowerCase()===user.email?.toLowerCase()).sort((a,b)=>b.createdAt>a.createdAt?1:-1);
-    if(matches.length>0){
-      const l=matches[0];
-      setRetClient(l);
-      setForm(f=>({...f,name:l.name,email:l.email,phone:l.phone||f.phone,age:l.age||f.age,position:l.position||f.position,goals:l.goals||f.goals}));
-      setLookSt("found");
-    } else {
-      setLookSt("notfound");
-    }
-  },[user,inquiries]);
-
-  function doLookup(){
-    if(!lookEmail.trim()) return;
-    const matches = [...(inquiries||[])].filter(b=>b.email?.toLowerCase()===lookEmail.trim().toLowerCase()).sort((a,b)=>b.createdAt>a.createdAt?1:-1);
-    if(matches.length>0){
-      const l=matches[0];
-      setRetClient(l);
-      setForm({name:l.name,email:l.email,phone:l.phone||"",age:l.age||"",position:l.position||"",goals:l.goals||"",notes:""});
-      setLookSt("found");
-      setRememberMe(true);
-    } else {
-      setLookSt("notfound");
-      setForm(f=>({...f,email:lookEmail.trim()}));
-    }
-  }
-  function clearLookup(){ setLookEmail("");setLookSt("idle");setRetClient(null);setForm({name:"",email:"",phone:"",age:"",position:"",goals:"",notes:""});setRememberMe(false); }
-
-  function slotBooked(dk,slotId){
-    const blockedSlot = (blocked||[]).some(b=>b.dateKey===dk&&b.sessId===slotId);
-    return blockedSlot||(inquiries||[]).some(inq=>inq.dateKey===dk&&inq.slotId===slotId&&inq.status!=="cancelled"&&inq.status!=="removed");
-  }
-  function slotCutoff(dateObj, slotTime){
-    if(!dateObj||!slotTime) return false;
-    const now = new Date();
-    const startStr = slotTime.split("–")[0].trim();
-    const [time, meridiem] = startStr.split(" ");
-    let [hours, minutes] = time.split(":").map(Number);
-    if(meridiem==="PM" && hours!==12) hours+=12;
-    if(meridiem==="AM" && hours===12) hours=0;
-    const sessionStart = new Date(dateObj);
-    sessionStart.setHours(hours, minutes||0, 0, 0);
-    return (sessionStart - now) / (1000*60*60) < 3;
-  }
-  function slotsAvail(d){
-    return PRIVATE_SCHEDULE[d.getDay()].slots.filter(sl=>!slotBooked(dKey(d),sl.id)&&!slotCutoff(d,sl.time)).length;
-  }
-
-  async function doSubmit(){
-    if(!form.name||!form.email||!form.phone||!form.position) return;
-    setLoading(true);
-    if(rememberMe){ try{ localStorage.setItem("laforja_1on1",JSON.stringify({name:form.name,email:form.email,phone:form.phone,age:form.age,position:form.position,goals:form.goals})); }catch(e){} }
-    else { try{ localStorage.removeItem("laforja_1on1"); }catch(e){} }
-    const ref = await addInquiry({
-      ...form,
-      status:"pending", type:"1on1", price:PRICE_1ON1,
-      dateKey:dKey(selDate), dateLabel:fmtDate(selDate),
-      slotId:selSlot.id, slotTime:selSlot.time,
-      sessTime:selSlot.time, ageGroup:form.age?"Age "+form.age:"Private",
-      ageTag:"9-11", skill:"The Tempering", skillIcon:"⚽",
-      count:1, total:PRICE_1ON1,
-      location:getLocation(dKey(selDate)), locationDetail:getLocationDetail(dKey(selDate)), locationMaps:getLocationMaps(dKey(selDate)),
-      createdAt:new Date().toISOString(),
-      ...(user?{userId:user.uid}:{}),
-      ...(selPlayerId?{playerId:selPlayerId}:{}),
-    });
-    if(ref?.id) setMyId(ref.id);
-    setLoading(false);
-    setStep(3);
-  }
-
-  function reset(){
-    setStep(1);setSelDate(null);setSelSlot(null);setMyId(null);setPayMethod(null);setSelPlayerId(null);
-    if(user){
-      setForm(f=>({...f,name:user.displayName||f.name,email:user.email||f.email,goals:"",notes:""}));
-    } else {
-      setForm(f=>({...f,goals:"",notes:"",age:f.age,position:f.position}));
-    }
-  }
-
-  const [payMethod,setPayMethod] = useState(STRIPE_ENABLED ? null : "venmo");
-
-  async function handleStripeSuccess(){
-    if(!myBooking) return;
-    await updateDoc(doc(db,"inquiries",myBooking.id),{status:"confirmed",paymentMethod:"stripe"});
-    await callEmailAPI({...myBooking, sessTime:myBooking.slotTime, count:1, total:myBooking.price, ageGroup:myBooking.age?`Age ${myBooking.age}`:"Private", ageTag:"9-11", skillIcon:"⚽", skill:"The Tempering"}, "group");
-  }
-
-  const DAY_ABBRp = {3:"WED",6:"SAT"};
-  const total = PRICE_1ON1;
-
-  if(!SITE_READY) return(
-    <div style={{paddingTop:120,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"120px 24px 80px"}}>
-      <div style={{maxWidth:500,textAlign:"center"}}>
-        <div style={{fontSize:40,marginBottom:20}}>⚒️</div>
-        <div style={{fontSize:9,letterSpacing:5,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Coming Soon</div>
-        <h2 style={{fontSize:32,fontWeight:600,color:C.white,fontFamily:D.display,margin:"0 0 16px"}}>1-on-1 Sessions Coming August 2026</h2>
-        <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:32}}>The Tempering — private 1-on-1 sessions — will be bookable starting August 2026. In the meantime, reach out directly to schedule with Coach Carlos.</p>
-        <a href="mailto:laforjafutbol@gmail.com?subject=1-on-1 Training Request" style={{background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,color:"#0a0a0a",borderRadius:9,padding:"14px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700,textDecoration:"none",display:"block",textAlign:"center"}}>Email Coach Carlos →</a>
-      </div>
-    </div>
-  );
-
-  return(
-    <div style={{paddingTop:100}}>
-      <div style={{maxWidth:680,margin:"0 auto",padding:"40px 20px 100px",animation:"fadeUp 0.4s ease"}}>
-
-        {/* Hero */}
-        <div style={{background:`linear-gradient(135deg,${C.silverDark},#1a0e06)`,border:`1px solid ${C.silver}33`,borderRadius:18,padding:"28px 24px",marginBottom:28,position:"relative",overflow:"hidden"}}>
-          <div style={{position:"absolute",top:-30,right:-30,width:160,height:160,borderRadius:"50%",background:`radial-gradient(circle,${C.red}18,transparent 70%)`,pointerEvents:"none"}}/>
-          <div style={{position:"relative",zIndex:1}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-              <span style={{fontSize:28}}>⚒️</span>
-              <div>
-                <div style={{fontSize:9,letterSpacing:5,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body}}>Private Training</div>
-                <h1 style={{margin:0,fontSize:26,fontWeight:600,color:C.white,fontFamily:D.display}}>The Tempering</h1>
-              </div>
-            </div>
-            <p style={{margin:"0 0 18px",fontSize:13,color:C.textMid,lineHeight:1.8,fontFamily:D.body}}>Your position. Your weaknesses. Your game. One coach, full attention, every session built around you specifically.</p>
-            <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-              {[{icon:"📅",label:"Wed · Sat"},
-                {icon:"🎯",label:"Position Specific"},
-                {icon:"💰",label:`$${PRICE_1ON1} / session`},
-              ].map((item,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{fontSize:14}}>{item.icon}</span>
-                  <span style={{fontSize:11,color:C.silverBright,fontFamily:D.body}}>{item.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Progress */}
-        {step<3&&(
-          <div style={{display:"flex",gap:8,marginBottom:28}}>
-            {["Pick a Slot","Your Details","Payment"].map((lbl,i)=>(
-              <div key={i} style={{flex:1}}>
-                <div style={{height:2,borderRadius:2,marginBottom:5,background:step>i+1?C.gold:step===i+1?C.silverBright:C.cardBorder,transition:"background 0.4s"}}/>
-                <div style={{fontSize:9,color:step>=i+1?C.gold:C.silverDark,letterSpacing:2,textTransform:"uppercase",fontFamily:D.body}}>{lbl}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* STEP 1 — Pick slot */}
-        {step===1&&(
-          <div style={{animation:"fadeUp 0.3s ease"}}>
-            <FL>Choose a Date</FL>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-              <NB disabled={weekOff===0} onClick={()=>setWeekOff(w=>w-1)}>← Prev</NB>
-              <span style={{fontSize:10,color:C.silver,letterSpacing:3,textTransform:"uppercase",fontFamily:D.body}}>Week {weekOff+1}</span>
-              <NB disabled={weekOff>=weeks.length-1} onClick={()=>setWeekOff(w=>w+1)}>Next →</NB>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:24}}>
-              {visDates.map((d,i)=>{
-                const avail=slotsAvail(d);
-                const full=avail===0;
-                const sel=selDate&&dKey(d)===dKey(selDate);
-                return(
-                  <button key={i} disabled={full} onClick={()=>{setSelDate(d);setSelSlot(null);}}
-                    style={{background:sel?C.silverDark:C.card,border:sel?`1px solid ${C.silver}`:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"20px 14px",cursor:full?"not-allowed":"pointer",textAlign:"center",transition:"all 0.2s",boxShadow:sel?`0 0 20px ${C.silver}33`:"none",opacity:full?0.35:1,color:C.white}}>
-                    <div style={{fontSize:9,letterSpacing:2,color:sel?C.silverBright:C.silverDim,marginBottom:4,fontFamily:D.body}}>{DAY_ABBRp[d.getDay()]}</div>
-                    <div style={{fontSize:26,fontWeight:700,marginBottom:2,fontFamily:D.display}}>{d.getDate()}</div>
-                    <div style={{fontSize:10,color:sel?C.silverBright:C.silverDim,marginBottom:8,fontFamily:D.body}}>{d.toLocaleDateString("en-US",{month:"short"})}</div>
-                    <div style={{fontSize:10,color:full?C.silverDark:avail===1?C.red:sel?C.silverBright:C.silverDim,fontFamily:D.body}}>{full?"CLOSED":`${avail} slot${avail!==1?"s":""} open`}</div>
-                  </button>
-                );
-              })}
-            </div>
-            {selDate&&(()=>{
-              const sched=PRIVATE_SCHEDULE[selDate.getDay()];
-              return(<>
-                <FL>Choose a Time</FL>
-                <div style={{display:"grid",gap:10,marginBottom:28}}>
-                  {sched.slots.map(slot=>{
-                    const booked=slotBooked(dKey(selDate),slot.id);
-                    const cutoff=slotCutoff(selDate,slot.time);
-                    const unavailable=booked||cutoff;
-                    const sel=selSlot?.id===slot.id;
-                    return(
-                      <button key={slot.id} disabled={unavailable} onClick={()=>!unavailable&&setSelSlot(slot)}
-                        style={{background:sel?C.silverDark:C.card,border:sel?`1px solid ${C.silver}`:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 20px",cursor:unavailable?"not-allowed":"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.2s",opacity:unavailable?0.35:1}}>
-                        <span style={{fontSize:15,color:sel?C.gold:C.white,fontFamily:D.display,fontWeight:600}}>{slot.time}</span>
-                        <span style={{fontSize:10,color:unavailable?C.silverDark:sel?C.gold:C.silverDim,fontFamily:D.body,letterSpacing:1}}>{cutoff?"CLOSED":booked?"BOOKED":sel?"SELECTED":"OPEN"}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </>);
-            })()}
-            <AB disabled={!selDate||!selSlot} onClick={()=>setStep(2)}>Continue →</AB>
-          </div>
-        )}
-
-        {/* STEP 2 — Details */}
-        {step===2&&(
-          <div style={{animation:"fadeUp 0.3s ease"}}>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:22}}>
-              <span style={{fontSize:10,padding:"4px 11px",borderRadius:20,background:C.silverDark,color:C.silver,border:`1px solid ${C.silver}44`,fontFamily:D.body}}>{fmtDate(selDate)}</span>
-              <span style={{fontSize:10,padding:"4px 11px",borderRadius:20,background:C.card,color:C.silver,border:`1px solid ${C.cardBorder}`,fontFamily:D.body}}>{selSlot?.time}</span>
-              <span style={{fontSize:10,padding:"4px 11px",borderRadius:20,background:C.silverDark,color:C.silver,border:`1px solid ${C.silver}44`,fontFamily:D.body}}>${PRICE_1ON1}</span>
-            </div>
-
-            {/* Location */}
-            <div style={{background:C.redDark,border:`1px solid ${C.red}33`,borderRadius:10,padding:"10px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:12}}>
-              <span style={{fontSize:18}}>📍</span>
-              <div style={{flex:1}}>
-                <div style={{fontSize:9,letterSpacing:2,color:C.red,textTransform:"uppercase",fontFamily:D.body,marginBottom:2}}>Training Location</div>
-                <div style={{fontSize:13,color:C.white,fontFamily:D.body,fontWeight:500}}>{getLocation(dKey(selDate))}</div>
-                <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>{getLocationDetail(dKey(selDate))}</div>
-              </div>
-              <a href={getLocationMaps(dKey(selDate))} target="_blank" rel="noopener noreferrer" style={{fontSize:10,color:C.red,textDecoration:"none",border:`1px solid ${C.redDim}`,borderRadius:6,padding:"5px 10px",fontFamily:D.body,whiteSpace:"nowrap",flexShrink:0}}>Map →</a>
-            </div>
-
-            {/* Returning client lookup */}
-            {lookSt==="idle"&&(
-              <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"18px 18px",marginBottom:20}}>
-                <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",marginBottom:4,fontFamily:D.body}}>Returning Client?</div>
-                <div style={{fontSize:12,color:C.textDim,marginBottom:12,lineHeight:1.7,fontFamily:D.body}}>Enter your email to auto-fill your details, position and age.</div>
-                <div style={{display:"flex",gap:10}}>
-                  <input type="email" placeholder="your@email.com" value={lookEmail} onChange={e=>setLookEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doLookup()} style={{...IS,flex:1}}/>
-                  <button onClick={doLookup} style={{background:`linear-gradient(135deg,${C.silverDark},#121214)`,border:`1px solid ${C.silver}44`,color:C.silver,borderRadius:10,padding:"10px 16px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,whiteSpace:"nowrap"}}>Look Up</button>
-                </div>
-                <div style={{marginTop:10,textAlign:"right"}}>
-                  <button onClick={()=>setLookSt("notfound")} style={{background:"none",border:"none",color:C.silverDark,fontSize:10,cursor:"pointer",fontFamily:D.body,letterSpacing:1}}>Skip — I'm new →</button>
-                </div>
-              </div>
-            )}
-            {lookSt==="found"&&retClient&&(
-              <div style={{background:"linear-gradient(135deg,#081408,#060e06)",border:`1px solid ${C.green}44`,borderRadius:14,padding:"14px 18px",marginBottom:18,animation:"fadeUp 0.3s ease"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                  <div>
-                    <div style={{fontSize:9,letterSpacing:3,color:C.green,textTransform:"uppercase",marginBottom:5,fontFamily:D.body}}>👋 Welcome Back!</div>
-                    <div style={{fontSize:15,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:3}}>{retClient.name}</div>
-                    <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>
-                      {retClient.position&&<span style={{color:C.silver,marginRight:8}}>{retClient.position}</span>}
-                      {retClient.age&&<span>Age {retClient.age}</span>}
-                    </div>
-                  </div>
-                  <button onClick={clearLookup} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:8,padding:"5px 10px",fontSize:10,cursor:"pointer",fontFamily:D.body}}>Not me</button>
-                </div>
-                <div style={{marginTop:8,fontSize:11,color:C.green,opacity:0.7,fontFamily:D.body}}>✓ Name, email, phone, position and age pre-filled.</div>
-              </div>
-            )}
-            {lookSt==="notfound"&&(
-              <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"10px 16px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <span style={{fontSize:12,color:C.textDim,fontFamily:D.body}}>{user?`Welcome, ${user.displayName?.split(" ")[0]||"there"}! Fill in the details below.`:lookEmail?`No past bookings for ${lookEmail}`:"New client — fill in your details."}</span>
-                {!user&&<button onClick={clearLookup} style={{background:"none",border:"none",color:C.silverDark,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Try again</button>}
-              </div>
-            )}
-
-            {lookSt!=="idle"&&(<>
-
-            {/* Player picker for logged-in users */}
-            {user&&players.length>0&&(
-              <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 18px",marginBottom:18}}>
-                <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Who is training?</div>
-                <div style={{display:"grid",gap:8}}>
-                  {players.map(p=>(
-                    <button key={p.id} onClick={()=>{
-                      setSelPlayerId(p.id);
-                      setForm(f=>({...f, age:p.age||f.age, position:p.position||f.position, goals:p.notes||f.goals, name:p.name||f.name }));
-                    }} style={{background:selPlayerId===p.id?`linear-gradient(135deg,${C.silverDark},#161416)`:C.black,border:selPlayerId===p.id?`1px solid ${C.silver}`:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"11px 16px",cursor:"pointer",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.2s"}}>
-                      <div>
-                        <div style={{fontSize:13,fontWeight:600,color:selPlayerId===p.id?C.gold:C.white,fontFamily:D.display,marginBottom:2}}>{p.name}</div>
-                        <div style={{fontSize:11,color:selPlayerId===p.id?C.silverDim:C.textDim,fontFamily:D.body}}>{p.age?`Age ${p.age}`:""}{p.position?` · ${p.position}`:""}</div>
-                      </div>
-                      {selPlayerId===p.id&&<span style={{color:C.silver,fontSize:14}}>✓</span>}
-                    </button>
-                  ))}
-                </div>
-                {selPlayerId&&<button onClick={()=>setSelPlayerId(null)} style={{background:"none",border:"none",color:C.silverDark,fontSize:11,cursor:"pointer",fontFamily:D.body,textDecoration:"underline",marginTop:8,padding:0}}>Clear selection</button>}
-              </div>
-            )}
-
-            {/* Position picker */}
-            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 18px",marginBottom:18}}>
-              <FL>Select Position *</FL>
-              <FieldPositionPicker selected={form.position} onSelect={pos=>setForm(p=>({...p,position:pos}))}/>
-              {form.position&&<div style={{textAlign:"center",marginTop:10,fontSize:11,color:C.silver,fontFamily:D.body,letterSpacing:1}}>{POSITIONS.find(p=>p.id===form.position)?.full}</div>}
-            </div>
-
-            {/* Contact details */}
-            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 18px",marginBottom:18}}>
-              <FL>Your Details</FL>
-              <div style={{display:"grid",gap:12}}>
-                {[
-                  {key:"name",  label:"Player's Full Name *", type:"text",     ph:"Player name"},
-                  {key:"email", label:"Parent Email *",        type:"email",    ph:"parent@email.com"},
-                  {key:"phone", label:"Parent Phone *",        type:"tel",      ph:"+1 (555) 000-0000"},
-                  {key:"age",   label:"Player Age",            type:"text",     ph:"e.g. 14"},
-                  {key:"goals", label:"Goals / Focus Areas",   type:"textarea", ph:"e.g. Finishing, 1v1, weak foot, decision making..."},
-                ].map(f=>(
-                  <div key={f.key}>
-                    <label style={{display:"block",fontSize:9,letterSpacing:2,color:C.silver,marginBottom:5,textTransform:"uppercase",fontFamily:D.body}}>{f.label}</label>
-                    {f.type==="textarea"?<textarea rows={2} placeholder={f.ph} value={form[f.key]} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))} style={IS}/>:<input type={f.type} placeholder={f.ph} value={form[f.key]} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))} style={IS}/>}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Remember Me */}
-            {!user&&(
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18,cursor:"pointer"}} onClick={()=>setRememberMe(r=>!r)}>
-                <div style={{width:20,height:20,borderRadius:5,border:`1px solid ${rememberMe?C.gold:C.cardBorder}`,background:rememberMe?C.silverDark:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.2s"}}>
-                  {rememberMe&&<span style={{color:C.silver,fontSize:12,lineHeight:1}}>✓</span>}
-                </div>
-                <span style={{fontSize:12,color:rememberMe?C.gold:C.textDim,fontFamily:D.body}}>Remember my details for next time</span>
-              </div>
-            )}
-
-            {/* Summary */}
-            <SC rows={[
-              {label:"Date",     value:fmtDate(selDate)},
-              {label:"Time",     value:selSlot?.time},
-              {label:"Location", value:getLocation(dKey(selDate))||"TBD"},
-              {label:"Position", value:form.position?POSITIONS.find(p=>p.id===form.position)?.full||form.position:"Not selected", color:C.silver},
-              {label:"Total",    value:`$${total}`, accent:true},
-            ]}/>
-
-            <div style={{display:"flex",gap:10,marginTop:18}}>
-              <GB onClick={()=>setStep(1)}>← Back</GB>
-              <AB disabled={!form.name||!form.email||!form.phone||!form.position||loading} onClick={doSubmit}>{loading?"Reserving…":"Reserve My Slot →"}</AB>
-            </div>
-            </>)}
-            {lookSt==="idle"&&<div style={{marginTop:4}}><GB onClick={()=>setStep(1)}>← Back</GB></div>}
-          </div>
-        )}
-
-        {/* STEP 3 — Pending / Confirmed (same as group) */}
-        {step===3&&myBooking&&(
-          <div style={{animation:"fadeUp 0.5s ease"}}>
-            {myBooking.status==="confirmed"?(
-              <>
-                <div style={{textAlign:"center",marginBottom:28}}>
-                  <div style={{width:76,height:76,borderRadius:"50%",margin:"0 auto 16px",background:`linear-gradient(135deg,${C.green},#0e7a47)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,color:C.white,boxShadow:`0 0 48px ${C.green}55`}}>✓</div>
-                  <h2 style={{margin:"0 0 8px",fontSize:28,fontWeight:600,color:C.white,fontFamily:D.display}}>Session Confirmed!</h2>
-                  <p style={{margin:0,fontSize:13,color:C.textDim,fontFamily:D.body}}>Coach Carlos confirmed your payment. See you on the field! ⚽</p>
-                </div>
-                <SC title="Your Session" rows={[
-                  {label:"Name",     value:myBooking.name},
-                  {label:"Date",     value:myBooking.dateLabel},
-                  {label:"Time",     value:myBooking.slotTime},
-                  {label:"Location",    value:myBooking.location||"Bayview Park"},
-                  {label:"Position", value:myBooking.position, color:C.silver},
-                  {label:"Paid",     value:`$${myBooking.price}`, accent:true},
-                ]}/>
-                <div style={{textAlign:"center",marginTop:22}}><GB onClick={reset}>Book Another Slot</GB></div>
-              </>
-            ):(
-              <>
-                {/* Payment header */}
-                <div style={{textAlign:"center",marginBottom:22}}>
-                  <div style={{width:64,height:64,borderRadius:"50%",margin:"0 auto 14px",background:C.redDark,border:`2px solid ${C.red}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,animation:"pulse 2s infinite"}}>⏳</div>
-                  <h2 style={{margin:"0 0 6px",fontSize:24,fontWeight:600,color:C.white,fontFamily:D.display}}>Slot Reserved — Payment Needed</h2>
-                  <p style={{margin:0,fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:1.7}}>Your slot is held. Complete payment below to confirm it instantly.</p>
-                </div>
-
-                {/* Payment method selector */}
-                {STRIPE_ENABLED&&!payMethod&&(
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
-                    <button onClick={()=>setPayMethod("stripe")} style={{background:C.card,border:`1px solid ${C.silver}44`,borderRadius:14,padding:"20px 16px",cursor:"pointer",textAlign:"center"}}>
-                      <div style={{fontSize:24,marginBottom:8}}>💳</div>
-                      <div style={{fontSize:13,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:3}}>Pay by Card</div>
-                      <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>Instant confirmation</div>
-                    </button>
-                    <button onClick={()=>setPayMethod("venmo")} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"20px 16px",cursor:"pointer",textAlign:"center"}}>
-                      <div style={{fontSize:24,marginBottom:8}}>📲</div>
-                      <div style={{fontSize:13,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:3}}>Pay with Venmo</div>
-                      <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>Coach confirms manually</div>
-                    </button>
-                  </div>
-                )}
-
-                {/* Stripe checkout */}
-                {payMethod==="stripe"&&(
-                  <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"20px",marginBottom:16}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-                      <div>
-                        <div style={{fontSize:10,letterSpacing:2,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>Amount Due</div>
-                        <div style={{fontSize:34,fontWeight:700,color:C.white,fontFamily:D.display,lineHeight:1}}>${total}</div>
-                      </div>
-                      <button onClick={()=>setPayMethod(null)} style={{background:"none",border:"none",color:C.textDim,fontSize:11,cursor:"pointer",fontFamily:D.body,textDecoration:"underline"}}>Change method</button>
-                    </div>
-                    <StripeCheckout
-                      amount={total}
-                      metadata={{docId:myBooking?.id||"",collectionName:"inquiries",sessionType:"1-on-1 — "+myBooking?.dateLabel}}
-                      onSuccess={handleStripeSuccess}
-                    />
-                  </div>
-                )}
-
-                {/* Venmo card */}
-                {payMethod==="venmo"&&(
-                <div style={{background:C.redDark,border:`1px solid ${C.red}33`,borderRadius:16,padding:"20px",marginBottom:16}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-                    <div>
-                      <div style={{fontSize:10,letterSpacing:2,color:C.red,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>Amount Due</div>
-                      <div style={{fontSize:40,fontWeight:700,color:C.white,fontFamily:D.display,lineHeight:1}}>${total}</div>
-                    </div>
-                    <div style={{textAlign:"right"}}>
-                      <div style={{fontSize:10,color:"#888",fontFamily:D.body,marginBottom:3,letterSpacing:1}}>VENMO</div>
-                      <div style={{fontSize:16,color:C.silverBright,fontFamily:D.body,fontWeight:600}}>@{BRAND.venmo}</div>
-                    </div>
-                  </div>
-                  <a href={`https://venmo.com/u/${BRAND.venmo}`} target="_blank" rel="noopener noreferrer"
-                    style={{display:"block",textAlign:"center",background:`linear-gradient(135deg,${C.red},${C.redDim})`,color:C.white,textDecoration:"none",padding:"15px",borderRadius:12,fontSize:14,letterSpacing:3,textTransform:"uppercase",fontFamily:D.body,fontWeight:700,marginBottom:12}}>
-                    📲 Pay on Venmo →
-                  </a>
-                  <div style={{background:"rgba(0,0,0,0.3)",borderRadius:8,padding:"10px 14px",marginBottom:10}}>
-                    <div style={{fontSize:10,color:"#555",fontFamily:D.body,marginBottom:2,letterSpacing:1}}>PAYMENT NOTE</div>
-                    <div style={{fontSize:12,color:C.silverBright,fontFamily:D.body}}>{myBooking.name} — {myBooking.dateLabel} · 1-on-1 · {myBooking.position}</div>
-                  </div>
-                  {STRIPE_ENABLED&&<button onClick={()=>setPayMethod(null)} style={{background:"none",border:"none",color:"#aaa",fontSize:11,cursor:"pointer",fontFamily:D.body,textDecoration:"underline"}}>Change method</button>}
-                </div>
-                )}
-
-                {/* Simple steps */}
-                {payMethod==="venmo"&&(
-                <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 18px",marginBottom:16}}>
-                  {[
-                    {n:"1",text:"Tap Pay on Venmo above and send $"+total},
-                    {n:"2",text:"Include your name and date in the payment note"},
-                    {n:"3",text:"Carlos confirms and you receive a confirmation email"},
-                  ].map((s,i)=>(
-                    <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:i<2?10:0}}>
-                      <div style={{width:22,height:22,borderRadius:"50%",background:C.redDark,border:`1px solid ${C.red}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:C.red,flexShrink:0,fontWeight:700}}>{s.n}</div>
-                      <div style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.6,paddingTop:2}}>{s.text}</div>
-                    </div>
-                  ))}
-                </div>
-                )}
-
-                {/* Awaiting */}
-                <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"12px",background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,marginBottom:16}}>
-                  <div style={{width:6,height:6,borderRadius:"50%",background:C.silver,animation:"pulse 1.5s infinite",flexShrink:0}}/>
-                  <span style={{fontSize:11,color:C.textMid,letterSpacing:1,textTransform:"uppercase",fontFamily:D.body}}>Waiting for payment confirmation</span>
-                </div>
-
-                <SC title="Booking Summary" rows={[
-                  {label:"Name",     value:myBooking.name},
-                  {label:"Date",     value:myBooking.dateLabel},
-                  {label:"Time",     value:myBooking.slotTime},
-                  {label:"Location", value:myBooking.location||"Bayview Park · James Island"},
-                  {label:"Position", value:myBooking.position, color:C.silver},
-                  {label:"Total Due",value:`$${myBooking.price}`, accent:true},
-                ]}/>
-
-                <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"12px 16px",marginTop:12,display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:14}}>📩</span>
-                  <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Need to reschedule? Email <a href="mailto:laforjafutbol@gmail.com" style={{color:C.silver,textDecoration:"none"}}>laforjafutbol@gmail.com</a></div>
-                </div>
-
-                <Auto1on1Refresh bookingId={myBooking.id}/>
-              </>
-            )}
-          </div>
-        )}
-        {step===3&&!myBooking&&<div style={{textAlign:"center",padding:"60px 20px",color:C.textDim,fontFamily:D.body}}>Loading your booking…</div>}
-      </div>
-    </div>
-  );
-}
-
-export function Auto1on1Refresh({bookingId}){
-  useEffect(()=>{
-    const iv=setInterval(async()=>{
-      try{
-        const {getDoc,doc:fDoc}=await import("firebase/firestore");
-        const snap=await getDoc(fDoc(db,"inquiries",bookingId));
-        if(snap.exists()&&snap.data().status==="confirmed") window.location.reload();
-      }catch(e){}
-    },5000);
-    return ()=>clearInterval(iv);
-  },[bookingId]);
-  return <div style={{textAlign:"center",marginTop:14,fontSize:10,color:C.silverDark,fontFamily:D.body}}>Checks for confirmation automatically</div>;
-}
-
-// ── LOCATION MANAGER ────────────────────────────────────
-function LocationManager({locations,saveLocation,getDates,getPrivateDates,fmtDate,dKey}){
-  const DEFAULT_LOC = {name:"Bayview Park",detail:"James Island Youth Soccer Club Fields · James Island, SC",mapsUrl:"https://maps.google.com/?q=Bayview+Park+James+Island+SC"};
-  const [selDate,setSelDate] = useState("default");
-  const [form,setForm]       = useState({...DEFAULT_LOC});
-  const [saved,setSaved]     = useState(false);
-
-  const allDates = [...getDates(8),...getPrivateDates(8)].sort((a,b)=>dKey(a)>dKey(b)?1:-1);
-
-  function handleDateChange(val){
-    setSelDate(val);
-    const l = locations[val]||DEFAULT_LOC;
-    setForm({name:l.name,detail:l.detail,mapsUrl:l.mapsUrl});
-  }
-
-  async function handleSave(){
-    await saveLocation(selDate,form.name,form.detail,form.mapsUrl);
-    setSaved(true);
-    setTimeout(()=>setSaved(false),2000);
-  }
-
-  return(
-    <div style={{background:"#1a1612",border:`1px solid #ff4d2e33`,borderRadius:14,padding:"20px 18px",marginBottom:16,animation:"fadeUp 0.3s ease"}}>
-      <div style={{fontSize:10,letterSpacing:3,color:"#ff4d2e",textTransform:"uppercase",marginBottom:14,fontFamily:"'Montserrat',sans-serif"}}>📍 Set Training Location</div>
-
-      <div style={{marginBottom:12}}>
-        <div style={{fontSize:9,letterSpacing:2,color:"#c9a84c",textTransform:"uppercase",marginBottom:6,fontFamily:"'Montserrat',sans-serif"}}>Apply To</div>
-        <select value={selDate} onChange={e=>handleDateChange(e.target.value)} style={{...IS,marginBottom:0}}>
-          <option value="default">Default — all sessions</option>
-          {allDates.slice(0,20).map(d=>(
-            <option key={dKey(d)} value={dKey(d)}>{fmtDate(d)}{locations[dKey(d)]?" ✓":""}</option>
-          ))}
-        </select>
-      </div>
-
-      <div style={{display:"grid",gap:10,marginBottom:14}}>
-        <div>
-          <div style={{fontSize:9,letterSpacing:2,color:"#c9a84c",textTransform:"uppercase",marginBottom:6,fontFamily:"'Montserrat',sans-serif"}}>Location Name</div>
-          <input type="text" value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="e.g. Bayview Park" style={IS}/>
-        </div>
-        <div>
-          <div style={{fontSize:9,letterSpacing:2,color:"#c9a84c",textTransform:"uppercase",marginBottom:6,fontFamily:"'Montserrat',sans-serif"}}>Address / Detail</div>
-          <input type="text" value={form.detail} onChange={e=>setForm(p=>({...p,detail:e.target.value}))} placeholder="James Island Youth Soccer Club Fields · James Island, SC" style={IS}/>
-        </div>
-        <div>
-          <div style={{fontSize:9,letterSpacing:2,color:"#c9a84c",textTransform:"uppercase",marginBottom:6,fontFamily:"'Montserrat',sans-serif"}}>Google Maps URL</div>
-          <input type="text" value={form.mapsUrl} onChange={e=>setForm(p=>({...p,mapsUrl:e.target.value}))} placeholder="https://maps.google.com/?q=..." style={IS}/>
-        </div>
-      </div>
-
-      <div style={{display:"flex",gap:10,alignItems:"center"}}>
-        <button onClick={handleSave} style={{background:"linear-gradient(135deg,#ff4d2e,#a8341e)",border:"none",color:"#f5efe6",borderRadius:10,padding:"10px 22px",fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",fontWeight:500}}>💾 Save Location</button>
-        {saved&&<span style={{fontSize:12,color:"#22c55e",fontFamily:"'Montserrat',sans-serif"}}>✓ Saved!</span>}
-      </div>
-
-      {Object.keys(locations).length>0&&(
-        <div style={{marginTop:16,borderTop:"1px solid #222",paddingTop:14}}>
-          <div style={{fontSize:9,letterSpacing:2,color:"#555",textTransform:"uppercase",marginBottom:10,fontFamily:"'Montserrat',sans-serif"}}>Saved Locations</div>
-          <div style={{display:"grid",gap:6}}>
-            {Object.entries(locations).map(([key,loc])=>(
-              <div key={key} onClick={()=>handleDateChange(key)} style={{background:"#161310",borderRadius:8,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",border:`1px solid ${selDate===key?"#b4aea044":"#2a251c"}`}}>
-                <div>
-                  <div style={{fontSize:11,color:"#f5efe6",fontFamily:"'Montserrat',sans-serif",fontWeight:500}}>{key==="default"?"Default (all sessions)":fmtDate(new Date(key+"T12:00:00"))}</div>
-                  <div style={{fontSize:10,color:"#666",fontFamily:"'Montserrat',sans-serif"}}>{loc.name} · {loc.detail}</div>
-                </div>
-                {key==="default"&&<span style={{fontSize:9,color:"#ff4d2e",fontFamily:"'Montserrat',sans-serif",letterSpacing:1}}>DEFAULT</span>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── MOVE MODAL ───────────────────────────────────────────
-function MoveModal({booking,type,selDate,selSess,onClose,onSelectDate,onSelectSess,getDates,getPrivateDates,spotsLeft,bookings,inquiries,blocked}){
-  const is1on1 = type==="1on1";
-  const allDates = is1on1 ? getPrivateDates() : getDates();
-  const b = booking;
-
-  function isSlotTaken(dk,slotId){
-    return (blocked||[]).some(x=>x.dateKey===dk&&x.sessId===slotId)||
-           (inquiries||[]).some(x=>x.dateKey===dk&&x.slotId===slotId&&x.status!=="cancelled"&&x.status!=="removed");
-  }
-
-  async function doMove(){
-    if(!selDate||!selSess) return;
-    const newDateKey=dKey(selDate);
-    const newDateLabel=fmtDate(selDate);
-    if(is1on1){
-      await updateDoc(doc(db,"inquiries",b.id),{dateKey:newDateKey,dateLabel:newDateLabel,slotId:selSess.id,slotTime:selSess.time,requestType:null,requestNote:null,movedAt:new Date().toISOString()});
-    } else {
-      const sched=DAY_SCHEDULE[selDate.getDay()];
-      await updateDoc(doc(db,"bookings",b.id),{dateKey:newDateKey,dateLabel:newDateLabel,sessId:selSess.id,sessTime:selSess.time,ageGroup:selSess.ageGroup,ageTag:selSess.ageTag,skill:sched.skill,skillIcon:sched.skillIcon,requestType:null,requestNote:null,movedAt:new Date().toISOString()});
-    }
-    try{ await callEmailAPI({...b,dateLabel:newDateLabel,sessTime:selSess.time},"reschedule"); }catch(e){}
-    onClose();
-  }
-
-  return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={onClose}>
-      <div style={{background:"#111",border:`1px solid ${C.silver}44`,borderRadius:16,padding:"28px 24px",maxWidth:520,width:"100%",maxHeight:"80vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
-
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
-          <div>
-            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>{is1on1?"Move 1-on-1":"Move Group Booking"}</div>
-            <div style={{fontSize:18,fontWeight:600,color:C.white,fontFamily:D.display}}>{b.name}</div>
-            <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,marginTop:2}}>Currently: {b.dateLabel} · {b.slotTime||b.sessTime}</div>
-          </div>
-          <button onClick={onClose} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,width:32,height:32,color:C.textDim,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
-        </div>
-
-        <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Select New Date</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:20}}>
-          {allDates.map((d,i)=>{
-            const sel=selDate&&dKey(d)===dKey(selDate);
-            if(is1on1){
-              const sched=PRIVATE_SCHEDULE[d.getDay()];
-              if(!sched) return null;
-              const avail=sched.slots.filter(sl=>!isSlotTaken(dKey(d),sl.id)).length;
-              return(
-                <button key={i} onClick={()=>onSelectDate(d)} style={{background:sel?C.silverDark:C.card,border:sel?`1px solid ${C.silver}`:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"10px 6px",cursor:"pointer",textAlign:"center",color:C.white}}>
-                  <div style={{fontSize:9,color:sel?C.gold:C.silverDim,fontFamily:D.body}}>{d.toLocaleDateString("en-US",{weekday:"short"}).slice(0,3).toUpperCase()}</div>
-                  <div style={{fontSize:17,fontWeight:700,fontFamily:D.display}}>{d.getDate()}</div>
-                  <div style={{fontSize:9,color:sel?C.gold:C.silverDim,fontFamily:D.body}}>{d.toLocaleDateString("en-US",{month:"short"})}</div>
-                  <div style={{fontSize:9,color:avail===0?C.silverDark:avail===1?C.red:C.silverDim,marginTop:3,fontFamily:D.body}}>{avail===0?"FULL":`${avail} open`}</div>
-                </button>
-              );
-            } else {
-              const sched=DAY_SCHEDULE[d.getDay()];
-              if(!sched) return null;
-              const sp=sched.sessions.reduce((s,sess)=>s+spotsLeft(d,sess.id),0);
-              return(
-                <button key={i} onClick={()=>onSelectDate(d)} style={{background:sel?C.silverDark:C.card,border:sel?`1px solid ${C.silver}`:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"10px 6px",cursor:"pointer",textAlign:"center",color:C.white}}>
-                  <div style={{fontSize:9,color:sel?C.gold:C.silverDim,fontFamily:D.body}}>{DAY_ABBR[d.getDay()]||d.toLocaleDateString("en-US",{weekday:"short"}).slice(0,3).toUpperCase()}</div>
-                  <div style={{fontSize:17,fontWeight:700,fontFamily:D.display}}>{d.getDate()}</div>
-                  <div style={{fontSize:9,color:sel?C.gold:C.silverDim,fontFamily:D.body}}>{d.toLocaleDateString("en-US",{month:"short"})}</div>
-                  <div style={{fontSize:9,color:sp===0?C.silverDark:sp<=2?C.red:C.silverDim,marginTop:3,fontFamily:D.body}}>{sp===0?"FULL":`${sp} left`}</div>
-                </button>
-              );
-            }
-          })}
-        </div>
-
-        {selDate&&is1on1&&(()=>{
-          const sched=PRIVATE_SCHEDULE[selDate.getDay()];
-          if(!sched) return null;
-          return(<>
-            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Select Slot</div>
-            <div style={{display:"grid",gap:8,marginBottom:20}}>
-              {sched.slots.map(slot=>{
-                const taken=isSlotTaken(dKey(selDate),slot.id);
-                const sel=selSess?.id===slot.id;
-                return(
-                  <button key={slot.id} disabled={taken} onClick={()=>onSelectSess(slot)} style={{background:sel?C.silverDark:C.card,border:sel?`1px solid ${C.silver}`:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"12px 16px",cursor:taken?"not-allowed":"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",opacity:taken?0.4:1}}>
-                    <span style={{fontSize:13,fontWeight:600,color:sel?C.gold:C.white,fontFamily:D.display}}>{slot.time}</span>
-                    <span style={{fontSize:10,color:taken?C.silverDark:sel?C.gold:C.silverDim,fontFamily:D.body}}>{taken?"BOOKED":"OPEN"}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </>);
-        })()}
-
-        {selDate&&!is1on1&&(()=>{
-          const sched=DAY_SCHEDULE[selDate.getDay()];
-          if(!sched) return null;
-          return(<>
-            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Select Session</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:20}}>
-              {sched.sessions.map(sess=>{
-                const sp=spotsLeft(selDate,sess.id);
-                const sel=selSess?.id===sess.id;
-                const ac=AGE_COLORS[sess.ageTag]||{bg:C.card,border:C.silver,text:C.silver};
-                return(
-                  <button key={sess.id} disabled={sp===0} onClick={()=>onSelectSess(sess)} style={{background:sel?ac.bg:C.card,border:sel?`1px solid ${ac.border}`:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"12px 14px",cursor:sp===0?"not-allowed":"pointer",textAlign:"left",opacity:sp===0?0.4:1}}>
-                    <div style={{fontSize:12,fontWeight:600,color:sel?ac.text:C.white,fontFamily:D.display,marginBottom:3}}>{sess.time}</div>
-                    <div style={{fontSize:10,color:sel?ac.text:C.textDim,fontFamily:D.body,marginBottom:4}}>{sess.ageGroup}</div>
-                    <div style={{fontSize:9,color:sp===0?C.silverDark:sp<=2?C.red:C.silverDim,fontFamily:D.body}}>{sp===0?"FULL":`${sp}/${MAX_PLAYERS} spots`}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </>);
-        })()}
-
-        <button disabled={!selDate||!selSess} onClick={doMove} style={{width:"100%",background:selDate&&selSess?`linear-gradient(135deg,${C.silver},${C.silverDim})`:"#1a1a1a",border:"none",borderRadius:10,padding:"14px",color:selDate&&selSess?C.black:C.silverDark,fontSize:12,letterSpacing:2,textTransform:"uppercase",cursor:selDate&&selSess?"pointer":"not-allowed",fontFamily:D.body,fontWeight:700}}>
-          {selDate&&selSess?`Move to ${fmtDate(selDate)} · ${selSess.time}`:"Select a date and slot above"}
-        </button>
-      </div>
-    </div>
-  );
-}
+import { db } from "./firebase";
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where } from "firebase/firestore";
+import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, DAY_SCHEDULE, DAY_ABBR, COACH_DAYS, dKey, fmtDate, getDates, callEmailAPI, sendReminderEmail, IS, GStyles, SH, FL } from "./constants";
 
 // ── DASHBOARD ─────────────────────────────────────────────
-export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,scheduleInquiry,removeInquiry,sendReminderEmail,blocked,blockSession,locations,saveLocation,spotsLeft,getDates,getPrivateDates}){
-  const [authed,setAuthed]     = useState(false);
-  const [pw,setPw]             = useState("");
-  const [calMonth,setCalMonth] = useState(new Date().getMonth());
-  const [calYear,setCalYear]   = useState(new Date().getFullYear());
-  const [dragId,setDragId]     = useState(null); // id of item being dragged
-  const [dragOver,setDragOver] = useState(null); // dateKey being hovered
-  const [dropTarget,setDropTarget] = useState(null);
-  const [dropSess,setDropSess]     = useState(null);
-  const [dropCustomTime,setDropCustomTime] = useState("");
-  const [moving,setMoving]         = useState(false);
-  const [noteId,setNoteId]         = useState(null);
-  const [noteText,setNoteText]     = useState("");
-  const [noteColl,setNoteColl]     = useState("bookings");
-  const [expandDay,setExpandDay]   = useState(null); // dateKey of expanded day detail
-  const [pendingClients,setPendingClients] = useState([]);
-  const [showAddPending,setShowAddPending] = useState(false);
-  const [pendingForm,setPendingForm]       = useState({name:"",contact:"",note:""});
-  const [reminderModal,setReminderModal]   = useState(null); // {booking} or "group"
-  const [reminderMsg,setReminderMsg]       = useState("");
-  const [sendingReminder,setSendingReminder] = useState(false);
-  const [coachNoteId,setCoachNoteId]   = useState(null);
-  const [coachNoteText,setCoachNoteText] = useState("");
-  const [actionItem,setActionItem] = useState(null);
+export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendReminderEmail,blocked,blockSession,spotsLeft,getDates}){
+  const [pw,setPw]           = useState("");
+  const [auth,setAuth]       = useState(false);
+  const [noteId,setNoteId]   = useState(null);
+  const [noteText,setNoteText] = useState("");
+  const [noteColl,setNoteColl] = useState("bookings");
+  const [reminderModal,setReminderModal] = useState(null);
+  const [reminderMsg,setReminderMsg]     = useState("");
+  const [sending,setSending]             = useState(false);
+  const [actionItem,setActionItem]       = useState(null);
   const [cancelConfirm,setCancelConfirm] = useState(false);
-  const [dashTab,setDashTab] = useState("calendar"); // "calendar" | "finance"
+  const [filterStatus,setFilterStatus]   = useState("all");
+  const [searchQ,setSearchQ]             = useState("");
 
-  useEffect(()=>{
-    const unsub=onSnapshot(collection(db,"pending"),s=>{
-      setPendingClients(s.docs.map(d=>({id:d.id,...d.data()})).filter(p=>p.status==="pending"));
-    });
-    return unsub;
-  },[]);
-
-  const PASS = "laforja2024";
-  const monthNames=["January","February","March","April","May","June","July","August","September","October","November","December"];
-  const dayLabels=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-
-  const today = new Date(); today.setHours(0,0,0,0);
-  const todayKey = dKey(today);
-
-  const allItems = [
-    ...(bookings||[]).filter(b=>b.status!=="cancelled"&&b.status!=="removed").map(b=>({...b,_type:b.status==="tentative"?"tentative":"group",_coll:"bookings",_time:b.sessTime})),
-    ...(inquiries||[]).filter(i=>i.status!=="cancelled"&&i.status!=="removed").map(i=>({...i,_type:i.status==="tentative"?"tentative":"1on1",_coll:"inquiries",_time:i.slotTime})),
-    ...pendingClients.map(p=>({...p,_type:"pending",_coll:"pending",_time:"",dateKey:"pending"})),
-  ];
-
-  function itemsOnDate(dk){ return allItems.filter(s=>s.dateKey===dk&&s._type!=="pending"); }
-
-  const todayItems = itemsOnDate(todayKey);
-  const pendingCount = (bookings||[]).filter(b=>b.status==="pending").length;
-  const newInquiries = (inquiries||[]).filter(i=>i.status==="pending").length;
-  const requestCount = [...(bookings||[]),...(inquiries||[])].filter(x=>x.requestType).length;
-  const weekRevenue  = (bookings||[]).filter(b=>{
-    const d=new Date(b.dateKey); const now=new Date();
-    const wstart=new Date(now); wstart.setDate(now.getDate()-now.getDay());
-    return d>=wstart && b.status==="confirmed";
-  }).reduce((s,b)=>s+(b.total||0),0);
-  const weekSessions = (bookings||[]).filter(b=>{
-    const d=new Date(b.dateKey); const now=new Date();
-    const wstart=new Date(now); wstart.setDate(now.getDate()-now.getDay());
-    return d>=wstart && b.status==="confirmed";
-  });
-
-  // ── AUTH GATE ──
-  if(!authed) return(
-    <div style={{minHeight:"100vh",background:C.black,display:"flex",alignItems:"center",justifyContent:"center"}}>
-      <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"40px 32px",maxWidth:360,width:"100%",textAlign:"center"}}>
-        <div style={{fontSize:32,marginBottom:12}}>⚒️</div>
-        <div style={{fontSize:10,letterSpacing:4,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>Coach Access</div>
-        <h2 style={{margin:"0 0 24px",fontSize:22,color:C.white,fontFamily:D.display}}>La Forja Dashboard</h2>
+  if(!auth) return(
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.black}}>
+      <div style={{width:320,padding:32,background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:16}}>
+        <div style={{textAlign:"center",marginBottom:24}}>
+          <div style={{fontSize:28,marginBottom:8}}>⚙</div>
+          <div style={{fontSize:16,color:C.white,fontFamily:D.display,fontWeight:600}}>Coach Dashboard</div>
+          <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,marginTop:4}}>La Forja · Restricted Access</div>
+        </div>
         <input type="password" placeholder="Password" value={pw} onChange={e=>setPw(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&pw===PASS&&setAuthed(true)}
-          style={{...IS,width:"100%",marginBottom:12,textAlign:"center",letterSpacing:4}}/>
-        <button onClick={()=>pw===PASS?setAuthed(true):null}
-          style={{width:"100%",background:pw===PASS?`linear-gradient(135deg,${C.silver},${C.silverDim})`:"#1a1a1a",border:"none",borderRadius:10,padding:"13px",color:pw===PASS?"#0a0a0a":C.silverDark,fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:pw===PASS?"pointer":"not-allowed",fontFamily:D.body,fontWeight:700}}>
+          onKeyDown={e=>e.key==="Enter"&&pw===BRAND.coachPw&&setAuth(true)}
+          style={{...IS,marginBottom:12,textAlign:"center",fontSize:16,letterSpacing:4}}/>
+        <button onClick={()=>pw===BRAND.coachPw?setAuth(true):alert("Wrong password")}
+          style={{width:"100%",background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",borderRadius:10,padding:"13px",color:C.white,fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>
           Enter
         </button>
       </div>
     </div>
   );
 
-  // ── DRAG HELPERS ──
-  // We store the full item in a ref to avoid stale closure issues
-  const dragItemRef = {current:null};
-
-  function onChipDragStart(e, item){
-    dragItemRef.current = item;
-    setDragId(item.id);
-    e.dataTransfer.effectAllowed="move";
-    e.dataTransfer.setData("text/plain", item.id||item.name||"item");
-  }
-
-  function onChipDragEnd(){
-    setDragId(null);
-    setDragOver(null);
-  }
-
-  function onDayCellDragOver(e, dk){
-    e.preventDefault();
-    e.dataTransfer.dropEffect="move";
-    if(dragOver!==dk) setDragOver(dk);
-  }
-
-  function onDayCellDrop(e, d){
-    e.preventDefault();
-    setDragOver(null);
-    setDragId(null);
-    // Get item from all items by matching dragId
-    const item = allItems.find(x=>x.id===dragId) || pendingClients.find(x=>x.id===dragId);
-    if(!item) return;
-    if(item.dateKey===dKey(d)&&item._type!=="pending") return; // same date
-    setDropTarget({item, date:d});
-    setDropSess(null);
-  }
-
-  async function confirmDrop(){
-    if(!dropTarget||!dropSess) return;
-    const{item:b,date:targetDate}=dropTarget;
-    const newDK=dKey(targetDate);
-    const newDL=fmtDate(targetDate);
-    const newType=dropSess._slotType; // "group" or "1on1" based on which slot was picked
-    setMoving(true);
-    try{
-      if(b._type==="pending"){
-        // Create new booking from holding area
-        const isNewPriv=newType==="1on1";
-        if(isNewPriv){
-          await addDoc(collection(db,"inquiries"),{
-            name:b.name,email:b.contact||"",phone:b.contact||"",
-            status:"pending",dateKey:newDK,dateLabel:newDL,
-            slotId:dropSess.id,slotTime:dropSess.time,
-            price:65,notes:b.note||"",
-            createdAt:new Date().toISOString(),fromHolding:true,
-          });
-        } else {
-          const sched=DAY_SCHEDULE[targetDate.getDay()]||{};
-          await addDoc(collection(db,"bookings"),{
-            name:b.name,email:b.contact||"",phone:b.contact||"",
-            status:"pending",dateKey:newDK,dateLabel:newDL,
-            sessId:dropSess.id,sessTime:dropSess.time,
-            ageGroup:dropSess.ageGroup||"",ageTag:dropSess.ageTag||"",
-            skill:sched.skill||"The Furnace",skillIcon:sched.skillIcon||"🔥",
-            count:1,total:55,notes:b.note||"",
-            createdAt:new Date().toISOString(),fromHolding:true,
-          });
-        }
-        if(b.id) await updateDoc(doc(db,"pending",b.id),{status:"scheduled"});
-      } else {
-        // Move existing booking — any type to any slot
-        const isMovingToPriv=newType==="1on1";
-        const sourceColl=b._coll||b._type==="1on1"?"inquiries":"bookings";
-        const targetColl=isMovingToPriv?"inquiries":"bookings";
-
-        if(sourceColl===targetColl){
-          // Same collection — just update fields
-          const updateData={
-            dateKey:newDK,dateLabel:newDL,
-            requestType:null,requestNote:null,
-            movedAt:new Date().toISOString(),
-          };
-          if(isMovingToPriv){
-            updateData.slotId=dropSess.id;
-            updateData.slotTime=dropSess.time;
-          } else {
-            const sched=DAY_SCHEDULE[targetDate.getDay()]||{};
-            updateData.sessId=dropSess.id;
-            updateData.sessTime=dropSess.time;
-            updateData.ageGroup=dropSess.ageGroup||b.ageGroup||"";
-            updateData.ageTag=dropSess.ageTag||b.ageTag||"";
-            updateData.skill=sched.skill||b.skill||"The Furnace";
-            updateData.skillIcon=sched.skillIcon||b.skillIcon||"🔥";
-          }
-          await updateDoc(doc(db,sourceColl,b.id),updateData);
-        } else {
-          // Cross-type move — create in new collection, delete from old
-          const sched=DAY_SCHEDULE[targetDate.getDay()]||{};
-          if(isMovingToPriv){
-            await addDoc(collection(db,"inquiries"),{
-              name:b.name,email:b.email||"",phone:b.phone||"",
-              status:b.status||"pending",dateKey:newDK,dateLabel:newDL,
-              slotId:dropSess.id,slotTime:dropSess.time,
-              price:65,notes:b.notes||"",
-              coachNote:b.coachNote||"",
-              createdAt:b.createdAt||new Date().toISOString(),
-              movedAt:new Date().toISOString(),
-            });
-          } else {
-            await addDoc(collection(db,"bookings"),{
-              name:b.name,email:b.email||"",phone:b.phone||"",
-              status:b.status||"pending",dateKey:newDK,dateLabel:newDL,
-              sessId:dropSess.id,sessTime:dropSess.time,
-              ageGroup:dropSess.ageGroup||"",ageTag:dropSess.ageTag||"",
-              skill:sched.skill||"The Furnace",skillIcon:sched.skillIcon||"🔥",
-              count:b.count||1,total:b.total||55,notes:b.notes||"",
-              coachNote:b.coachNote||"",
-              createdAt:b.createdAt||new Date().toISOString(),
-              movedAt:new Date().toISOString(),
-            });
-          }
-          // Remove from old collection
-          await deleteDoc(doc(db,sourceColl,b.id));
-        }
-
-        // Fire reschedule email
-        try{
-          await callEmailAPI({
-            ...b,
-            dateLabel:newDL,
-            sessTime:dropSess.time,
-            skill:isMovingToPriv?"The Tempering":(DAY_SCHEDULE[targetDate.getDay()]?.skill||"The Furnace"),
-            skillIcon:isMovingToPriv?"⚒️":(DAY_SCHEDULE[targetDate.getDay()]?.skillIcon||"🔥"),
-          },"reschedule");
-        }catch(e){}
-      }
-    }finally{setMoving(false);setDropTarget(null);setDropSess(null);}
-  }
-
-  // ── CALENDAR BUILD ──
-  const firstDay = new Date(calYear,calMonth,1).getDay();
-  const daysInMonth = new Date(calYear,calMonth+1,0).getDate();
-  const calDays = [];
-  for(let i=0;i<firstDay;i++) calDays.push(null);
-  for(let d=1;d<=daysInMonth;d++) calDays.push(new Date(calYear,calMonth,d));
-  while(calDays.length%7!==0) calDays.push(null);
-
-  return(
-    <div style={{paddingTop:88,background:C.black,minHeight:"100vh"}}>
-      <div style={{maxWidth:1320,margin:"0 auto",padding:"20px 20px 100px"}}>
-
-        {/* ── HEADER ── */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18,flexWrap:"wrap",gap:12}}>
-          <div>
-            <div style={{fontSize:8,letterSpacing:5,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>La Forja · Coach Dashboard</div>
-            <h1 style={{margin:0,fontSize:26,fontWeight:600,color:C.white,fontFamily:D.display,letterSpacing:1}}>{new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</h1>
-          </div>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-            {[
-              {show:todayItems.length>0,label:`🔥 ${todayItems.length} today`,bg:C.redDark,border:`1px solid ${C.red}33`,color:C.red},
-              {show:pendingCount+newInquiries>0,label:`⏳ ${pendingCount+newInquiries} pending`,bg:C.silverDark,border:`1px solid ${C.silver}33`,color:C.silver},
-              {show:requestCount>0,label:`⚠ ${requestCount} request${requestCount>1?"s":""}`,bg:"#1a1a1a",border:`1px solid ${C.silver}33`,color:C.silver},
-            ].filter(b=>b.show).map((b,i)=>(
-              <span key={i} style={{fontSize:9,padding:"5px 12px",borderRadius:12,background:b.bg,border:b.border,color:b.color,fontFamily:D.body,fontWeight:500,letterSpacing:1}}>{b.label}</span>
-            ))}
-          </div>
-        </div>
-
-        {/* ── DASH TABS ── */}
-        <div style={{display:"flex",gap:0,marginBottom:16,borderBottom:`1px solid ${C.cardBorder}`}}>
-          {[["calendar","🗓 Calendar"],["finance","💰 Finance"]].map(([key,lbl])=>(
-            <button key={key} onClick={()=>setDashTab(key)} style={{background:"none",border:"none",borderBottom:`2px solid ${dashTab===key?C.gold:"transparent"}`,color:dashTab===key?C.gold:C.textDim,padding:"8px 20px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:dashTab===key?600:400,transition:"all 0.2s"}}>
-              {lbl}
-            </button>
-          ))}
-        </div>
-
-        {dashTab==="finance"&&<FinanceTab bookings={bookings} inquiries={inquiries}/>}
-        {dashTab==="calendar"&&<>
-
-        {/* ── STATS ROW ── */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:16}}>
-          {[
-            {label:"Today",value:todayItems.length,color:C.silver},
-            {label:"This Week",value:weekSessions.length,color:C.green},
-            {label:"Week Revenue",value:`$${weekRevenue}`,color:C.silverBright},
-            {label:"All Time",value:(bookings||[]).filter(b=>b.status!=="cancelled").length+(inquiries||[]).filter(i=>i.status!=="cancelled").length,color:C.textMid},
-          ].map((s,i)=>(
-            <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"12px 16px",textAlign:"center"}}>
-              <div style={{fontSize:22,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:3}}>{s.value}</div>
-              <div style={{fontSize:7,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* ── INFO STRIP ── */}
-        <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:10,marginBottom:14}}>
-
-          {/* Holding Area */}
-          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"14px 16px"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-              <div style={{fontSize:8,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Working Out a Time</div>
-              <button onClick={()=>setShowAddPending(v=>!v)} style={{background:showAddPending?`${C.silver}20`:"transparent",border:`1px solid ${C.silver}33`,borderRadius:6,padding:"3px 10px",color:C.silver,fontSize:8,cursor:"pointer",fontFamily:D.body,letterSpacing:1}}>
-                {showAddPending?"✕ Cancel":"+ Add Client"}
-              </button>
-            </div>
-            {showAddPending&&(
-              <div style={{marginBottom:10,paddingBottom:10,borderBottom:`1px solid ${C.cardBorder}`}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
-                  <input placeholder="Name *" value={pendingForm.name} onChange={e=>setPendingForm(p=>({...p,name:e.target.value}))} style={{...IS,fontSize:10}}/>
-                  <input placeholder="Phone / email" value={pendingForm.contact} onChange={e=>setPendingForm(p=>({...p,contact:e.target.value}))} style={{...IS,fontSize:10}}/>
-                </div>
-                <input placeholder="Note (optional)" value={pendingForm.note} onChange={e=>setPendingForm(p=>({...p,note:e.target.value}))} style={{...IS,fontSize:10,width:"100%",marginBottom:6}}/>
-                <button onClick={async()=>{
-                  if(!pendingForm.name.trim()) return;
-                  await addDoc(collection(db,"pending"),{...pendingForm,createdAt:new Date().toISOString(),status:"pending"});
-                  setPendingForm({name:"",contact:"",note:""});setShowAddPending(false);
-                }} style={{background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,border:"none",borderRadius:6,padding:"7px 20px",color:"#0a0a0a",fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:700,letterSpacing:1}}>Save</button>
-              </div>
-            )}
-            <div style={{display:"flex",flexWrap:"wrap",gap:6,minHeight:32}}>
-              {pendingClients.length===0?(
-                <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,padding:"4px 0",fontStyle:"italic"}}>No one waiting — add a client or drag a chip here</div>
-              ):pendingClients.map((p,i)=>(
-                <div key={i} draggable="true"
-                  onDragStart={e=>onChipDragStart(e,{...p,_type:"pending",_coll:"pending"})}
-                  onDragEnd={onChipDragEnd}
-                  style={{background:"linear-gradient(135deg,#161618,#121014)",border:`1px solid ${C.silver}33`,borderRadius:8,padding:"5px 10px",cursor:"grab",userSelect:"none",display:"flex",alignItems:"center",gap:7}}
-                >
-                  <span style={{fontSize:10,color:"#e0d0b8",fontFamily:D.display,fontWeight:600}}>{p.name}</span>
-                  {p.note&&<span style={{fontSize:8,color:C.silver,fontFamily:D.body}}>{p.note}</span>}
-                  {p.contact&&<span style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>{p.contact}</span>}
-                  <button onClick={async()=>await updateDoc(doc(db,"pending",p.id),{status:"scheduled"})} style={{background:`${C.green}20`,border:`1px solid ${C.green}33`,borderRadius:4,color:C.green,fontSize:8,cursor:"pointer",padding:"2px 6px",fontFamily:D.body,lineHeight:1}}>✓</button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Reschedule Requests */}
-          <div style={{background:C.card,border:`1px solid ${requestCount>0?C.silver+"33":C.cardBorder}`,borderRadius:12,padding:"14px 16px"}}>
-            <div style={{fontSize:8,letterSpacing:3,color:requestCount>0?C.silver:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:10,fontWeight:600}}>
-              {requestCount>0?`⚠ ${requestCount} Request${requestCount>1?"s":""}` :"Client Requests"}
-            </div>
-            {requestCount===0?(
-              <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,fontStyle:"italic"}}>All clear</div>
-            ):[...(bookings||[]),...(inquiries||[])].filter(x=>x.requestType).map((x,i)=>(
-              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,padding:"6px 10px",background:"#0a0805",borderRadius:8,border:`1px solid ${C.silver}18`}}>
-                <div>
-                  <div style={{fontSize:11,fontWeight:600,color:C.white,fontFamily:D.display}}>{x.name}</div>
-                  <div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{x.dateLabel}{x.requestedNewDate?` → ${x.requestedNewDate}`:""}</div>
-                </div>
-                <button onClick={()=>updateDoc(doc(db,x._type==="1on1"?"inquiries":"bookings",x.id),{requestType:null,requestNote:null})}
-                  style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:5,padding:"3px 8px",color:C.silver,fontSize:8,cursor:"pointer",fontFamily:D.body}}>Done</button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── MAIN: Full-width Calendar ── */}
-        <div style={{marginBottom:14}}>
-          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"16px"}}>
-
-            {/* Calendar nav + legend */}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <button onClick={()=>{if(calMonth===0){setCalMonth(11);setCalYear(y=>y-1);}else setCalMonth(m=>m-1);}} style={{background:"#0a0805",border:`1px solid ${C.cardBorder}`,borderRadius:6,width:28,height:28,color:C.textMid,cursor:"pointer",fontFamily:D.body,fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
-                <span style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display,minWidth:160,textAlign:"center"}}>{monthNames[calMonth]} {calYear}</span>
-                <button onClick={()=>{if(calMonth===11){setCalMonth(0);setCalYear(y=>y+1);}else setCalMonth(m=>m+1);}} style={{background:"#0a0805",border:`1px solid ${C.cardBorder}`,borderRadius:6,width:28,height:28,color:C.textMid,cursor:"pointer",fontFamily:D.body,fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
-                <button onClick={()=>{setCalMonth(new Date().getMonth());setCalYear(new Date().getFullYear());}} style={{background:`${C.silver}12`,border:`1px solid ${C.silver}33`,borderRadius:6,padding:"3px 10px",color:C.silver,cursor:"pointer",fontFamily:D.body,fontSize:8,letterSpacing:2,textTransform:"uppercase"}}>Today</button>
-              </div>
-              <div style={{display:"flex",gap:12,alignItems:"center"}}>
-                <div style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:8,height:8,borderRadius:2,background:C.red}}/><span style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>Furnace</span></div>
-                <div style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:8,height:8,borderRadius:"50%",background:C.silver}}/><span style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>Tempering</span></div>
-                <div style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:8,height:8,borderRadius:"50%",background:C.green}}/><span style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>Confirmed</span></div>
-                <span style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>🔒 tap slot · drag to move</span>
-              </div>
-            </div>
-
-            {/* Day headers */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3,marginBottom:3}}>
-              {dayLabels.map(d=><div key={d} style={{textAlign:"center",fontSize:9,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,padding:"4px 0"}}>{d}</div>)}
-            </div>
-
-            {/* Calendar grid */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4}}>
-              {calDays.map((d,i)=>{
-                if(!d) return <div key={i} style={{minHeight:160}}/>;
-                const dk=dKey(d);
-                const isToday=dk===todayKey;
-                const isPast=d<today;
-                const isDragOver=dragOver===dk;
-                const isGroupDay=COACH_DAYS.includes(d.getDay());
-                const isPrivDay=[3,6].includes(d.getDay());
-                const isCoachDay=isGroupDay||isPrivDay;
-                const sessions=isGroupDay?(DAY_SCHEDULE[d.getDay()]?.sessions||[]):isPrivDay?(PRIVATE_SCHEDULE[d.getDay()]?.slots||[]):[];
-                const allBlocked=sessions.length>0&&sessions.every(s=>(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id));
-                const dayBookings=allItems.filter(s=>s.dateKey===dk&&s._type!=="pending"&&s.status!=="tentative");
-                const tentativeItems=allItems.filter(s=>s.dateKey===dk&&s.status==="tentative");
-
-                let bg,brd;
-                if(isDragOver){bg="rgba(196,168,76,0.1)";brd=C.gold;}
-                else if(allBlocked){bg="#0f0d0b";brd="#242228";}
-                else if(isPast){bg="#0c0c0e";brd="#1c1a20";}
-                else if(isToday){bg="rgba(196,168,76,0.07)";brd=`${C.silver}55`;}
-                else if(isGroupDay){bg="#0e0e10";brd="#1e1c20";}
-                else if(isPrivDay){bg="#0e0c08";brd="#1c1a1e";}
-                else{bg="#090807";brd="#120f0c";}
-
-                return(
-                  <div key={i}
-                    onDragOver={e=>onDayCellDragOver(e,dk)}
-                    onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget))setDragOver(null);}}
-                    onDrop={e=>onDayCellDrop(e,d)}
-                    style={{background:bg,border:`1px solid ${brd}`,borderRadius:8,padding:"6px 5px",minHeight:160,position:"relative",opacity:isPast?0.8:1}}
-                  >
-                    {/* Date + lock */}
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
-                      <div style={{fontSize:13,fontWeight:isToday?700:400,color:isPast?"#8a7858":allBlocked?"#44405a":isToday?C.gold:isCoachDay?"#c8bca8":"#3a3428",fontFamily:D.display,width:22,height:22,borderRadius:"50%",background:isToday?`${C.silver}22`:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>{d.getDate()}</div>
-                      {isCoachDay&&(
-                        <button onClick={e=>{e.stopPropagation();
-                          if(allBlocked){sessions.forEach(s=>blockSession(dk,s.id,""));}
-                          else if(!isPast){sessions.forEach(s=>{if(!(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===s.id))blockSession(dk,s.id,fmtDate(d));});}
-                        }} style={{background:allBlocked?"rgba(50,45,80,0.2)":"transparent",border:"none",color:allBlocked?"#7070aa":"#2e2820",fontSize:10,cursor:"pointer",padding:0,lineHeight:1}} title={allBlocked?"Unblock day":isPast?"":"Block day"}>
-                          {allBlocked?"🔓":isPast?"":"🔒"}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Session slots */}
-                    {isCoachDay&&!allBlocked&&sessions.map(sess=>{
-                      const isBlk=(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===sess.id);
-                      const slotItems=dayBookings.filter(s=>
-                        isGroupDay
-                          ?(s.sessId===sess.id||(s.sessId==="custom"&&s.sessTime===sess.time))
-                          :(s.slotId===sess.id||s.slotTime===sess.time||(s.sessId==="custom"&&s.sessTime===sess.time))
-                      );
-                      const filled=slotItems.length;
-                      const maxSpots=isGroupDay?MAX_PLAYERS:1;
-                      const tShort=(sess.time||"").split("–")[0].trim().replace(":00","").replace(" PM","p").replace(" AM","a");
-                      const slotCol=isGroupDay?"#b85050":"#b89a3e";
-
-                      if(isBlk) return(
-                        <div key={sess.id} onClick={e=>{e.stopPropagation();blockSession(dk,sess.id,"");}}
-                          style={{fontSize:7,padding:"2px 4px",borderRadius:3,marginBottom:3,background:"rgba(50,45,80,0.2)",border:"1px solid #40408055",color:"#60609a",cursor:"pointer",userSelect:"none"}}>
-                          <span style={{pointerEvents:"none"}}>🔒 {tShort} off</span>
-                        </div>
-                      );
-
-                      return(
-                        <div key={sess.id} style={{marginBottom:3}}>
-                          <div onClick={e=>{e.stopPropagation();blockSession(dk,sess.id,fmtDate(d));}}
-                            style={{fontSize:7,padding:"2px 4px",borderRadius:3,marginBottom:filled?2:0,background:filled?`${slotCol}18`:"rgba(255,255,255,0.025)",border:`1px solid ${filled?slotCol+"44":"rgba(255,255,255,0.05)"}`,color:filled?slotCol:"#2e2418",cursor:"pointer",userSelect:"none",display:"flex",justifyContent:"space-between"}}>
-                            <span style={{pointerEvents:"none"}}>{isGroupDay?"🔥":"⚒️"} {tShort}</span>
-                            <span style={{pointerEvents:"none",fontWeight:filled?700:400}}>{filled}/{maxSpots}</span>
-                          </div>
-                          {slotItems.map((item,si)=>(
-                            <div key={si} draggable="true"
-                              onDragStart={e=>onChipDragStart(e,item)}
-                              onDragEnd={onChipDragEnd}
-                              onClick={e=>{e.stopPropagation();setActionItem(item);setNoteId(item.id);setNoteText(item.coachNote||"");setNoteColl(item._coll||"bookings");setCancelConfirm(false);}}
-                              style={{background:item._type==="1on1"?"#1a181c":"#220808",border:`1px solid ${item._type==="1on1"?"#b4aea044":"#c8505033"}`,borderLeft:`2px solid ${item._type==="1on1"?"#b4aea0":"#c85050"}`,borderRadius:4,padding:"3px 5px",marginBottom:1,cursor:"grab",userSelect:"none",opacity:dragId===item.id?0.35:1,display:"flex",alignItems:"center",justifyContent:"space-between",gap:2}}
-                              title="Click note · drag to move"
-                            >
-                              <span style={{fontSize:9,color:"#e0d0b8",fontFamily:D.display,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"72%",pointerEvents:"none"}}>{item.name}</span>
-                              <div style={{display:"flex",gap:2,flexShrink:0,pointerEvents:"none",alignItems:"center"}}>
-                                {item.coachNote&&<span style={{fontSize:6,color:"#b4aea0"}}>📝</span>}
-                                {item.requestType&&<span style={{fontSize:6,color:"#909090"}}>⚠</span>}
-                                <div style={{width:5,height:5,borderRadius:"50%",background:item.status==="confirmed"?"#4db870":"#b4aea0"}}/>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })}
-
-
-                    {/* ALL sessions not matched to a preset slot — shows on any day, past or future */}
-                    {(()=>{
-                      const shownIds=new Set();
-                      if(isCoachDay&&!allBlocked){
-                        sessions.forEach(sess=>{
-                          dayBookings.filter(s=>
-                            isGroupDay
-                              ?(s.sessId===sess.id||(s.sessId==="custom"&&s.sessTime===sess.time))
-                              :(s.slotId===sess.id||s.slotTime===sess.time||(s.sessId==="custom"&&s.sessTime===sess.time))
-                          ).forEach(s=>shownIds.add(s.id));
-                        });
-                      }
-                      const unmatched=dayBookings.filter(s=>!shownIds.has(s.id)&&s.status!=="tentative");
-                      if(!unmatched.length) return null;
-                      return unmatched.map((item,ci)=>(
-                        <div key={`u${ci}`} draggable="true"
-                          onDragStart={e=>onChipDragStart(e,item)}
-                          onDragEnd={onChipDragEnd}
-                          onClick={e=>{e.stopPropagation();setActionItem(item);setNoteId(item.id);setNoteText(item.coachNote||"");setNoteColl(item._coll||"bookings");setCancelConfirm(false);}}
-                          style={{background:item._type==="1on1"?"#1a181c":"#1e1208",border:`1px solid ${item._type==="1on1"?"#b4aea044":"#c4704433"}`,borderLeft:`2px solid ${item._type==="1on1"?"#b4aea0":"#c47044"}`,borderRadius:4,padding:"3px 5px",marginBottom:2,cursor:"grab",userSelect:"none",opacity:dragId===item.id?0.35:1}}
-                        >
-                          {(item._time||item.sessTime)&&item.sessTime!=="Time TBD"&&(
-                            <div style={{fontSize:7,color:"#b4aea077",fontFamily:D.body,pointerEvents:"none"}}>{item._time||item.sessTime}</div>
-                          )}
-                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:2}}>
-                            <span style={{fontSize:9,color:"#e0d0b8",fontFamily:D.display,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"72%",pointerEvents:"none"}}>{item.name}</span>
-                            <div style={{display:"flex",gap:2,flexShrink:0,pointerEvents:"none",alignItems:"center"}}>
-                              {item.coachNote&&<span style={{fontSize:6,color:"#b4aea0"}}>📝</span>}
-                              {item.requestType&&<span style={{fontSize:6,color:"#909090"}}>⚠</span>}
-                              <div style={{width:5,height:5,borderRadius:"50%",background:item.status==="confirmed"?"#4db870":"#b4aea0"}}/>
-                            </div>
-                          </div>
-                        </div>
-                      ));
-                    })()}
-
-                    {/* Tentative */}
-                    {!isPast&&tentativeItems.map((item,ti)=>(
-                      <div key={`t${ti}`} draggable="true"
-                        onDragStart={e=>onChipDragStart(e,item)}
-                        onDragEnd={onChipDragEnd}
-                        onClick={e=>{e.stopPropagation();setNoteId(item.id);setNoteText(item.coachNote||"");setNoteColl(item._coll||"bookings");}}
-                        style={{background:"rgba(196,168,76,0.05)",border:"1px dashed #b4aea044",borderRadius:4,padding:"3px 5px",marginBottom:1,marginTop:2,cursor:"grab",userSelect:"none",opacity:dragId===item.id?0.35:1,display:"flex",alignItems:"center",gap:3}}
-                      >
-                        <span style={{fontSize:8,color:"#b4aea0",pointerEvents:"none"}}>⏰</span>
-                        <span style={{fontSize:9,color:"#b4aea0",fontFamily:D.display,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",pointerEvents:"none"}}>{item.name}</span>
-                      </div>
-                    ))}
-
-                    {/* Pending confirm buttons */}
-                    {!isPast&&dayBookings.filter(s=>s.status==="pending").length>0&&(
-                      <div style={{marginTop:3,borderTop:"1px solid rgba(255,255,255,0.04)",paddingTop:3}}>
-                        {dayBookings.filter(s=>s.status==="pending").map((s,pi)=>(
-                          <button key={pi} onClick={e=>{e.stopPropagation();confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings");}}
-                            style={{display:"block",width:"100%",background:`${C.green}15`,border:`1px solid ${C.green}33`,borderRadius:3,padding:"2px 4px",color:C.green,fontSize:7,cursor:"pointer",fontFamily:D.body,marginBottom:1,textAlign:"left",userSelect:"none"}}>
-                            ✓ confirm {s.name?.split(" ")[0]}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {isDragOver&&<div style={{position:"absolute",inset:2,border:"2px dashed #b4aea088",borderRadius:6,pointerEvents:"none",background:"rgba(196,168,76,0.04)"}}/>}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* ── TODAY'S ROSTER ── */}
-        <div style={{marginBottom:20}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:6,height:6,borderRadius:"50%",background:C.green,animation:"pulse 1.5s infinite",flexShrink:0}}/>
-              <span style={{fontSize:11,letterSpacing:3,color:C.green,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Today's Roster</span>
-              <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>· {todayItems.length} player{todayItems.length!==1?"s":""}</span>
-            </div>
-            <div style={{display:"flex",gap:6}}>
-              {todayItems.length>0&&(
-                <button onClick={()=>setReminderModal({group:true,players:todayItems,time:"Today"})}
-                  style={{background:`${C.silver}12`,border:`1px solid ${C.silver}33`,borderRadius:7,padding:"5px 14px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body,letterSpacing:1}}>
-                  📧 Send All
-                </button>
-              )}
-              <button onClick={()=>setReminderModal("group")}
-                style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"5px 14px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body,letterSpacing:1}}>
-                📧 Group Email
-              </button>
-            </div>
-          </div>
-          {todayItems.length===0?(
-            <div style={{textAlign:"center",padding:"28px",background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,color:C.textDim,fontSize:12,fontFamily:D.body,fontStyle:"italic"}}>No sessions scheduled today</div>
-          ):(()=>{
-            const groups={};
-            todayItems.forEach(s=>{const k=s._time||"x";if(!groups[k])groups[k]={time:s._time,type:s._type,players:[]};groups[k].players.push(s);});
-            return(
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:12}}>
-                {Object.values(groups).map((group,gi)=>(
-                  <div key={gi} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,overflow:"hidden"}}>
-                    <div style={{padding:"10px 16px",borderBottom:`1px solid ${C.cardBorder}`,display:"flex",justifyContent:"space-between",alignItems:"center",background:group.type==="1on1"?"#100e12":"#0e0c10"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <span style={{fontSize:16}}>{group.type==="1on1"?"⚒️":"🔥"}</span>
-                        <div>
-                          <div style={{fontSize:12,fontWeight:600,color:C.white,fontFamily:D.display}}>{group.type==="1on1"?"The Tempering":"The Furnace"}</div>
-                          <div style={{fontSize:9,color:group.type==="1on1"?C.gold:C.red,fontFamily:D.body,letterSpacing:1}}>{group.time} · {group.players.length} player{group.players.length!==1?"s":""}</div>
-                        </div>
-                      </div>
-                      <button onClick={()=>setReminderModal({group:true,players:group.players,time:group.time})} style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:6,padding:"4px 10px",color:C.silver,fontSize:8,cursor:"pointer",fontFamily:D.body}}>📧 Remind</button>
-                    </div>
-                    <div style={{padding:"8px 12px",display:"grid",gap:6}}>
-                      {group.players.map((s,si)=>(
-                        <div key={si} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:"#090705",borderRadius:8,border:`1px solid ${s.status==="confirmed"?C.green+"22":C.cardBorder}`,borderLeft:`3px solid ${s.status==="confirmed"?C.green:s.status==="pending"?C.gold:C.silverDark}`}}>
-                          <div style={{flex:1,minWidth:0}}>
-                            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
-                              <span style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display}}>{s.name}</span>
-                              <span style={{fontSize:7,padding:"1px 6px",borderRadius:4,background:s.status==="confirmed"?`${C.green}18`:`${C.silver}18`,color:s.status==="confirmed"?C.green:C.silver,fontFamily:D.body}}>{s.status==="confirmed"?"✓":"Pending"}</span>
-                            </div>
-                            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                              {s.position&&<span style={{fontSize:9,color:C.silver,fontFamily:D.body}}>⚽ {s.position}</span>}
-                              {s.phone&&<span style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{s.phone}</span>}
-                              {s.email&&<span style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{s.email}</span>}
-                            </div>
-                            {s.coachNote&&<div style={{fontSize:8,color:C.silver,marginTop:3,fontFamily:D.body,fontStyle:"italic"}}>📝 {s.coachNote}</div>}
-                          </div>
-                          <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0,marginLeft:8}}>
-                            <button onClick={()=>setReminderModal(s)} style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:5,padding:"4px 7px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📧</button>
-                            <button onClick={()=>{setActionItem(s);setNoteId(s.id);setNoteText(s.coachNote||"");setNoteColl(s._coll||"bookings");setCancelConfirm(false);}} style={{background:s.coachNote?`${C.silver}12`:"transparent",border:`1px solid ${s.coachNote?C.gold+"44":C.cardBorder}`,borderRadius:5,padding:"4px 7px",color:s.coachNote?C.gold:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📝</button>
-                            {s.status==="pending"&&<button onClick={()=>confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings")} style={{background:`${C.green}18`,border:`1px solid ${C.green}44`,borderRadius:5,padding:"4px 10px",color:C.green,fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓</button>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-        </div>
-
-        </> /* end calendar tab */}
-
-        {/* ── DROP MODAL ── */}
-        {dropTarget&&(()=>{
-          const b=dropTarget.item;
-          const targetDate=dropTarget.date;
-          const isPending=b._type==="pending";
-          const dayOfWeek=targetDate.getDay();
-          const groupSched=DAY_SCHEDULE[dayOfWeek];
-          const privSched=PRIVATE_SCHEDULE[dayOfWeek];
-          const presetSlots=[];
-          if(groupSched?.sessions) groupSched.sessions.forEach(s=>presetSlots.push({...s,_slotType:"group",label:`🔥 ${s.time}`,sub:s.ageGroup||"Group"}));
-          if(privSched?.slots)     privSched.slots.forEach(s=>presetSlots.push({...s,_slotType:"1on1",label:`⚒️ ${s.time}`,sub:"The Tempering"}));
-
-          return(
-            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>setDropTarget(null)}>
-              <div style={{background:"#111",border:`1px solid ${C.silver}44`,borderRadius:16,padding:"24px",maxWidth:440,width:"100%",maxHeight:"85vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
-
-                {/* Header */}
-                <div style={{fontSize:8,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>{isPending?"Schedule Client":"Move Session"}</div>
-                <div style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:2}}>{b.name}</div>
-                <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginBottom:isPending&&b.note?4:14}}>→ {fmtDate(targetDate)} · {targetDate.toLocaleDateString("en-US",{weekday:"long"})}</div>
-                {isPending&&b.note&&<div style={{fontSize:9,color:C.silver,fontFamily:D.body,marginBottom:14,fontStyle:"italic"}}>Note: {b.note}</div>}
-
-                {/* Custom time input — always shown first */}
-                <div style={{marginBottom:16}}>
-                  <div style={{fontSize:8,letterSpacing:2,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:7}}>Type the confirmed time</div>
-                  <input
-                    placeholder="e.g. 4:30 PM – 5:45 PM"
-                    value={dropCustomTime||""}
-                    onChange={e=>{setDropCustomTime(e.target.value);setDropSess(null);}}
-                    style={{...IS,width:"100%",fontSize:13,letterSpacing:0.5}}
-                    autoFocus
-                  />
-                  {dropCustomTime&&dropCustomTime.trim().length>2&&(
-                    <div style={{marginTop:6,fontSize:9,color:C.green,fontFamily:D.body}}>✓ Will be scheduled at: {dropCustomTime}</div>
-                  )}
-                </div>
-
-                {/* OR divider */}
-                {presetSlots.length>0&&(
-                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-                    <div style={{flex:1,height:1,background:C.cardBorder}}/>
-                    <span style={{fontSize:9,color:C.textDim,fontFamily:D.body,letterSpacing:2,textTransform:"uppercase"}}>or pick a preset slot</span>
-                    <div style={{flex:1,height:1,background:C.cardBorder}}/>
-                  </div>
-                )}
-
-                {/* Preset slots */}
-                {presetSlots.length>0&&(
-                  <div style={{display:"grid",gap:6,marginBottom:16}}>
-                    {presetSlots.map((slot,si)=>{
-                      const sel=dropSess?.id===slot.id&&dropSess?._slotType===slot._slotType;
-                      const isGroup=slot._slotType==="group";
-                      const color=isGroup?C.red:C.gold;
-                      return(
-                        <button key={si} onClick={()=>{setDropSess(slot);setDropCustomTime("");}}
-                          style={{background:sel?isGroup?"rgba(204,34,34,0.12)":"rgba(196,168,76,0.12)":"#0d0d0d",border:sel?`1px solid ${color}`:`1px solid #222`,borderRadius:9,padding:"10px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.15s"}}>
-                          <div>
-                            <div style={{fontSize:12,fontWeight:600,color:sel?color:C.white,fontFamily:D.display}}>{slot.label}</div>
-                            <div style={{fontSize:9,color:sel?color:C.textDim,fontFamily:D.body,marginTop:1}}>{slot.sub}</div>
-                          </div>
-                          {sel&&<span style={{color,fontSize:14}}>✓</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Action buttons */}
-                <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  {/* Confirm with time */}
-                  <div style={{display:"flex",gap:8}}>
-                    <button
-                      disabled={(!dropSess&&(!dropCustomTime||!dropCustomTime.trim()))||moving}
-                      onClick={async()=>{
-                        if(!dropTarget) return;
-                        const{item:b,date:targetDate}=dropTarget;
-                        const newDK=dKey(targetDate);
-                        const newDL=fmtDate(targetDate);
-                        const timeToUse=dropCustomTime?.trim()||dropSess?.time||"";
-                        const slotType=dropSess?._slotType||(dropCustomTime?"custom":"group");
-                        setMoving(true);
-                        try{
-                          const sched=DAY_SCHEDULE[targetDate.getDay()]||{};
-                          if(b._type==="pending"){
-                            await addDoc(collection(db,"bookings"),{
-                              name:b.name,email:b.contact||"",phone:b.contact||"",
-                              status:"pending",dateKey:newDK,dateLabel:newDL,
-                              sessId:dropSess?.id||"custom",sessTime:timeToUse,
-                              ageGroup:dropSess?.ageGroup||"",ageTag:dropSess?.ageTag||"",
-                              skill:slotType==="1on1"?"The Tempering":(sched.skill||"The Furnace"),
-                              skillIcon:slotType==="1on1"?"⚒️":(sched.skillIcon||"🔥"),
-                              count:1,total:slotType==="1on1"?65:55,
-                              notes:b.note||"",createdAt:new Date().toISOString(),fromHolding:true,
-                            });
-                            if(b.id) await updateDoc(doc(db,"pending",b.id),{status:"scheduled"});
-                          } else if(b._type==="1on1"){
-                            await updateDoc(doc(db,"inquiries",b.id),{
-                              dateKey:newDK,dateLabel:newDL,
-                              slotId:dropSess?.id||"custom",slotTime:timeToUse,
-                              requestType:null,requestNote:null,movedAt:new Date().toISOString(),
-                            });
-                          } else {
-                            await updateDoc(doc(db,"bookings",b.id),{
-                              dateKey:newDK,dateLabel:newDL,
-                              sessId:dropSess?.id||"custom",sessTime:timeToUse,
-                              ageGroup:dropSess?.ageGroup||b.ageGroup||"",
-                              ageTag:dropSess?.ageTag||b.ageTag||"",
-                              skill:dropSess?._slotType==="1on1"?"The Tempering":(sched.skill||b.skill||"The Furnace"),
-                              skillIcon:dropSess?._slotType==="1on1"?"⚒️":(sched.skillIcon||b.skillIcon||"🔥"),
-                              requestType:null,requestNote:null,movedAt:new Date().toISOString(),
-                            });
-                          }
-                          try{await callEmailAPI({...b,dateLabel:newDL,sessTime:timeToUse,skill:slotType==="1on1"?"The Tempering":(sched.skill||"La Forja"),skillIcon:slotType==="1on1"?"⚒️":"🔥"},"reschedule");}catch(e){}
-                        }finally{setMoving(false);setDropTarget(null);setDropSess(null);setDropCustomTime("");}
-                      }}
-                      style={{flex:1,background:(dropSess||(dropCustomTime?.trim().length>2))?`linear-gradient(135deg,${C.silver},${C.silverDim})`:"#1a1a1a",border:"none",borderRadius:9,padding:"12px",color:(dropSess||(dropCustomTime?.trim().length>2))?"#0a0a0a":C.silverDark,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:(dropSess||(dropCustomTime?.trim().length>2))?"pointer":"not-allowed",fontFamily:D.body,fontWeight:700}}
-                    >
-                      {moving?"Scheduling…":"Confirm & Schedule"}
-                    </button>
-                    <button onClick={()=>{setDropTarget(null);setDropCustomTime("");}} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:9,padding:"12px 14px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
-                  </div>
-
-                  {/* Place as tentative */}
-                  <button disabled={moving} onClick={async()=>{
-                    if(!dropTarget) return;
-                    const{item:b,date:targetDate}=dropTarget;
-                    const newDK=dKey(targetDate);
-                    const newDL=fmtDate(targetDate);
-                    setMoving(true);
-                    try{
-                      if(b._type==="pending"){
-                        await addDoc(collection(db,"bookings"),{
-                          name:b.name,email:b.contact||"",phone:b.contact||"",
-                          status:"tentative",dateKey:newDK,dateLabel:newDL,
-                          sessId:"tbd",sessTime:"Time TBD",ageGroup:"",ageTag:"",
-                          skill:"La Forja",skillIcon:"⏰",count:1,total:0,
-                          notes:b.note||"",createdAt:new Date().toISOString(),fromHolding:true,
-                        });
-                        if(b.id) await updateDoc(doc(db,"pending",b.id),{status:"scheduled"});
-                      } else {
-                        await updateDoc(doc(db,b._coll||"bookings",b.id),{
-                          dateKey:newDK,dateLabel:newDL,
-                          sessId:"tbd",sessTime:"Time TBD",
-                          status:"tentative",requestType:null,requestNote:null,
-                          movedAt:new Date().toISOString(),
-                        });
-                      }
-                    }finally{setMoving(false);setDropTarget(null);setDropSess(null);setDropCustomTime("");}
-                  }} style={{background:"transparent",border:`1px dashed ${C.silver}33`,borderRadius:9,padding:"9px",color:C.textDim,fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,textAlign:"center"}}>
-                    ⏰ Place as Tentative — work out time later
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* ── SESSION ACTION MODAL ── */}
-        {(noteId||actionItem)&&(()=>{
-          const item = actionItem || allItems.find(x=>x.id===noteId);
-          if(!item) return null;
-          const coll = item._coll||noteColl||"bookings";
-          const close = ()=>{ setNoteId(null); setActionItem(null); setCancelConfirm(false); };
-          return(
-            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={close}>
-              <div style={{background:"#111",border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"22px",maxWidth:420,width:"100%"}} onClick={e=>e.stopPropagation()}>
-
-                {/* Header */}
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
-                  <div>
-                    <div style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:2}}>{item.name}</div>
-                    <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{item.dateLabel} · {item._time||item.sessTime||item.slotTime||"—"}</div>
-                    <div style={{fontSize:9,color:item.status==="confirmed"?C.green:C.silver,fontFamily:D.body,marginTop:2,letterSpacing:1,textTransform:"uppercase"}}>{item.status}</div>
-                  </div>
-                  <button onClick={close} style={{background:"transparent",border:"none",color:C.textDim,fontSize:18,cursor:"pointer",padding:"0 4px",lineHeight:1}}>✕</button>
-                </div>
-
-                {/* Coach Note */}
-                <div style={{marginBottom:16}}>
-                  <div style={{fontSize:8,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Coach Note</div>
-                  <textarea value={noteText} onChange={e=>setNoteText(e.target.value)} placeholder="Session notes, player focus, changes..." rows={3} style={{...IS,width:"100%",fontSize:12,resize:"vertical"}} autoFocus/>
-                  <div style={{display:"flex",gap:6,marginTop:8}}>
-                    <button onClick={async()=>{await updateDoc(doc(db,coll,item.id),{coachNote:noteText,coachNoteUpdated:new Date().toISOString()});close();}} style={{flex:1,background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,border:"none",borderRadius:8,padding:"10px",color:"#0a0a0a",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save Note</button>
-                    {noteText&&<button onClick={async()=>{await updateDoc(doc(db,coll,item.id),{coachNote:"",coachNoteUpdated:new Date().toISOString()});close();}} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"10px 12px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div style={{borderTop:`1px solid ${C.cardBorder}`,marginBottom:14}}/>
-
-                {/* Actions */}
-                <div style={{fontSize:8,letterSpacing:3,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Session Actions</div>
-
-                {/* Unconfirm — only if confirmed */}
-                {item.status==="confirmed"&&(
-                  <button onClick={async()=>{
-                    await updateDoc(doc(db,coll,item.id),{status:"pending",unconfirmedAt:new Date().toISOString()});
-                    close();
-                  }} style={{display:"block",width:"100%",background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:9,padding:"10px",color:C.silver,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,marginBottom:8,textAlign:"center"}}>
-                    ↩ Unconfirm (move back to pending)
-                  </button>
-                )}
-
-                {/* Cancel session */}
-                {!cancelConfirm?(
-                  <button onClick={()=>setCancelConfirm(true)} style={{display:"block",width:"100%",background:"transparent",border:`1px solid ${C.redDim}44`,borderRadius:9,padding:"10px",color:C.redDim,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,marginBottom:8,textAlign:"center"}}>
-                    ✕ Cancel Session
-                  </button>
-                ):(
-                  <div style={{background:`${C.red}08`,border:`1px solid ${C.red}33`,borderRadius:9,padding:"12px 14px",marginBottom:8}}>
-                    <div style={{fontSize:11,color:C.white,fontFamily:D.body,marginBottom:10}}>Cancel this session for <strong>{item.name}</strong>? This cannot be undone.</div>
-                    <div style={{display:"flex",gap:8}}>
-                      <button onClick={async()=>{
-                        await updateDoc(doc(db,coll,item.id),{status:"cancelled",cancelledAt:new Date().toISOString()});
-                        if(item.calendarEventId) await deleteCalendarEvent(item.calendarEventId);
-                        if(item.email) try{ await callEmailAPI({...item,sessTime:item._time||item.sessTime||item.slotTime},"reschedule"); }catch(e){}
-                        close();
-                      }} style={{flex:1,background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",borderRadius:7,padding:"9px",color:C.white,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>Yes, Cancel</button>
-                      <button onClick={()=>setCancelConfirm(false)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"9px 14px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Keep It</button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Remove entirely */}
-                <button onClick={async()=>{
-                  if(!window.confirm(`Permanently delete ${item.name}'s booking? This cannot be undone.`)) return;
-                  await deleteDoc(doc(db,coll,item.id));
-                  close();
-                }} style={{display:"block",width:"100%",background:"transparent",border:"none",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body,padding:"6px",textAlign:"center",textDecoration:"underline"}}>
-                  Remove from records entirely
-                </button>
-
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* ── REMINDER MODAL ── */}
-        {reminderModal&&(()=>{
-          const isGroup=reminderModal==="group"||reminderModal?.group;
-          const recipients=isGroup
-            ? (reminderModal?.players||[...(bookings||[]),...(inquiries||[])].filter(x=>x.status==="confirmed"&&x.dateKey>=todayKey))
-            : [reminderModal];
-          const defaultMsg=isGroup
-            ? `Hi! This is a reminder for your upcoming La Forja session. Please confirm you'll be there by replying to this message. See you on the field! — Coach Carlos`
-            : `Hi ${reminderModal?.name?.split(" ")[0]||""}! Reminder for your La Forja session on ${reminderModal?.dateLabel||""} at ${reminderModal?._time||reminderModal?.sessTime||""}. Looking forward to it! — Coach Carlos`;
-
-          return(
-            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>setReminderModal(null)}>
-              <div style={{background:"#111",border:`1px solid ${C.silver}44`,borderRadius:16,padding:"24px",maxWidth:460,width:"100%",maxHeight:"80vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
-                <div style={{fontSize:8,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>{isGroup?"Group Reminder":"Individual Reminder"}</div>
-                <div style={{fontSize:15,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:3}}>{isGroup?`${recipients.length} clients`:(reminderModal?.name||"")}</div>
-                {!isGroup&&<div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginBottom:12}}>{reminderModal?.dateLabel} · {reminderModal?._time||reminderModal?.sessTime}</div>}
-                {isGroup&&(
-                  <div style={{marginBottom:12,maxHeight:120,overflowY:"auto"}}>
-                    {recipients.map((r,i)=>(
-                      <div key={i} style={{fontSize:9,color:C.textDim,fontFamily:D.body,padding:"2px 0"}}>{r.name} — {r.dateLabel}</div>
-                    ))}
-                  </div>
-                )}
-                <div style={{marginBottom:12}}>
-                  <div style={{fontSize:8,letterSpacing:2,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:5}}>Message</div>
-                  <textarea
-                    value={reminderMsg||defaultMsg}
-                    onChange={e=>setReminderMsg(e.target.value)}
-                    rows={4}
-                    style={{...IS,width:"100%",fontSize:11,resize:"vertical"}}
-                  />
-                </div>
-                <div style={{display:"flex",gap:8}}>
-                  <button disabled={sendingReminder} onClick={async()=>{
-                    setSendingReminder(true);
-                    try{
-                      const msg=reminderMsg||defaultMsg;
-                      for(const r of recipients){
-                        if(!r.email){ console.log("No email for",r.name); continue; }
-                        await callEmailAPI({
-                          ...r,
-                          message:msg,
-                          sessTime:r.sessTime||r.slotTime||r._time||"",
-                          dateLabel:r.dateLabel||r.dateKey||"",
-                          skill:r.skill||"La Forja Session",
-                          skillIcon:r.skillIcon||"🔥",
-                          count:r.count||1,
-                          total:r.total||r.price||0,
-                          ageGroup:"U11+",
-                          ageTag:"u11+",
-                        },"reminder");
-                      }
-                    }finally{setSendingReminder(false);setReminderModal(null);setReminderMsg("");}
-                  }} style={{flex:1,background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,border:"none",borderRadius:9,padding:"12px",color:"#0a0a0a",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:sendingReminder?"not-allowed":"pointer",fontFamily:D.body,fontWeight:700,opacity:sendingReminder?0.6:1}}>
-                    {sendingReminder?"Sending…":`Send to ${recipients.length} client${recipients.length!==1?"s":""}`}
-                  </button>
-                  <button onClick={()=>{setReminderModal(null);setReminderMsg("");}} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:9,padding:"12px 14px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-
-      </div>
-    </div>
-  );
-}
-
-// ── REVIEWS MODERATION (Dashboard) ───────────────────────
-// ── FINANCE TAB ────────────────────────────────────────────
-export function FinanceTab({bookings,inquiries}){
-  const IRS_RATE = 0.67;
-  const [finTab,setFinTab] = useState("overview");
-  const [entries,setEntries] = useState([]);
-  const [mileage,setMileage] = useState([]);
-  const [draws,setDraws]     = useState([]);
-  const [finLoaded,setFinLoaded] = useState(false);
-  const [incForm,setIncForm] = useState(false);
-  const [expForm,setExpForm] = useState(false);
-  const [incF,setIncF] = useState({date:new Date().toISOString().split("T")[0],category:"",description:"",amount:""});
-  const [expF,setExpF] = useState({date:new Date().toISOString().split("T")[0],category:"",description:"",amount:""});
-  const [miF,setMiF]   = useState({date:new Date().toISOString().split("T")[0],from:"Home",to:"Bayview Park",miles:"",purpose:"Training session"});
-  const [drF,setDrF]   = useState({date:new Date().toISOString().split("T")[0],amount:"",note:""});
-  const [incSearch,setIncSearch] = useState("");
-  const [expSearch,setExpSearch] = useState("");
-
-  // Load from Firestore
-  useEffect(()=>{
-    const u1=onSnapshot(collection(db,"finance_entries"),s=>{ setEntries(s.docs.map(d=>({id:d.id,...d.data()}))); });
-    const u2=onSnapshot(collection(db,"finance_mileage"),s=>{ setMileage(s.docs.map(d=>({id:d.id,...d.data()}))); });
-    const u3=onSnapshot(collection(db,"finance_draws"),  s=>{ setDraws(s.docs.map(d=>({id:d.id,...d.data()}))); setFinLoaded(true); });
-    return ()=>{ u1(); u2(); u3(); };
-  },[]);
-
-  // Auto-import Stripe payments from bookings
-  useEffect(()=>{
-    if(!finLoaded) return;
-    (bookings||[]).filter(b=>b.paymentMethod==="stripe"&&b.status==="confirmed"&&b.total>0).forEach(async b=>{
-      const alreadyImported=entries.some(e=>e.stripeBookingId===b.id);
-      if(!alreadyImported){
-        await addDoc(collection(db,"finance_entries"),{
-          type:"income",date:b.dateKey||new Date().toISOString().split("T")[0],
-          category:"Session — Single",description:`${b.name} · ${b.dateLabel||""}`,
-          amount:b.total,stripeBookingId:b.id,auto:true,
-          createdAt:new Date().toISOString(),
-        });
-      }
-    });
-  },[bookings,finLoaded]);
-
-  function fmt(n){ return "$"+(n||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); }
-  function fmtD(d){ try{ return new Date(d+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); }catch(e){ return d; } }
-
-  // Totals
-  const inc   = entries.filter(e=>e.type==="income");
-  const exp   = entries.filter(e=>e.type==="expense");
-  const totalInc  = inc.reduce((s,e)=>s+e.amount,0);
-  const totalExp  = exp.reduce((s,e)=>s+e.amount,0);
-  const totalDraw = draws.reduce((s,d)=>s+d.amount,0);
-  const totalMiles= mileage.reduce((s,m)=>s+m.miles,0);
-  const mileDed   = totalMiles*IRS_RATE;
-  const netProfit = totalInc-totalExp;
-  const taxRes    = Math.max(0,netProfit)*0.28;
-  const avail     = netProfit-totalDraw-taxRes;
-  const now       = new Date();
-  const mInc = inc.filter(e=>{ const d=new Date(e.date+"T12:00:00"); return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear(); }).reduce((s,e)=>s+e.amount,0);
-  const mExp = exp.filter(e=>{ const d=new Date(e.date+"T12:00:00"); return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear(); }).reduce((s,e)=>s+e.amount,0);
-
-  const INC_CATS = ["Session — Single","Session — Package","1-on-1","Other Income"];
-  const EXP_CATS = ["Insurance","Equipment","Website / Tech","Field / Permit","Marketing","Education / Certifications","Other Expense"];
-
-  async function saveInc(){
-    if(!incF.category||!incF.amount||!incF.date) return;
-    await addDoc(collection(db,"finance_entries"),{type:"income",date:incF.date,category:incF.category,description:incF.description,amount:parseFloat(incF.amount),createdAt:new Date().toISOString()});
-    setIncF({date:now.toISOString().split("T")[0],category:"",description:"",amount:""});
-    setIncForm(false);
-  }
-  async function saveExp(){
-    if(!expF.category||!expF.amount||!expF.date) return;
-    await addDoc(collection(db,"finance_entries"),{type:"expense",date:expF.date,category:expF.category,description:expF.description,amount:parseFloat(expF.amount),createdAt:new Date().toISOString()});
-    setExpF({date:now.toISOString().split("T")[0],category:"",description:"",amount:""});
-    setExpForm(false);
-  }
-  async function saveMileage(){
-    if(!miF.miles||!miF.date) return;
-    await addDoc(collection(db,"finance_mileage"),{...miF,miles:parseFloat(miF.miles),createdAt:new Date().toISOString()});
-    setMiF(f=>({...f,miles:""}));
-  }
-  async function saveDraw(){
-    if(!drF.amount||!drF.date) return;
-    await addDoc(collection(db,"finance_draws"),{date:drF.date,amount:parseFloat(drF.amount),note:drF.note,createdAt:new Date().toISOString()});
-    setDrF({date:now.toISOString().split("T")[0],amount:"",note:""});
-  }
-  async function delEntry(id){ await deleteDoc(doc(db,"finance_entries",id)); }
-  async function delMileage(id){ await deleteDoc(doc(db,"finance_mileage",id)); }
-  async function delDraw(id){ await deleteDoc(doc(db,"finance_draws",id)); }
-
-  const finTabs=[["overview","Overview"],["income","Income"],["expenses","Expenses"],["mileage","Mileage"],["taxes","Taxes"],["draws","Draws"]];
-
-  const tabBtn=(key,lbl)=>(
-    <button key={key} onClick={()=>setFinTab(key)} style={{background:"none",border:"none",borderBottom:`2px solid ${finTab===key?C.gold:"transparent"}`,color:finTab===key?C.gold:C.textDim,padding:"6px 14px",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:finTab===key?600:400,whiteSpace:"nowrap"}}>
-      {lbl}
-    </button>
-  );
-
-  return(
-    <div style={{paddingBottom:40}}>
-      {/* Sub-nav */}
-      <div style={{display:"flex",gap:0,marginBottom:20,borderBottom:`1px solid ${C.cardBorder}`,overflowX:"auto"}}>
-        {finTabs.map(([k,l])=>tabBtn(k,l))}
-      </div>
-
-      {/* ── OVERVIEW ── */}
-      {finTab==="overview"&&(
-        <div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
-            {[
-              {label:"Total Revenue",value:fmt(totalInc),color:C.green},
-              {label:"Net Profit",value:fmt(netProfit),color:netProfit>=0?C.gold:C.red},
-              {label:"Tax Reserve 28%",value:fmt(taxRes),color:C.silver},
-              {label:"Available to Draw",value:fmt(avail),color:avail>=0?C.gold:C.red},
-            ].map((s,i)=>(
-              <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"14px 16px"}}>
-                <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",marginBottom:6}}>{s.label}</div>
-                <div style={{fontSize:22,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:3}}>{s.value}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>
-            {[
-              {label:"This Month Income",value:fmt(mInc),color:C.green},
-              {label:"This Month Expenses",value:fmt(mExp),color:C.red},
-              {label:"Mileage Deduction",value:fmt(mileDed),color:C.silver,sub:`${totalMiles.toFixed(1)} mi @ $${IRS_RATE}`},
-            ].map((s,i)=>(
-              <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"14px 16px"}}>
-                <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",marginBottom:6}}>{s.label}</div>
-                <div style={{fontSize:20,fontWeight:700,color:s.color,fontFamily:D.display}}>{s.value}</div>
-                {s.sub&&<div style={{fontSize:9,color:C.textDim,marginTop:3}}>{s.sub}</div>}
-              </div>
-            ))}
-          </div>
-          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"14px 16px"}}>
-            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Recent Entries</div>
-            {[...entries,...draws.map(d=>({...d,type:"draw"}))].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,8).map((e,i,arr)=>(
-              <div key={e.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:i<arr.length-1?`1px solid ${C.cardBorder}`:"none"}}>
-                <div>
-                  <div style={{fontSize:11,fontWeight:500,color:C.white,marginBottom:1}}>{e.description||e.category||"Draw"}{e.auto?<span style={{fontSize:7,color:C.silver,marginLeft:6,letterSpacing:1}}>AUTO</span>:null}</div>
-                  <div style={{fontSize:9,color:C.textDim}}>{fmtD(e.date)} · {e.category||"Owner's Draw"}</div>
-                </div>
-                <div style={{fontSize:13,fontWeight:600,color:e.type==="income"?C.green:C.red,fontFamily:D.display}}>{e.type==="income"?"+":"-"}{fmt(e.amount)}</div>
-              </div>
-            ))}
-            {entries.length===0&&draws.length===0&&<div style={{fontSize:11,color:C.textDim,fontStyle:"italic"}}>No entries yet</div>}
-          </div>
-        </div>
-      )}
-
-      {/* ── INCOME ── */}
-      {finTab==="income"&&(
-        <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-            <div>
-              <div style={{fontSize:9,letterSpacing:3,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>Total Income</div>
-              <div style={{fontSize:24,fontWeight:700,color:C.green,fontFamily:D.display}}>{fmt(totalInc)}</div>
-            </div>
-            <button onClick={()=>setIncForm(v=>!v)} style={{background:`${C.green}12`,border:`1px solid ${C.green}33`,borderRadius:8,padding:"7px 16px",color:C.green,fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>+ Add Income</button>
-          </div>
-          {incForm&&(
-            <div style={{background:C.card,border:`1px solid ${C.green}22`,borderRadius:10,padding:"16px",marginBottom:14}}>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,marginBottom:10}}>
-                {[
-                  {label:"Date",el:<input type="date" value={incF.date} onChange={e=>setIncF(f=>({...f,date:e.target.value}))} style={{...IS}}/>},
-                  {label:"Category",el:<select value={incF.category} onChange={e=>setIncF(f=>({...f,category:e.target.value}))} style={{...IS}}><option value="">Select…</option>{INC_CATS.map(c=><option key={c}>{c}</option>)}</select>},
-                  {label:"Description",el:<input placeholder="e.g. John Smith · Tue 7/22" value={incF.description} onChange={e=>setIncF(f=>({...f,description:e.target.value}))} style={{...IS}}/>},
-                  {label:"Amount ($)",el:<input type="number" placeholder="0.00" min="0" step="0.01" value={incF.amount} onChange={e=>setIncF(f=>({...f,amount:e.target.value}))} style={{...IS}} onKeyDown={e=>e.key==="Enter"&&saveInc()}/>},
-                ].map((f,i)=>(
-                  <div key={i}><div style={{fontSize:8,color:C.textDim,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>{f.label}</div>{f.el}</div>
-                ))}
-              </div>
-              <button onClick={saveInc} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:7,padding:"8px 20px",color:"#0a0a0a",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save</button>
-              <button onClick={()=>setIncForm(false)} style={{marginLeft:8,background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"8px 12px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
-            </div>
-          )}
-          <input placeholder="Search…" value={incSearch} onChange={e=>setIncSearch(e.target.value)} style={{...IS,width:200,marginBottom:10,fontSize:11}}/>
-          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,overflow:"hidden"}}>
-            <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 90px 40px",background:"#0c0c0e",padding:"7px 14px",borderBottom:`1px solid ${C.cardBorder}`}}>
-              {["Date","Category","Description","Amount",""].map((h,i)=><div key={i} style={{fontSize:7,letterSpacing:2,color:C.textDim,textTransform:"uppercase"}}>{h}</div>)}
-            </div>
-            {inc.filter(e=>!incSearch||e.description?.toLowerCase().includes(incSearch.toLowerCase())||e.category.toLowerCase().includes(incSearch.toLowerCase())).sort((a,b)=>new Date(b.date)-new Date(a.date)).map((e,i,arr)=>(
-              <div key={e.id} style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 90px 40px",padding:"9px 14px",borderBottom:i<arr.length-1?`1px solid ${C.cardBorder}`:"none",alignItems:"center"}}>
-                <div style={{fontSize:10,color:C.textDim}}>{fmtD(e.date)}</div>
-                <div style={{fontSize:11,color:C.white,fontWeight:500}}>{e.category}{e.auto&&<span style={{fontSize:7,color:C.silver,marginLeft:5,letterSpacing:1}}>AUTO</span>}</div>
-                <div style={{fontSize:10,color:C.textDim}}>{e.description||"—"}</div>
-                <div style={{fontSize:13,fontWeight:600,color:C.green,fontFamily:D.display}}>{fmt(e.amount)}</div>
-                {!e.auto&&<button onClick={()=>delEntry(e.id)} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:4,padding:"2px 6px",color:C.redDim,fontSize:8,cursor:"pointer"}}>✕</button>}
-                {e.auto&&<span style={{fontSize:7,color:C.textDim}}>auto</span>}
-              </div>
-            ))}
-            {inc.length===0&&<div style={{padding:"24px",textAlign:"center",fontSize:11,color:C.textDim,fontStyle:"italic"}}>No income yet</div>}
-          </div>
-        </div>
-      )}
-
-      {/* ── EXPENSES ── */}
-      {finTab==="expenses"&&(
-        <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-            <div>
-              <div style={{fontSize:9,letterSpacing:3,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>Total Expenses</div>
-              <div style={{fontSize:24,fontWeight:700,color:C.red,fontFamily:D.display}}>{fmt(totalExp)}</div>
-            </div>
-            <button onClick={()=>setExpForm(v=>!v)} style={{background:`${C.red}12`,border:`1px solid ${C.red}33`,borderRadius:8,padding:"7px 16px",color:C.red,fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>+ Add Expense</button>
-          </div>
-          {expForm&&(
-            <div style={{background:C.card,border:`1px solid ${C.red}22`,borderRadius:10,padding:"16px",marginBottom:14}}>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,marginBottom:10}}>
-                {[
-                  {label:"Date",el:<input type="date" value={expF.date} onChange={e=>setExpF(f=>({...f,date:e.target.value}))} style={{...IS}}/>},
-                  {label:"Category",el:<select value={expF.category} onChange={e=>setExpF(f=>({...f,category:e.target.value}))} style={{...IS}}><option value="">Select…</option>{EXP_CATS.map(c=><option key={c}>{c}</option>)}</select>},
-                  {label:"Description",el:<input placeholder="Optional note" value={expF.description} onChange={e=>setExpF(f=>({...f,description:e.target.value}))} style={{...IS}}/>},
-                  {label:"Amount ($)",el:<input type="number" placeholder="0.00" min="0" step="0.01" value={expF.amount} onChange={e=>setExpF(f=>({...f,amount:e.target.value}))} style={{...IS}} onKeyDown={e=>e.key==="Enter"&&saveExp()}/>},
-                ].map((f,i)=>(
-                  <div key={i}><div style={{fontSize:8,color:C.textDim,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>{f.label}</div>{f.el}</div>
-                ))}
-              </div>
-              <button onClick={saveExp} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",borderRadius:7,padding:"8px 20px",color:C.white,fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save</button>
-              <button onClick={()=>setExpForm(false)} style={{marginLeft:8,background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"8px 12px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
-            </div>
-          )}
-          <input placeholder="Search…" value={expSearch} onChange={e=>setExpSearch(e.target.value)} style={{...IS,width:200,marginBottom:10,fontSize:11}}/>
-          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,overflow:"hidden"}}>
-            <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 90px 40px",background:"#0c0c0e",padding:"7px 14px",borderBottom:`1px solid ${C.cardBorder}`}}>
-              {["Date","Category","Description","Amount",""].map((h,i)=><div key={i} style={{fontSize:7,letterSpacing:2,color:C.textDim,textTransform:"uppercase"}}>{h}</div>)}
-            </div>
-            {exp.filter(e=>!expSearch||e.description?.toLowerCase().includes(expSearch.toLowerCase())||e.category.toLowerCase().includes(expSearch.toLowerCase())).sort((a,b)=>new Date(b.date)-new Date(a.date)).map((e,i,arr)=>(
-              <div key={e.id} style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 90px 40px",padding:"9px 14px",borderBottom:i<arr.length-1?`1px solid ${C.cardBorder}`:"none",alignItems:"center"}}>
-                <div style={{fontSize:10,color:C.textDim}}>{fmtD(e.date)}</div>
-                <div style={{fontSize:11,color:C.white,fontWeight:500}}>{e.category}</div>
-                <div style={{fontSize:10,color:C.textDim}}>{e.description||"—"}</div>
-                <div style={{fontSize:13,fontWeight:600,color:C.red,fontFamily:D.display}}>{fmt(e.amount)}</div>
-                <button onClick={()=>delEntry(e.id)} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:4,padding:"2px 6px",color:C.redDim,fontSize:8,cursor:"pointer"}}>✕</button>
-              </div>
-            ))}
-            {exp.length===0&&<div style={{padding:"24px",textAlign:"center",fontSize:11,color:C.textDim,fontStyle:"italic"}}>No expenses yet</div>}
-          </div>
-        </div>
-      )}
-
-      {/* ── MILEAGE ── */}
-      {finTab==="mileage"&&(
-        <div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>
-            {[
-              {label:"Total Miles",value:totalMiles.toFixed(1)+" mi",color:C.silver},
-              {label:"IRS Rate 2024",value:"$"+IRS_RATE+"/mile",color:C.silver},
-              {label:"Deduction",value:fmt(mileDed),color:C.green},
-            ].map((s,i)=>(
-              <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"14px 16px",textAlign:"center"}}>
-                <div style={{fontSize:22,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:5}}>{s.value}</div>
-                <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase"}}>{s.label}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{background:C.card,border:`1px solid ${C.silver}18`,borderRadius:10,padding:"16px",marginBottom:14}}>
-            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Log a Trip</div>
-            <div style={{display:"grid",gridTemplateColumns:"110px 1fr 1fr 80px 1fr",gap:8,marginBottom:10}}>
-              {[
-                {label:"Date",el:<input type="date" value={miF.date} onChange={e=>setMiF(f=>({...f,date:e.target.value}))} style={{...IS}}/>},
-                {label:"From",el:<input value={miF.from} onChange={e=>setMiF(f=>({...f,from:e.target.value}))} style={{...IS}}/>},
-                {label:"To",el:<input value={miF.to} onChange={e=>setMiF(f=>({...f,to:e.target.value}))} style={{...IS}}/>},
-                {label:"Miles",el:<input type="number" value={miF.miles} onChange={e=>setMiF(f=>({...f,miles:e.target.value}))} placeholder="0.0" min="0" step="0.1" style={{...IS}} onKeyDown={e=>e.key==="Enter"&&saveMileage()}/>},
-                {label:"Purpose",el:<input value={miF.purpose} onChange={e=>setMiF(f=>({...f,purpose:e.target.value}))} style={{...IS}}/>},
-              ].map((f,i)=>(
-                <div key={i}><div style={{fontSize:8,color:C.textDim,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>{f.label}</div>{f.el}</div>
-              ))}
-            </div>
-            <button onClick={saveMileage} style={{background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,border:"none",borderRadius:7,padding:"8px 20px",color:"#0a0a0a",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Log Trip</button>
-          </div>
-          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,overflow:"hidden"}}>
-            <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 70px 80px 30px",background:"#0c0c0e",padding:"7px 14px",borderBottom:`1px solid ${C.cardBorder}`}}>
-              {["Date","From","To / Purpose","Miles","Deduction",""].map((h,i)=><div key={i} style={{fontSize:7,letterSpacing:2,color:C.textDim,textTransform:"uppercase"}}>{h}</div>)}
-            </div>
-            {[...mileage].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((m,i,arr)=>(
-              <div key={m.id} style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 70px 80px 30px",padding:"9px 14px",borderBottom:i<arr.length-1?`1px solid ${C.cardBorder}`:"none",alignItems:"center"}}>
-                <div style={{fontSize:10,color:C.textDim}}>{fmtD(m.date)}</div>
-                <div style={{fontSize:11,color:C.white}}>{m.from}</div>
-                <div style={{fontSize:11,color:C.white}}>{m.to}{m.purpose&&<span style={{color:C.textDim}}> · {m.purpose}</span>}</div>
-                <div style={{fontSize:11,color:C.silver,fontFamily:D.display,fontWeight:600}}>{m.miles.toFixed(1)} mi</div>
-                <div style={{fontSize:11,color:C.green,fontFamily:D.display}}>{fmt(m.miles*IRS_RATE)}</div>
-                <button onClick={()=>delMileage(m.id)} style={{background:"transparent",border:"none",color:C.redDim,fontSize:11,cursor:"pointer"}}>✕</button>
-              </div>
-            ))}
-            {mileage.length===0&&<div style={{padding:"24px",textAlign:"center",fontSize:11,color:C.textDim,fontStyle:"italic"}}>No trips logged yet</div>}
-            {mileage.length>0&&(
-              <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 70px 80px 30px",padding:"9px 14px",background:"#0c0c0e",borderTop:`1px solid ${C.cardBorder}`}}>
-                <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",gridColumn:"1/4"}}>Total</div>
-                <div style={{fontSize:13,color:C.silver,fontFamily:D.display,fontWeight:700}}>{totalMiles.toFixed(1)} mi</div>
-                <div style={{fontSize:13,color:C.green,fontFamily:D.display,fontWeight:700}}>{fmt(mileDed)}</div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── TAXES ── */}
-      {finTab==="taxes"&&(
-        <div>
-          <div style={{fontSize:9,letterSpacing:4,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>La Forja</div>
-          <h2 style={{fontSize:22,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:16}}>Tax Estimator — {now.getFullYear()}</h2>
-          <div style={{background:"linear-gradient(135deg,#100c06,#0a0804)",border:`1px solid ${C.silver}22`,borderRadius:12,padding:"20px",marginBottom:16}}>
-            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:14}}>Full Year Estimate</div>
-            {[
-              {label:"Gross Revenue",value:fmt(totalInc),color:C.green},
-              {label:"Business Expenses",value:"-"+fmt(totalExp),color:C.red},
-              {label:"Mileage Deduction",value:"-"+fmt(mileDed),color:C.red},
-              {label:"Taxable Income",value:fmt(Math.max(0,netProfit-mileDed)),color:C.silver},
-            ].map((s,i)=>(
-              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${C.cardBorder}`}}>
-                <span style={{fontSize:11,color:C.textMid}}>{s.label}</span>
-                <span style={{fontSize:13,fontWeight:600,color:s.color,fontFamily:D.display}}>{s.value}</span>
-              </div>
-            ))}
-            <div style={{background:"rgba(0,0,0,0.3)",borderRadius:8,padding:"12px 14px",marginTop:14}}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:11,color:C.textMid}}>Self-Employment Tax (15.3%)</span><span style={{fontSize:12,color:C.silver,fontFamily:D.display}}>{fmt(Math.max(0,netProfit)*0.153)}</span></div>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><span style={{fontSize:11,color:C.textMid}}>Federal Income Tax (est. 12%)</span><span style={{fontSize:12,color:C.silver,fontFamily:D.display}}>{fmt(Math.max(0,netProfit-mileDed)*0.12)}</span></div>
-              <div style={{display:"flex",justifyContent:"space-between",paddingTop:10,borderTop:`1px solid ${C.cardBorder}`}}>
-                <span style={{fontSize:12,fontWeight:600,color:C.white}}>Total Estimate</span>
-                <span style={{fontSize:18,fontWeight:700,color:C.red,fontFamily:D.display}}>{fmt(Math.max(0,netProfit)*0.153+Math.max(0,netProfit-mileDed)*0.12)}</span>
-              </div>
-            </div>
-            <div style={{fontSize:9,color:C.textDim,marginTop:10,fontStyle:"italic"}}>* Estimate only. Talk to a CPA for your actual filing.</div>
-          </div>
-          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 18px"}}>
-            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Quarterly Due Dates</div>
-            {[["Q1 (Jan–Mar)","April 15"],["Q2 (Apr–May)","June 16"],["Q3 (Jun–Aug)","September 15"],["Q4 (Sep–Dec)","January 15"]].map(([q,due],i)=>(
-              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:i<3?`1px solid ${C.cardBorder}`:"none"}}>
-                <span style={{fontSize:11,color:C.textMid}}>{q}</span>
-                <span style={{fontSize:11,color:C.silver,fontFamily:D.display}}>{due}</span>
-              </div>
-            ))}
-            <div style={{marginTop:12,fontSize:10,color:C.textDim,lineHeight:1.7}}>Pay at <strong style={{color:C.white}}>irs.gov/payments</strong> → IRS Direct Pay → "Estimated Tax (1040-ES)"</div>
-          </div>
-        </div>
-      )}
-
-      {/* ── DRAWS ── */}
-      {finTab==="draws"&&(
-        <div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
-            {[
-              {label:"Net Profit",value:fmt(netProfit),color:C.silver},
-              {label:"Tax Reserve",value:fmt(taxRes),color:C.silver},
-              {label:"Total Drawn",value:fmt(totalDraw),color:C.red},
-              {label:"Available",value:fmt(avail),color:avail>=0?C.green:C.red},
-            ].map((s,i)=>(
-              <div key={i} style={{background:C.card,border:`1px solid ${i===3?s.color+"33":C.cardBorder}`,borderRadius:10,padding:"14px 16px"}}>
-                <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",marginBottom:6}}>{s.label}</div>
-                <div style={{fontSize:20,fontWeight:700,color:s.color,fontFamily:D.display}}>{s.value}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{background:C.card,border:`1px solid ${C.silver}18`,borderRadius:10,padding:"16px",marginBottom:14}}>
-            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Record a Draw</div>
-            <div style={{display:"grid",gridTemplateColumns:"120px 1fr 1fr",gap:8,marginBottom:10}}>
-              <div><div style={{fontSize:8,color:C.textDim,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>Date</div><input type="date" value={drF.date} onChange={e=>setDrF(f=>({...f,date:e.target.value}))} style={{...IS}}/></div>
-              <div><div style={{fontSize:8,color:C.textDim,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>Amount ($)</div><input type="number" placeholder="0.00" min="0" step="0.01" value={drF.amount} onChange={e=>setDrF(f=>({...f,amount:e.target.value}))} style={{...IS}} onKeyDown={e=>e.key==="Enter"&&saveDraw()}/></div>
-              <div><div style={{fontSize:8,color:C.textDim,letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>Note</div><input placeholder="Optional" value={drF.note} onChange={e=>setDrF(f=>({...f,note:e.target.value}))} style={{...IS}}/></div>
-            </div>
-            <button onClick={saveDraw} style={{background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,border:"none",borderRadius:7,padding:"8px 20px",color:"#0a0a0a",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Record Draw</button>
-          </div>
-          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,overflow:"hidden"}}>
-            <div style={{padding:"10px 14px",background:"#0c0c0e",borderBottom:`1px solid ${C.cardBorder}`,fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase"}}>Draw History</div>
-            {[...draws].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((d,i,arr)=>(
-              <div key={d.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",borderBottom:i<arr.length-1?`1px solid ${C.cardBorder}`:"none"}}>
-                <div><div style={{fontSize:11,fontWeight:500,color:C.white,marginBottom:1}}>{d.note||"Owner's Draw"}</div><div style={{fontSize:9,color:C.textDim}}>{fmtD(d.date)}</div></div>
-                <div style={{display:"flex",gap:12,alignItems:"center"}}>
-                  <div style={{fontSize:14,fontWeight:600,color:C.silver,fontFamily:D.display}}>{fmt(d.amount)}</div>
-                  <button onClick={()=>delDraw(d.id)} style={{background:"transparent",border:"none",color:C.redDim,fontSize:12,cursor:"pointer"}}>✕</button>
-                </div>
-              </div>
-            ))}
-            {draws.length===0&&<div style={{padding:"24px",textAlign:"center",fontSize:11,color:C.textDim,fontStyle:"italic"}}>No draws recorded yet</div>}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export function ReviewsModeration(){
-  const [reviews,setReviews] = useState([]);
-  const [loaded,setLoaded]   = useState(false);
-  const [filter,setFilter]   = useState("pending");
-
-  useEffect(()=>{
-    const q = query(collection(db,"reviews"),orderBy("createdAt","desc"));
-    const unsub = onSnapshot(q, s=>{
-      setReviews(s.docs.map(d=>({id:d.id,...d.data()})));
-      setLoaded(true);
-    });
-    return unsub;
-  },[]);
-
-  async function setStatus(id,status){
-    await updateDoc(doc(db,"reviews",id),{status});
-  }
-  async function removeReview(id){
-    await deleteDoc(doc(db,"reviews",id));
-  }
-
-  const filtered = filter==="all"?reviews:reviews.filter(r=>r.status===filter);
-  const counts = {
-    pending: reviews.filter(r=>r.status==="pending").length,
-    approved: reviews.filter(r=>r.status==="approved").length,
-    rejected: reviews.filter(r=>r.status==="rejected").length,
-  };
-
-  return(
-    <div>
-      <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap"}}>
-        {[["pending",`Pending (${counts.pending})`],["approved",`Approved (${counts.approved})`],["rejected",`Rejected (${counts.rejected})`],["all","All"]].map(([key,lbl])=>(
-          <button key={key} onClick={()=>setFilter(key)} style={{background:filter===key?"rgba(168,168,188,0.1)":"transparent",border:filter===key?`1px solid ${C.silver}44`:`1px solid ${C.cardBorder}`,color:filter===key?C.silverBright:C.textDim,borderRadius:8,padding:"7px 16px",fontSize:11,letterSpacing:1,cursor:"pointer",fontFamily:D.body}}>
-            {lbl}
-          </button>
-        ))}
-      </div>
-
-      <div style={{display:"grid",gap:10}}>
-        {!loaded?(
-          <div style={{textAlign:"center",padding:40,color:C.textDim,fontSize:12,fontFamily:D.body}}>Loading…</div>
-        ):filtered.length===0?(
-          <div style={{textAlign:"center",padding:40,color:C.textDim,fontSize:12,fontFamily:D.body,background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14}}>
-            No reviews in this category.
-          </div>
-        ):filtered.map(r=>(
-          <div key={r.id} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:`3px solid ${r.status==="approved"?C.green:r.status==="rejected"?C.red:C.silver}`,borderRadius:12,padding:"16px 18px"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8,flexWrap:"wrap",gap:8}}>
-              <div>
-                <span style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display}}>{r.name}</span>
-                {r.email&&<span style={{fontSize:11,color:C.textDim,fontFamily:D.body,marginLeft:8}}>{r.email}</span>}
-              </div>
-              <span style={{color:C.silver,fontSize:13,letterSpacing:1}}>{"★".repeat(r.rating)}{"☆".repeat(5-r.rating)}</span>
-            </div>
-            <div style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.7,marginBottom:12}}>{r.text}</div>
-            <div style={{display:"flex",gap:8}}>
-              {r.status!=="approved"&&(
-                <button onClick={()=>setStatus(r.id,"approved")} style={{background:`linear-gradient(135deg,${C.green},#0e7a47)`,border:"none",borderRadius:8,padding:"7px 14px",color:C.white,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>✓ Approve</button>
-              )}
-              {r.status!=="rejected"&&(
-                <button onClick={()=>setStatus(r.id,"rejected")} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"7px 14px",color:C.textDim,fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Hide</button>
-              )}
-              <button onClick={()=>removeReview(r.id)} style={{background:"transparent",border:`1px solid ${C.redDim}`,borderRadius:8,padding:"7px 14px",color:C.redDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Delete</button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── MOVE BOOKING MODAL — outside transformed div so position:fixed works ── */}
-    </div>
-  );
-}
-
-// ── FIELD POSITION PICKER ────────────────────────────────
-function FieldPositionPicker({selected, onSelect}){
-  // Field layout: rows from attack to defense (top = attack, bottom = defense)
-  // Each row: positions left to right
-  const rows = [
-    [{ id:"ST",  label:"ST" }],
-    [{ id:"LW",  label:"LW" }, { id:"CAM", label:"CAM" }, { id:"RW",  label:"RW" }],
-    [{ id:"CM",  label:"CM" }],
-    [{ id:"LB",  label:"LB" }, { id:"CDM", label:"CDM" }, { id:"RB",  label:"RB" }],
-    [{ id:"CB",  label:"CB" }],
+  const todayKey = dKey(new Date());
+  const now = new Date();
+
+  // Build allSessions combining bookings + inquiries, excluding cancelled
+  const allSessions = [
+    ...(bookings||[]).filter(b=>b.status!=="cancelled"&&b.status!=="removed").map(b=>({...b,_type:"group",_coll:"bookings",_time:b.sessTime})),
+    ...(inquiries||[]).filter(i=>i.status!=="cancelled"&&i.status!=="removed").map(i=>({...i,_type:"1on1",_coll:"inquiries",_time:i.slotTime})),
   ];
 
-  return(
-    <div style={{
-      background:"#1a2e1a",
-      border:"2px solid #2d5a2d",
-      borderRadius:16,
-      padding:"16px 12px",
-      position:"relative",
-      overflow:"hidden",
-      userSelect:"none",
-    }}>
-      {/* Field markings */}
-      <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}} preserveAspectRatio="none">
-        {/* Outer boundary */}
-        <rect x="4%" y="2%" width="92%" height="96%" fill="none" stroke="#ffffff15" strokeWidth="1"/>
-        {/* Center line */}
-        <line x1="4%" y1="50%" x2="96%" y2="50%" stroke="#ffffff15" strokeWidth="1"/>
-        {/* Center circle */}
-        <ellipse cx="50%" cy="50%" rx="14%" ry="10%" fill="none" stroke="#ffffff15" strokeWidth="1"/>
-        {/* Center dot */}
-        <circle cx="50%" cy="50%" r="2" fill="#ffffff20"/>
-        {/* Top penalty box */}
-        <rect x="25%" y="2%" width="50%" height="18%" fill="none" stroke="#ffffff10" strokeWidth="1"/>
-        {/* Bottom penalty box */}
-        <rect x="25%" y="80%" width="50%" height="18%" fill="none" stroke="#ffffff10" strokeWidth="1"/>
-        {/* Top goal box */}
-        <rect x="37%" y="2%" width="26%" height="8%" fill="none" stroke="#ffffff08" strokeWidth="1"/>
-        {/* Bottom goal box */}
-        <rect x="37%" y="90%" width="26%" height="8%" fill="none" stroke="#ffffff08" strokeWidth="1"/>
-        {/* Grass stripes */}
-        {[0,1,2,3,4,5].map(i=>(
-          <rect key={i} x="0" y={`${i*17}%`} width="100%" height="8%" fill={i%2===0?"#1a2e1a":"#1e321e"} style={{pointerEvents:"none"}}/>
-        ))}
-      </svg>
+  // Today's sessions
+  const todaySessions = allSessions.filter(s=>s.dateKey===todayKey).sort((a,b)=>(a._time||"").localeCompare(b._time||""));
 
-      {/* Position buttons laid out top (attack) to bottom (defense) */}
-      <div style={{position:"relative",zIndex:1,display:"flex",flexDirection:"column",gap:10,padding:"4px 0"}}>
-        {/* Attack label */}
-        <div style={{textAlign:"center",fontSize:8,letterSpacing:3,color:"#ffffff25",textTransform:"uppercase",fontFamily:"Montserrat,sans-serif",marginBottom:-4}}>Attack</div>
-        {rows.map((row,ri)=>(
-          <div key={ri} style={{display:"flex",justifyContent:"center",gap:10}}>
-            {row.map(pos=>{
-              const sel = selected===pos.id;
+  // Upcoming (after today)
+  const upcomingSessions = allSessions.filter(s=>s.dateKey>todayKey).sort((a,b)=>a.dateKey.localeCompare(b.dateKey)||(a._time||"").localeCompare(b._time||""));
+
+  // Past sessions
+  const pastSessions = allSessions.filter(s=>s.dateKey<todayKey).sort((a,b)=>b.dateKey.localeCompare(a.dateKey));
+
+  // Stats
+  const pendingCount = allSessions.filter(s=>s.status==="pending").length;
+  const weekStart = new Date(now); weekStart.setDate(now.getDate()-now.getDay());
+  const weekEnd   = new Date(weekStart); weekEnd.setDate(weekStart.getDate()+7);
+  const weekSessions = allSessions.filter(s=>{ const d=new Date(s.dateKey+"T12:00:00"); return d>=weekStart&&d<weekEnd&&s.status==="confirmed"; });
+  const weekRevenue = weekSessions.reduce((s,x)=>s+(x.total||x.price||0),0);
+  const totalRevenue = allSessions.filter(s=>s.status==="confirmed").reduce((s,x)=>s+(x.total||x.price||0),0);
+
+  // Filter/search for upcoming
+  const filteredUpcoming = upcomingSessions.filter(s=>{
+    if(filterStatus!=="all"&&s.status!==filterStatus) return false;
+    if(searchQ&&!s.name?.toLowerCase().includes(searchQ.toLowerCase())&&!s.dateLabel?.toLowerCase().includes(searchQ.toLowerCase())) return false;
+    return true;
+  });
+
+  function openAction(item){
+    setActionItem(item); setNoteText(item.coachNote||""); setNoteColl(item._coll||"bookings"); setCancelConfirm(false);
+  }
+
+  async function saveNote(){
+    await updateDoc(doc(db,noteColl,actionItem.id),{coachNote:noteText,coachNoteUpdated:new Date().toISOString()});
+    setActionItem(null);
+  }
+
+  // Next Friday slots for dashboard
+  const nextFridays = getDates(4);
+
+  return(
+    <div style={{paddingTop:80,background:C.black,minHeight:"100vh"}}>
+      <div style={{maxWidth:1100,margin:"0 auto",padding:"20px 20px 100px"}}>
+
+        {/* Header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,flexWrap:"wrap",gap:12}}>
+          <div>
+            <div style={{fontSize:9,letterSpacing:4,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>La Forja · Coach Dashboard</div>
+            <h1 style={{margin:0,fontSize:24,fontWeight:600,color:C.white,fontFamily:D.display}}>{now.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</h1>
+          </div>
+          {pendingCount>0&&(
+            <div style={{background:C.redDark,border:`1px solid ${C.red}33`,borderRadius:10,padding:"8px 16px",fontSize:10,color:C.red,fontFamily:D.body,letterSpacing:1}}>
+              ⏳ {pendingCount} pending confirmation{pendingCount>1?"s":""}
+            </div>
+          )}
+        </div>
+
+        {/* Stats */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:24}}>
+          {[
+            {label:"Today",value:todaySessions.length,color:C.red},
+            {label:"Week Sessions",value:weekSessions.length,color:C.green},
+            {label:"Week Revenue",value:`$${weekRevenue}`,color:C.silverBright},
+            {label:"All Time Revenue",value:`$${totalRevenue.toLocaleString()}`,color:C.textMid},
+          ].map((s,i)=>(
+            <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"14px 16px",textAlign:"center"}}>
+              <div style={{fontSize:22,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:3}}>{s.value}</div>
+              <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Friday Fill Rates */}
+        <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 18px",marginBottom:20}}>
+          <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:14}}>Upcoming Fridays</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10}}>
+            {nextFridays.map((d,i)=>{
+              const dk=dKey(d);
+              const sched=DAY_SCHEDULE[d.getDay()];
               return(
-                <button key={pos.id} type="button" onClick={()=>onSelect(pos.id)}
-                  style={{
-                    width:52, height:44,
-                    background:sel?"linear-gradient(135deg,#c9a84c,#7a6030)":"rgba(0,0,0,0.55)",
-                    border:sel?"2px solid #e8c96a":"1px solid rgba(255,255,255,0.2)",
-                    borderRadius:10,
-                    cursor:"pointer",
-                    display:"flex", alignItems:"center", justifyContent:"center",
-                    transition:"all 0.2s",
-                    boxShadow:sel?"0 0 16px #c9a84c66":"none",
-                    backdropFilter:"blur(4px)",
-                  }}>
-                  <span style={{fontSize:12,fontWeight:700,color:sel?"#120f0c":"#f5efe6",fontFamily:"Cormorant Garamond,Georgia,serif",letterSpacing:0.5}}>{pos.label}</span>
-                </button>
+                <div key={i} style={{background:"#0d0b08",borderRadius:10,padding:"12px 14px",border:`1px solid ${C.cardBorder}`}}>
+                  <div style={{fontSize:11,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:8}}>{fmtDate(d)}</div>
+                  {sched.sessions.map(sess=>{
+                    const confirmed=allSessions.filter(s=>s.dateKey===dk&&s.sessId===sess.id&&s.status==="confirmed").length;
+                    const pending=allSessions.filter(s=>s.dateKey===dk&&s.sessId===sess.id&&s.status==="pending").length;
+                    const total=confirmed+pending;
+                    const isBlockd=(blocked||[]).some(b=>b.dateKey===dk&&b.sessId===sess.id);
+                    const pct=Math.round((confirmed/MAX_PLAYERS)*100);
+                    return(
+                      <div key={sess.id} style={{marginBottom:8}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                          <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{sess.time.split("–")[0].trim()}</div>
+                          <div style={{fontSize:10,color:isBlockd?"#666":confirmed===MAX_PLAYERS?C.red:C.silver,fontFamily:D.body}}>{isBlockd?"Blocked":`${confirmed}/${MAX_PLAYERS}`}{pending>0&&!isBlockd?` (${pending} pending)`:""}</div>
+                        </div>
+                        {!isBlockd&&(
+                          <div style={{height:4,background:"#1a1a1a",borderRadius:2,overflow:"hidden"}}>
+                            <div style={{height:"100%",width:`${pct}%`,background:pct===100?C.red:pct>60?C.silver:C.green,borderRadius:2,transition:"width 0.5s"}}/>
+                          </div>
+                        )}
+                        <button onClick={()=>blockSession(dk,sess.id,fmtDate(d))} style={{marginTop:5,background:"transparent",border:`1px solid ${isBlockd?C.red:C.cardBorder}33`,borderRadius:5,padding:"2px 8px",color:isBlockd?C.red:C.textDim,fontSize:8,cursor:"pointer",fontFamily:D.body}}>
+                          {isBlockd?"Unblock":"Block"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               );
             })}
           </div>
-        ))}
-        {/* Defense label */}
-        <div style={{textAlign:"center",fontSize:8,letterSpacing:3,color:"#ffffff25",textTransform:"uppercase",fontFamily:"Montserrat,sans-serif",marginTop:-4}}>Defense</div>
+        </div>
+
+        {/* Today's Sessions */}
+        <div style={{marginBottom:24}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{width:6,height:6,borderRadius:"50%",background:C.green,animation:"pulse 1.5s infinite"}}/>
+              <span style={{fontSize:11,letterSpacing:3,color:C.green,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Today's Sessions</span>
+              <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>· {todaySessions.length} player{todaySessions.length!==1?"s":""}</span>
+            </div>
+            {todaySessions.length>0&&(
+              <button onClick={()=>{setReminderModal({group:true,players:todaySessions});setReminderMsg("");}}
+                style={{background:`${C.silver}12`,border:`1px solid ${C.silver}33`,borderRadius:8,padding:"6px 14px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body,letterSpacing:1}}>
+                📧 Send All Reminders
+              </button>
+            )}
+          </div>
+          {todaySessions.length===0?(
+            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"28px",textAlign:"center",color:C.textDim,fontSize:12,fontFamily:D.body,fontStyle:"italic"}}>No sessions today</div>
+          ):(
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:10}}>
+              {todaySessions.map((s,i)=><PlayerCard key={i} s={s} onAction={openAction} onConfirm={confirmBooking} onReminder={()=>setReminderModal(s)}/>)}
+            </div>
+          )}
+        </div>
+
+        {/* Upcoming Sessions */}
+        <div style={{marginBottom:24}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
+            <span style={{fontSize:11,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Upcoming Sessions</span>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <input placeholder="Search name..." value={searchQ} onChange={e=>setSearchQ(e.target.value)} style={{...IS,width:160,fontSize:11,padding:"6px 10px"}}/>
+              {["all","confirmed","pending"].map(f=>(
+                <button key={f} onClick={()=>setFilterStatus(f)} style={{background:filterStatus===f?`${C.red}18`:"transparent",border:`1px solid ${filterStatus===f?C.red:C.cardBorder}`,borderRadius:7,padding:"5px 12px",color:filterStatus===f?C.red:C.textDim,fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+          {filteredUpcoming.length===0?(
+            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"28px",textAlign:"center",color:C.textDim,fontSize:12,fontFamily:D.body,fontStyle:"italic"}}>No upcoming sessions</div>
+          ):(
+            <div style={{display:"grid",gap:8}}>
+              {filteredUpcoming.map((s,i)=>(
+                <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:`3px solid ${s.status==="confirmed"?C.green:s.status==="pending"?C.silver:C.silverDark}`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                  <div style={{flex:1,minWidth:180}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3,flexWrap:"wrap"}}>
+                      <span style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display}}>{s.name}</span>
+                      <span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:s.status==="confirmed"?`${C.green}18`:`${C.silver}12`,color:s.status==="confirmed"?C.green:C.silver,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>{s.status}</span>
+                    </div>
+                    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                      <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>📅 {s.dateLabel}</span>
+                      <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>🕐 {s._time}</span>
+                      <span style={{fontSize:10,color:C.silver,fontFamily:D.body,fontWeight:600}}>${s.total||s.price||0}</span>
+                    </div>
+                    {s.coachNote&&<div style={{fontSize:9,color:C.silver,fontFamily:D.body,marginTop:4,fontStyle:"italic"}}>📝 {s.coachNote}</div>}
+                  </div>
+                  <div style={{display:"flex",gap:6,flexShrink:0}}>
+                    {s.status==="pending"&&<button onClick={()=>confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings")} style={{background:`${C.green}18`,border:`1px solid ${C.green}33`,borderRadius:7,padding:"5px 12px",color:C.green,fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓ Confirm</button>}
+                    <button onClick={()=>setReminderModal(s)} style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:7,padding:"5px 10px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📧</button>
+                    <button onClick={()=>openAction(s)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"5px 10px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>⋯</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Past Sessions */}
+        {pastSessions.length>0&&(
+          <div>
+            <details>
+              <summary style={{fontSize:11,letterSpacing:3,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,cursor:"pointer",marginBottom:14,userSelect:"none"}}>
+                Past Sessions ({pastSessions.length})
+              </summary>
+              <div style={{display:"grid",gap:6,marginTop:10}}>
+                {pastSessions.slice(0,30).map((s,i)=>(
+                  <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"10px 14px",opacity:0.7,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+                    <div>
+                      <div style={{fontSize:12,fontWeight:600,color:C.textMid,fontFamily:D.display,marginBottom:2}}>{s.name}</div>
+                      <div style={{display:"flex",gap:10}}>
+                        <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{s.dateLabel}</span>
+                        <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{s._time}</span>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                      <span style={{fontSize:10,color:C.silver,fontFamily:D.body}}>${s.total||s.price||0}</span>
+                      <button onClick={()=>openAction(s)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:6,padding:"3px 8px",color:C.textDim,fontSize:8,cursor:"pointer",fontFamily:D.body}}>⋯</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </details>
+          </div>
+        )}
       </div>
+
+      {/* ── ACTION MODAL ── */}
+      {actionItem&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>{setActionItem(null);setCancelConfirm(false);}}>
+          <div style={{background:"#111",border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"22px",maxWidth:420,width:"100%"}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
+              <div>
+                <div style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:2}}>{actionItem.name}</div>
+                <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{actionItem.dateLabel} · {actionItem._time}</div>
+                <div style={{fontSize:9,color:actionItem.status==="confirmed"?C.green:C.silver,fontFamily:D.body,marginTop:2,letterSpacing:1,textTransform:"uppercase"}}>{actionItem.status}</div>
+              </div>
+              <button onClick={()=>setActionItem(null)} style={{background:"transparent",border:"none",color:C.textDim,fontSize:18,cursor:"pointer"}}>✕</button>
+            </div>
+
+            {/* Note */}
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:8,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Coach Note</div>
+              <textarea value={noteText} onChange={e=>setNoteText(e.target.value)} placeholder="Session notes, player focus..." rows={3} style={{...IS,fontSize:12,resize:"vertical"}} autoFocus/>
+              <div style={{display:"flex",gap:6,marginTop:8}}>
+                <button onClick={saveNote} style={{flex:1,background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,border:"none",borderRadius:8,padding:"9px",color:"#0a0a0a",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>Save Note</button>
+                {noteText&&<button onClick={async()=>{await updateDoc(doc(db,noteColl,actionItem.id),{coachNote:"",coachNoteUpdated:new Date().toISOString()});setActionItem(null);}} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"9px 12px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Clear</button>}
+              </div>
+            </div>
+
+            <div style={{borderTop:`1px solid ${C.cardBorder}`,marginBottom:14}}/>
+
+            {/* Actions */}
+            {actionItem.status==="confirmed"&&(
+              <button onClick={async()=>{await updateDoc(doc(db,noteColl,actionItem.id),{status:"pending"});setActionItem(null);}}
+                style={{display:"block",width:"100%",background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:9,padding:"10px",color:C.silver,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,marginBottom:8,textAlign:"center"}}>
+                ↩ Unconfirm
+              </button>
+            )}
+            {actionItem.status==="pending"&&(
+              <button onClick={()=>confirmBooking(actionItem.id,actionItem._coll||"bookings")}
+                style={{display:"block",width:"100%",background:`${C.green}18`,border:`1px solid ${C.green}33`,borderRadius:9,padding:"10px",color:C.green,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,marginBottom:8,textAlign:"center",fontWeight:600}}>
+                ✓ Confirm
+              </button>
+            )}
+            {!cancelConfirm?(
+              <button onClick={()=>setCancelConfirm(true)} style={{display:"block",width:"100%",background:"transparent",border:`1px solid ${C.redDim}44`,borderRadius:9,padding:"10px",color:C.redDim,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,marginBottom:8,textAlign:"center"}}>
+                ✕ Cancel Session
+              </button>
+            ):(
+              <div style={{background:`${C.red}08`,border:`1px solid ${C.red}33`,borderRadius:9,padding:"12px 14px",marginBottom:8}}>
+                <div style={{fontSize:11,color:C.white,fontFamily:D.body,marginBottom:10}}>Cancel <strong>{actionItem.name}</strong>'s session?</div>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={async()=>{await updateDoc(doc(db,noteColl,actionItem.id),{status:"cancelled",cancelledAt:new Date().toISOString()});setActionItem(null);setCancelConfirm(false);}}
+                    style={{flex:1,background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",borderRadius:7,padding:"9px",color:C.white,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>Yes, Cancel</button>
+                  <button onClick={()=>setCancelConfirm(false)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"9px 14px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Keep</button>
+                </div>
+              </div>
+            )}
+            <button onClick={async()=>{if(!window.confirm(`Permanently delete ${actionItem.name}'s record?`)) return; await deleteDoc(doc(db,noteColl,actionItem.id));setActionItem(null);}}
+              style={{display:"block",width:"100%",background:"transparent",border:"none",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body,padding:"6px",textAlign:"center",textDecoration:"underline"}}>
+              Remove from records
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── REMINDER MODAL ── */}
+      {reminderModal&&(()=>{
+        const isGroup=reminderModal.group;
+        const recipients=isGroup?reminderModal.players:[reminderModal];
+        const defaultMsg=`Hey ${isGroup?"everyone":"there"}! Just a reminder that you have a La Forja session${reminderModal.time?" at "+reminderModal.time:""}. See you on the field! 🔥`;
+        return(
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>setReminderModal(null)}>
+            <div style={{background:"#111",border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"22px",maxWidth:420,width:"100%"}} onClick={e=>e.stopPropagation()}>
+              <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:14}}>{isGroup?`Send to ${recipients.length} player${recipients.length>1?"s":""}`:reminderModal.name}</div>
+              <textarea value={reminderMsg||defaultMsg} onChange={e=>setReminderMsg(e.target.value)} rows={4} style={{...IS,fontSize:12,resize:"vertical",marginBottom:12}}/>
+              <div style={{display:"flex",gap:8}}>
+                <button disabled={sending} onClick={async()=>{
+                  setSending(true);
+                  const msg=reminderMsg||defaultMsg;
+                  for(const r of recipients){
+                    if(!r.email){ console.log("No email for",r.name); continue; }
+                    await callEmailAPI({...r,message:msg,sessTime:r.sessTime||r.slotTime||r._time||"",dateLabel:r.dateLabel||r.dateKey||"",skill:r.skill||"La Forja Session",skillIcon:"🔥",count:r.count||1,total:r.total||r.price||0,ageGroup:"U11+",ageTag:"u11+"},"reminder");
+                  }
+                  setSending(false);setReminderModal(null);setReminderMsg("");
+                }} style={{flex:1,background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,border:"none",borderRadius:8,padding:"10px",color:"#0a0a0a",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:sending?"wait":"pointer",fontFamily:D.body,fontWeight:700}}>
+                  {sending?"Sending…":"Send Reminder"}
+                </button>
+                <button onClick={()=>setReminderModal(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"10px 14px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
 
-// ── AUTH PAGE (Sign Up / Login) ─────────────────────────
+// ── PLAYER CARD (Today's Roster) ──────────────────────────
+function PlayerCard({s,onAction,onConfirm,onReminder}){
+  return(
+    <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:`3px solid ${s.status==="confirmed"?C.green:C.silver}`,borderRadius:12,padding:"12px 14px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+        <div>
+          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+            <span style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display}}>{s.name}</span>
+            <span style={{fontSize:7,padding:"1px 6px",borderRadius:4,background:s.status==="confirmed"?`${C.green}18`:`${C.silver}12`,color:s.status==="confirmed"?C.green:C.silver,fontFamily:D.body}}>{s.status==="confirmed"?"✓":"Pending"}</span>
+          </div>
+          <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>🕐 {s._time}</div>
+          {s.email&&<div style={{fontSize:9,color:C.textDim,fontFamily:D.body,marginTop:2}}>{s.email}</div>}
+          {s.phone&&<div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{s.phone}</div>}
+          {s.coachNote&&<div style={{fontSize:9,color:C.silver,fontFamily:D.body,marginTop:4,fontStyle:"italic"}}>📝 {s.coachNote}</div>}
+        </div>
+        <div style={{display:"flex",gap:5,flexShrink:0}}>
+          <button onClick={onReminder} style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:6,padding:"4px 8px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📧</button>
+          <button onClick={()=>onAction(s)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:6,padding:"4px 8px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>⋯</button>
+        </div>
+      </div>
+      {s.status==="pending"&&(
+        <button onClick={()=>onConfirm(s.id,s._type==="1on1"?"inquiries":"bookings")}
+          style={{width:"100%",background:`${C.green}18`,border:`1px solid ${C.green}33`,borderRadius:7,padding:"6px",color:C.green,fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600,letterSpacing:1,marginTop:8}}>
+          ✓ Confirm Payment Received
+        </button>
+      )}
+    </div>
+  );
+}
