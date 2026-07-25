@@ -48,9 +48,9 @@ export const DAY_SCHEDULE = {
 
 // ── PACKAGES ──────────────────────────────────────────────
 export const PACKAGES = [
-  {id:"single", name:"Single Session", sessions:1,  price:40,  rate:40,  save:0},
-  {id:"month4", name:"4 Sessions",     sessions:4,  price:140, rate:35,  save:20},
-  {id:"month8", name:"Full Month",     sessions:8,  price:260, rate:32,  save:60},
+  {id:"single", name:"Single Session", sessions:1,  price:40,  rate:40,  save:0,   desc:"Try it out. No commitment."},
+  {id:"month1", name:"4 Sessions",     sessions:4,  price:140, rate:35,  save:20,  desc:"One Friday per week for a month."},
+  {id:"month2", name:"8 Sessions",     sessions:8,  price:260, rate:32,  save:60,  desc:"Two months of Fridays. Commit to the process."},
 ];
 
 export const AGE_COLORS = {
