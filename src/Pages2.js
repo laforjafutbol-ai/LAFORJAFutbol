@@ -447,31 +447,116 @@ export function SessionsPage({setPage,user}){
 // ── ABOUT PAGE ────────────────────────────────────────────
 export function AboutPage({setPage}){
   return(
-    <div style={{maxWidth:800,margin:"0 auto",padding:"60px 24px 100px"}}>
+    <div style={{maxWidth:900,margin:"0 auto",padding:"60px 24px 100px"}}>
       <SH eyebrow="The Program" title="About La Forja"/>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:24,marginBottom:40}}>
-        <div>
-          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,overflow:"hidden",marginBottom:20}}>
-            <img src="/carlos.jpg" alt="Coach Carlos" style={{width:"100%",height:240,objectFit:"cover",objectPosition:"top",display:"block"}}/>
-          </div>
-          <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>Head Coach</div>
-          <div style={{fontSize:20,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:4}}>Carlos Cepeda</div>
-          <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.8}}>Former professional soccer player. Coaching is not just a job — it's a calling to give back what the game gave him.</div>
-        </div>
-        <div>
-          <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:2,marginBottom:20}}>La Forja — The Forge — exists because most training isn't honest. It's fun drills, cones in a row, and controlled environments that have nothing to do with what happens in a real game.</p>
-          <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:2,marginBottom:20}}>We train differently. Every session is built around real game situations — pressure, decision-making, 1v1 dominance. We don't just work on your skill. We work on your composure when the game is on the line.</p>
-          <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:2}}>The Furnace is where raw players become forged ones. Small groups. Full intensity. Real results.</p>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:20}}>
-            {[["📍","Bayview Park, James Island"],["⚽","U11+ · All positions"],["🔥","Fridays · 5–7:45 PM"],["👥",`Max ${MAX_PLAYERS} per session`]].map(([icon,text],i)=>(
-              <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
-                <span style={{fontSize:14,flexShrink:0}}>{icon}</span>
-                <span style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.6}}>{text}</span>
+
+      {/* Mission */}
+      <div style={{marginBottom:48}}>
+        <p style={{fontSize:15,color:C.textMid,fontFamily:D.display,fontStyle:"italic",lineHeight:2,marginBottom:20}}>La Forja — The Forge. A place where raw iron becomes something sharper, stronger, and more precise than what walked in.</p>
+        <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:2,marginBottom:16}}>Most training isn't honest. Fun drills, cones in a row, controlled environments that have nothing to do with what happens in a real game. We train differently. Every session is built around real game situations — pressure, decision-making, 1v1 dominance. We don't just work on your skill. We work on your composure when the game is on the line.</p>
+        <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:2}}>The Furnace is where raw players become forged ones. Small groups. Full intensity. Real results. Every player is treated as an individual — because the forge doesn't mass-produce, it crafts.</p>
+      </div>
+
+      {/* Coaching Staff */}
+      <div style={{marginBottom:48}}>
+        <div style={{fontSize:9,letterSpacing:5,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:24}}>The Coaching Staff</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:20}}>
+
+          {/* Carlos */}
+          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:16,overflow:"hidden"}}>
+            <img src="/carlos.jpg" alt="Coach Carlos Cepeda" style={{width:"100%",height:280,objectFit:"cover",objectPosition:"top center",display:"block"}}/>
+            <div style={{padding:"20px 22px"}}>
+              <div style={{fontSize:9,letterSpacing:3,color:C.red,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>Head Coach · Founder</div>
+              <div style={{fontSize:20,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:4}}>Carlos Cepeda</div>
+              <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.8,marginBottom:14}}>Former professional soccer player with experience across multiple leagues and levels. Coaching is not just a job — it's a calling to give back what the game gave him. Carlos built La Forja because he saw the gap between recreational training and what it actually takes to develop at a high level.</div>
+              <div style={{display:"grid",gap:6}}>
+                {["Former professional player","USSF licensed coach","Specialist in 1v1 and technical development","Founder & head of curriculum"].map((item,i)=>(
+                  <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                    <div style={{width:4,height:4,borderRadius:"50%",background:C.red,flexShrink:0,marginTop:6,opacity:0.8}}/>
+                    <span style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.7}}>{item}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
+
+          {/* Waldo Sr. */}
+          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:16,overflow:"hidden"}}>
+            <img src="/waldo-sr.jpg" alt="Coach Waldo Sr." style={{width:"100%",height:280,objectFit:"cover",objectPosition:"top center",display:"block"}}/>
+            <div style={{padding:"20px 22px"}}>
+              <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>Assistant Coach</div>
+              <div style={{fontSize:20,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:4}}>Waldo Cepeda Sr.</div>
+              <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.8,marginBottom:14}}>The steady hand in the forge. Waldo Sr. brings decades of experience and an eye for the technical details that separate good players from elite ones. His presence on the field means every player gets individual attention, every session runs with precision.</div>
+              <div style={{display:"grid",gap:6}}>
+                {["Lifelong student of the game","Technical fundamentals specialist","Keeps every session organized and sharp","The foundation the program is built on"].map((item,i)=>(
+                  <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                    <div style={{width:4,height:4,borderRadius:"50%",background:C.silver,flexShrink:0,marginTop:6,opacity:0.8}}/>
+                    <span style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.7}}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Waldo Jr. */}
+          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:16,overflow:"hidden",position:"relative"}}>
+            <img src="/waldo-jr.jpg" alt="Coach Waldo Jr." style={{width:"100%",height:280,objectFit:"cover",objectPosition:"top center",display:"block"}}/>
+            <div style={{padding:"20px 22px"}}>
+              <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>Coach</div>
+              <div style={{fontSize:20,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:4}}>Waldo Cepeda Jr.</div>
+              <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.8,marginBottom:14}}>The next generation of the forge. Waldo Jr. brings energy, relatability, and a deep understanding of what today's player needs. Close in age to the players he trains, he connects with them in ways that accelerate development — pushing hard and pulling the best out of every session.</div>
+              <div style={{display:"grid",gap:6}}>
+                {["Dynamic and high-energy coaching style","Connects with players at every level","Emerging leader in the La Forja system","Expanding the program's capacity and reach"].map((item,i)=>(
+                  <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                    <div style={{width:4,height:4,borderRadius:"50%",background:C.silver,flexShrink:0,marginTop:6,opacity:0.8}}/>
+                    <span style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.7}}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
+
+      {/* The Forge Philosophy */}
+      <div style={{background:"linear-gradient(135deg,#1a0a08,#100806)",border:`1px solid ${C.red}22`,borderRadius:16,padding:"28px 30px",marginBottom:40}}>
+        <div style={{fontSize:9,letterSpacing:5,color:C.red,textTransform:"uppercase",fontFamily:D.body,marginBottom:16}}>The Philosophy</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:20}}>
+          {[
+            {title:"Raw Iron",desc:"Every player comes in with raw ability and real weaknesses. We identify both before we do anything else.",icon:"⬜"},
+            {title:"The Forge",desc:"Heat and pressure, applied deliberately. Real game situations. No comfort zones. The work that actually makes players better.",icon:"🔥"},
+            {title:"Forged Steel",desc:"What comes out is sharper, more composed, and ready to perform when the game is on the line.",icon:"⚔️"},
+          ].map((item,i)=>(
+            <div key={i} style={{textAlign:"center",padding:"16px 12px"}}>
+              <div style={{fontSize:32,marginBottom:12}}>{item.icon}</div>
+              <div style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:8}}>{item.title}</div>
+              <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.8}}>{item.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Quick facts */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10,marginBottom:40}}>
+        {[
+          {icon:"📍",label:"Location",value:"Bayview Park · James Island, SC"},
+          {icon:"⚽",label:"Age Group",value:"U11 and up"},
+          {icon:"👥",label:"Group Size",value:`Max ${MAX_PLAYERS} per session`},
+          {icon:"🔥",label:"Sessions",value:"Fridays · 5:00 & 6:30 PM"},
+          {icon:"💰",label:"Price",value:`$${PRICE_GROUP}/session`},
+        ].map((item,i)=>(
+          <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 16px",display:"flex",alignItems:"flex-start",gap:10}}>
+            <span style={{fontSize:18,flexShrink:0}}>{item.icon}</span>
+            <div>
+              <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:3}}>{item.label}</div>
+              <div style={{fontSize:12,color:C.white,fontFamily:D.body,fontWeight:500}}>{item.value}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* CTA */}
       <div style={{textAlign:"center"}}>
         <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 6px 24px ${C.red}33`,fontFamily:D.body,fontWeight:600}}>Book The Furnace →</button>
       </div>
