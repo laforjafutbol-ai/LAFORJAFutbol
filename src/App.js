@@ -5,7 +5,7 @@ import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where
 import { Elements } from "@stripe/react-stripe-js";
 import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, PACKAGES, POSITIONS, DAY_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, SITE_READY, stripePromise, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles } from "./constants";
 import { Dashboard } from "./Pages1";
-import { AuthPage, AccountPage, SessionsPage, AboutPage, ContactPage } from "./Pages2";
+import { AuthPage, AccountPage, SessionsPage, AboutPage, ContactPage, PackagesPage } from "./Pages2";
 
 // ── BOOKING CUTOFF ─────────────────────────────────────────
 function isCutoffHour(date, sessTime){
@@ -305,7 +305,7 @@ function HomePage({setPage,user}){
 
 // ── BOOK PAGE ─────────────────────────────────────────────
 function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
-  const [step,setStep]       = useState(1);
+  const [step,setStep]       = useState(0); // 0=packages, 1=pick date, 2=details, 3=confirmed
   const [selDate,setSelDate] = useState(null);
   const [selSess,setSelSess] = useState(null);
   const [form,setForm]       = useState({name:"",email:"",phone:"",notes:""});
@@ -331,7 +331,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
   const canNext1 = selDate && selSess && !isBlocked(dKey(selDate),selSess.id) && spotsLeft(dKey(selDate),selSess.id)>=effectiveCount;
   const canNext2 = form.name && form.email && waiverAgreed;
 
-  function reset(){ setStep(1);setSelDate(null);setSelSess(null);setForm({name:"",email:"",phone:"",notes:""});setMyBooking(null);setWaiverAgreed(false);setSelPlayerIds([]);setCount(1); }
+  function reset(){ setStep(0);setSelDate(null);setSelSess(null);setForm({name:"",email:"",phone:"",notes:""});setMyBooking(null);setWaiverAgreed(false);setSelPlayerIds([]);setCount(1); }
 
   async function doBook(){
     setBookingLoading(true);
@@ -364,7 +364,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
       <SH eyebrow="Reserve" title="Book a Session"/>
 
       {/* Step indicators */}
-      {step<3&&(
+      {step>0&&step<3&&(
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:28}}>
           {["Pick a Date","Your Details","Confirmed"].map((s,i)=>(
             <div key={i}>
@@ -372,6 +372,43 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
               <div style={{fontSize:9,letterSpacing:2,color:step===i+1?C.silver:C.textDim,fontFamily:D.body,textTransform:"uppercase"}}>{s}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Step 0 — Packages overview */}
+      {step===0&&(
+        <div style={{animation:"fadeUp 0.3s ease"}}>
+          <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:28}}>Choose how you want to train. Single sessions to try it out, or lock in a package for a better rate.</p>
+          <div style={{display:"grid",gap:12,marginBottom:24}}>
+            {[
+              {name:"Single Session",price:"$40",rate:"$40/session",sessions:"1 session",desc:"Try it out. No commitment.",highlight:false},
+              {name:"4 Sessions",price:"$140",rate:"$35/session",sessions:"4 sessions",save:"Save $20",desc:"One Friday per week for a month.",highlight:false},
+              {name:"Full Month",price:"$260",rate:"$32/session",sessions:"8 sessions",save:"Save $60",desc:"Both Friday sessions for a full month. Best value.",highlight:true},
+            ].map((p,i)=>(
+              <div key={i} style={{background:p.highlight?"linear-gradient(135deg,#1a1618,#141416)":C.card,border:p.highlight?`1px solid ${C.silver}44`:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"18px 22px",position:"relative",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+                {p.highlight&&<div style={{position:"absolute",top:-9,left:20,background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,color:"#0a0a0a",fontSize:7,letterSpacing:2,fontWeight:700,textTransform:"uppercase",fontFamily:D.body,padding:"2px 10px",borderRadius:8}}>Best Value</div>}
+                <div style={{flex:1}}>
+                  <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:4}}>
+                    <span style={{fontSize:16,fontWeight:600,color:p.highlight?C.silver:C.white,fontFamily:D.display}}>{p.name}</span>
+                    <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{p.sessions}</span>
+                    <span style={{fontSize:10,color:p.highlight?C.silver:C.textMid,fontFamily:D.body}}>{p.rate}</span>
+                    {p.save&&<span style={{fontSize:9,padding:"2px 8px",borderRadius:6,background:p.highlight?`${C.silver}18`:"rgba(255,255,255,0.05)",color:p.highlight?C.silver:C.textDim,fontFamily:D.body}}>{p.save}</span>}
+                  </div>
+                  <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>{p.desc}</div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:16,flexShrink:0}}>
+                  <div style={{fontSize:26,fontWeight:700,color:C.white,fontFamily:D.display}}>{p.price}</div>
+                  <button onClick={()=>setStep(1)} style={{background:p.highlight?`linear-gradient(135deg,${C.silver},${C.silverDim})`:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:p.highlight?"#0a0a0a":C.white,borderRadius:9,padding:"10px 20px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700,whiteSpace:"nowrap"}}>
+                    Select →
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"14px 18px"}}>
+            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>How Packages Work</div>
+            <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.8}}>Pick your package, then select your Friday sessions. You can reschedule any session directly from your account — no approval needed. Session credit never expires within the purchased period.</div>
+          </div>
         </div>
       )}
 
