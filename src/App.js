@@ -305,56 +305,89 @@ function HomePage({setPage,user}){
 
 // ── BOOK PAGE ─────────────────────────────────────────────
 function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
-  const [step,setStep]       = useState(0); // 0=packages, 1=pick date, 2=details, 3=confirmed
-  const [selDate,setSelDate] = useState(null);
-  const [selSess,setSelSess] = useState(null);
-  const [form,setForm]       = useState({name:"",email:"",phone:"",notes:""});
+  const [step,setStep]         = useState(0);
+  const [selPkg,setSelPkg]     = useState(null); // {name,sessions,price,rate}
+  const [selDates,setSelDates] = useState([]); // [{date,sess}] for packages
+  const [selDate,setSelDate]   = useState(null); // single session
+  const [selSess,setSelSess]   = useState(null);
+  const [form,setForm]         = useState({name:"",email:"",phone:"",notes:""});
   const [waiverAgreed,setWaiverAgreed] = useState(false);
   const [bookingLoading,setBookingLoading] = useState(false);
-  const [myBooking,setMyBooking] = useState(null);
+  const [myBookings,setMyBookings] = useState([]);
   const [players,setPlayers]   = useState([]);
   const [selPlayerIds,setSelPlayerIds] = useState([]);
   const [count,setCount]       = useState(1);
 
   useEffect(()=>{
     if(!user) return;
-    const q=collection(db,"users",user.uid,"players");
-    const unsub=onSnapshot(q,s=>setPlayers(s.docs.map(d=>({id:d.id,...d.data()}))));
+    const unsub=onSnapshot(collection(db,"users",user.uid,"players"),s=>setPlayers(s.docs.map(d=>({id:d.id,...d.data()}))));
     return unsub;
   },[user]);
 
-  const allDates = getDates(8);
-  const daySchedule = selDate ? DAY_SCHEDULE[selDate.getDay()] : null;
-  const sessions = daySchedule?.sessions||[];
+  const allDates   = getDates(10);
+  const isPackage  = selPkg && selPkg.sessions > 1;
+  const needed     = selPkg?.sessions || 1;
   const effectiveCount = user&&selPlayerIds.length>0 ? selPlayerIds.length : count;
-  const total = effectiveCount * PRICE_GROUP;
-  const canNext1 = selDate && selSess && !isBlocked(dKey(selDate),selSess.id) && spotsLeft(dKey(selDate),selSess.id)>=effectiveCount;
-  const canNext2 = form.name && form.email && waiverAgreed;
+  const total      = isPackage ? selPkg.price * effectiveCount : effectiveCount * PRICE_GROUP;
 
-  function reset(){ setStep(0);setSelDate(null);setSelSess(null);setForm({name:"",email:"",phone:"",notes:""});setMyBooking(null);setWaiverAgreed(false);setSelPlayerIds([]);setCount(1); }
+  // Single: can continue if date+session selected
+  const canNext1Single = selDate && selSess && !isBlocked(dKey(selDate),selSess.id) && spotsLeft(dKey(selDate),selSess.id)>=effectiveCount;
+  // Package: can continue if all sessions picked
+  const canNext1Pkg = selDates.length === needed;
+  const canNext1 = isPackage ? canNext1Pkg : canNext1Single;
+  const canNext2 = (form.name||selPlayerIds.length>0) && form.email && waiverAgreed;
+
+  function togglePackDate(date, sess){
+    const dk = dKey(date);
+    const existing = selDates.findIndex(s=>s.dk===dk&&s.sess.id===sess.id);
+    if(existing>=0){
+      setSelDates(selDates.filter((_,i)=>i!==existing));
+    } else if(selDates.length < needed){
+      setSelDates([...selDates, {dk, date, sess, dateLabel:fmtDate(date)}]);
+    }
+  }
+
+  function reset(){ setStep(0);setSelPkg(null);setSelDate(null);setSelSess(null);setSelDates([]);setForm({name:"",email:"",phone:"",notes:""});setMyBookings([]);setWaiverAgreed(false);setSelPlayerIds([]);setCount(1); }
 
   async function doBook(){
     setBookingLoading(true);
     const selectedPlayers = players.filter(p=>selPlayerIds.includes(p.id));
     const bookingName = selectedPlayers.length>0 ? selectedPlayers.map(p=>p.name).join(", ") : form.name;
-    const booking = {
-      dateKey:dKey(selDate), dateLabel:fmtDate(selDate),
-      sessId:selSess.id, sessTime:selSess.time,
-      skill:daySchedule.skill, skillIcon:daySchedule.skillIcon,
-      count:effectiveCount, total,
+    const base = {
+      skill:"The Furnace", skillIcon:"🔥",
+      count:effectiveCount,
       name:bookingName, email:form.email, phone:form.phone, notes:form.notes,
       parentName:user?user.displayName||form.name:null,
       status:"pending",
+      packageName:selPkg?.name||"Single Session",
+      packageTotal:total,
       waiverAgreed:true, waiverSignedAt:new Date().toISOString(),
       createdAt:new Date().toISOString(),
       ...(user?{userId:user.uid}:{}),
       ...(selPlayerIds.length>0?{playerIds:selPlayerIds}:{}),
     };
-    const ref = await addBooking(booking);
-    if(ref?.id){
-      setMyBooking({...booking,id:ref.id});
-      if(booking.email) await callEmailAPI(booking,"group");
+
+    let refs = [];
+    if(isPackage){
+      for(const s of selDates){
+        const booking = {...base, dateKey:s.dk, dateLabel:s.dateLabel, sessId:s.sess.id, sessTime:s.sess.time, total:selPkg.price/needed*effectiveCount};
+        const ref = await addBooking(booking);
+        if(ref?.id) refs.push({...booking,id:ref.id});
+      }
+      // Send one confirmation email with all dates
+      if(refs.length>0&&form.email){
+        await callEmailAPI({...refs[0], packageBooking:true, packageDates:selDates.map(s=>s.dateLabel).join(", "), packageName:selPkg.name, total},"group");
+      }
+    } else {
+      const daySchedule = DAY_SCHEDULE[selDate.getDay()];
+      const booking = {...base, dateKey:dKey(selDate), dateLabel:fmtDate(selDate), sessId:selSess.id, sessTime:selSess.time, total};
+      const ref = await addBooking(booking);
+      if(ref?.id){
+        refs.push({...booking,id:ref.id});
+        if(form.email) await callEmailAPI(booking,"group");
+      }
     }
+    setMyBookings(refs);
     setBookingLoading(false);
     setStep(3);
   }
@@ -378,27 +411,27 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
       {/* Step 0 — Packages overview */}
       {step===0&&(
         <div style={{animation:"fadeUp 0.3s ease"}}>
-          <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:28}}>Choose how you want to train. Single sessions to try it out, or lock in a package for a better rate.</p>
+          <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:28}}>Choose how you want to train. Single session to try it out, or lock in a package for a better rate.</p>
           <div style={{display:"grid",gap:12,marginBottom:24}}>
             {[
-              {name:"Single Session",price:"$40",rate:"$40/session",sessions:"1 session",desc:"Try it out. No commitment.",highlight:false},
-              {name:"4 Sessions",price:"$140",rate:"$35/session",sessions:"4 sessions",save:"Save $20",desc:"One Friday per week for a month.",highlight:false},
-              {name:"8 Sessions",price:"$260",rate:"$32/session",sessions:"8 sessions",save:"Save $60",desc:"Two months of Fridays. Commit to the process.",highlight:true},
+              {id:"single",name:"Single Session",price:40,  rate:"$40/session",sessions:1,desc:"Try it out. No commitment.",highlight:false},
+              {id:"month4",name:"4 Sessions",    price:140, rate:"$35/session",sessions:4,save:"Save $20",desc:"One Friday per week for a month.",highlight:false},
+              {id:"month8",name:"8 Sessions",    price:260, rate:"$32/session",sessions:8,save:"Save $60",desc:"Two months of Fridays. Commit to the process.",highlight:true},
             ].map((p,i)=>(
               <div key={i} style={{background:p.highlight?"linear-gradient(135deg,#1a1618,#141416)":C.card,border:p.highlight?`1px solid ${C.silver}44`:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"18px 22px",position:"relative",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap"}}>
                 {p.highlight&&<div style={{position:"absolute",top:-9,left:20,background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,color:"#0a0a0a",fontSize:7,letterSpacing:2,fontWeight:700,textTransform:"uppercase",fontFamily:D.body,padding:"2px 10px",borderRadius:8}}>Best Value</div>}
                 <div style={{flex:1}}>
                   <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:4}}>
                     <span style={{fontSize:16,fontWeight:600,color:p.highlight?C.silver:C.white,fontFamily:D.display}}>{p.name}</span>
-                    <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{p.sessions}</span>
+                    <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{p.sessions} session{p.sessions>1?"s":""}</span>
                     <span style={{fontSize:10,color:p.highlight?C.silver:C.textMid,fontFamily:D.body}}>{p.rate}</span>
                     {p.save&&<span style={{fontSize:9,padding:"2px 8px",borderRadius:6,background:p.highlight?`${C.silver}18`:"rgba(255,255,255,0.05)",color:p.highlight?C.silver:C.textDim,fontFamily:D.body}}>{p.save}</span>}
                   </div>
                   <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>{p.desc}</div>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:16,flexShrink:0}}>
-                  <div style={{fontSize:26,fontWeight:700,color:C.white,fontFamily:D.display}}>{p.price}</div>
-                  <button onClick={()=>setStep(1)} style={{background:p.highlight?`linear-gradient(135deg,${C.silver},${C.silverDim})`:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:p.highlight?"#0a0a0a":C.white,borderRadius:9,padding:"10px 20px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700,whiteSpace:"nowrap"}}>
+                  <div style={{fontSize:26,fontWeight:700,color:C.white,fontFamily:D.display}}>${p.price}</div>
+                  <button onClick={()=>{setSelPkg(p);setSelDates([]);setSelDate(null);setSelSess(null);setStep(1);}} style={{background:p.highlight?`linear-gradient(135deg,${C.silver},${C.silverDim})`:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:p.highlight?"#0a0a0a":C.white,borderRadius:9,padding:"10px 20px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700,whiteSpace:"nowrap"}}>
                     Select →
                   </button>
                 </div>
@@ -407,14 +440,50 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
           </div>
           <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"14px 18px"}}>
             <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>How Packages Work</div>
-            <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.8}}>Pick your package, then select your Friday sessions. You can reschedule any session directly from your account — no approval needed. Session credit never expires within the purchased period.</div>
+            <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.8}}>Pick your package, then select your Friday sessions. You can reschedule any session from your account — no approval needed. Session credit never expires within the purchased period.</div>
           </div>
         </div>
       )}
 
-      {/* Step 1 — Pick date + session */}
+      {/* Step 1 — Pick date(s) */}
       {step===1&&(
         <div style={{animation:"fadeUp 0.3s ease"}}>
+
+          {/* Package progress tracker */}
+          {isPackage&&(
+            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 18px",marginBottom:20}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display}}>{selPkg.name}</div>
+                <div style={{fontSize:11,color:selDates.length===needed?C.green:C.silver,fontFamily:D.body,fontWeight:600}}>
+                  {selDates.length} of {needed} selected
+                </div>
+              </div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+                {Array.from({length:needed}).map((_,i)=>{
+                  const filled = selDates[i];
+                  return(
+                    <div key={i} style={{flex:"1 1 auto",minWidth:60,background:filled?`${C.green}18`:"#0a0908",border:`1px solid ${filled?C.green:C.cardBorder}`,borderRadius:8,padding:"6px 8px",textAlign:"center",position:"relative"}}>
+                      {filled?(
+                        <>
+                          <div style={{fontSize:9,color:C.green,fontFamily:D.body,fontWeight:600,marginBottom:1}}>✓</div>
+                          <div style={{fontSize:8,color:C.green,fontFamily:D.body,lineHeight:1.3}}>{filled.dateLabel.split(",")[0]}</div>
+                        </>
+                      ):(
+                        <div style={{fontSize:18,color:C.cardBorder}}>·</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {selDates.length>0&&selDates.length<needed&&(
+                <div style={{fontSize:10,color:C.silver,fontFamily:D.body}}>{needed-selDates.length} more session{needed-selDates.length>1?"s":""} to pick</div>
+              )}
+              {selDates.length===needed&&(
+                <div style={{fontSize:10,color:C.green,fontFamily:D.body,fontWeight:600}}>✓ All sessions selected — continue below</div>
+              )}
+            </div>
+          )}
+
           {/* Player selection for logged-in users */}
           {user&&players.length>0&&(
             <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"18px",marginBottom:20}}>
@@ -427,50 +496,60 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
                       style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",background:sel?`${C.red}12`:C.black,border:`1px solid ${sel?C.red:C.cardBorder}`,borderRadius:9,cursor:"pointer"}}>
                       <div style={{textAlign:"left"}}>
                         <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display}}>{p.name}</div>
-                        <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{p.age?" Age "+p.age:""}{p.position?" · "+p.position:""}</div>
+                        <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{p.age?"Age "+p.age:""}{p.age&&p.position?" · ":""}{p.position||""}</div>
                       </div>
                       {sel&&<div style={{width:18,height:18,borderRadius:"50%",background:C.red,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:C.white}}>✓</div>}
                     </button>
                   );
                 })}
               </div>
-              {selPlayerIds.length>0&&<div style={{fontSize:11,color:C.silver,fontFamily:D.body,marginTop:10,textAlign:"center"}}>{selPlayerIds.length} player{selPlayerIds.length>1?"s":""} · ${selPlayerIds.length*PRICE_GROUP} total</div>}
+              {selPlayerIds.length>0&&<div style={{fontSize:11,color:C.silver,fontFamily:D.body,marginTop:10,textAlign:"center"}}>{selPlayerIds.length} player{selPlayerIds.length>1?"s":""} · ${selPlayerIds.length*(isPackage?selPkg.price:PRICE_GROUP)} total</div>}
             </div>
           )}
 
           {!user&&(
             <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"12px 16px",marginBottom:20,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
-              <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>
-                <span>Players: </span>
+              <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,display:"flex",alignItems:"center",gap:6}}>
+                <span>Players:</span>
                 {[1,2,3,4,5,6].map(n=>(
-                  <button key={n} onClick={()=>setCount(n)} style={{background:count===n?`${C.red}22`:"transparent",border:`1px solid ${count===n?C.red:C.cardBorder}`,borderRadius:6,padding:"3px 10px",color:count===n?C.red:C.textDim,fontSize:11,cursor:"pointer",marginLeft:4,fontFamily:D.body}}>{n}</button>
+                  <button key={n} onClick={()=>setCount(n)} style={{background:count===n?`${C.red}22`:"transparent",border:`1px solid ${count===n?C.red:C.cardBorder}`,borderRadius:6,padding:"3px 10px",color:count===n?C.red:C.textDim,fontSize:11,cursor:"pointer",fontFamily:D.body}}>{n}</button>
                 ))}
               </div>
-              <div style={{fontSize:11,color:C.silver,fontFamily:D.body,fontWeight:600}}>${count*PRICE_GROUP} total</div>
+              <div style={{fontSize:11,color:C.silver,fontFamily:D.body,fontWeight:600}}>${count*(isPackage?selPkg.price:PRICE_GROUP)} total</div>
             </div>
           )}
 
-          <FL>Available Fridays</FL>
+          <FL>{isPackage?`Pick Your ${needed} Fridays`:"Available Fridays"}</FL>
           <div style={{display:"grid",gap:8}}>
             {allDates.map((d,i)=>{
               const dk=dKey(d);
               const sched=DAY_SCHEDULE[d.getDay()];
-              const isSelected=selDate&&dKey(selDate)===dk;
+              const isSelDate = !isPackage && selDate && dKey(selDate)===dk;
               return(
-                <div key={i} style={{background:isSelected?`${C.red}08`:C.card,border:`1px solid ${isSelected?C.red:C.cardBorder}`,borderRadius:12,padding:"14px 16px"}}>
+                <div key={i} style={{background:isSelDate?`${C.red}08`:C.card,border:`1px solid ${isSelDate?C.red:C.cardBorder}`,borderRadius:12,padding:"14px 16px"}}>
                   <div style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:10}}>{fmtDate(d)}</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:8}}>
                     {sched.sessions.map(sess=>{
                       const spots=spotsLeft(dk,sess.id);
-                      const blocked=isBlocked(dk,sess.id);
-                      const isSel=isSelected&&selSess?.id===sess.id;
-                      const disabled=blocked||spots<effectiveCount||isCutoffHour(d,sess.time);
+                      const blocked_=isBlocked(dk,sess.id);
+                      const cutoff=isCutoffHour(d,sess.time);
+                      const disabled=blocked_||spots<effectiveCount||cutoff;
+                      // Package: check if this slot is already selected
+                      const pkgSel = isPackage && selDates.some(s=>s.dk===dk&&s.sess.id===sess.id);
+                      const isSel = isPackage ? pkgSel : (isSelDate&&selSess?.id===sess.id);
+                      // Package: at capacity and this slot not selected
+                      const pkgFull = isPackage && selDates.length>=needed && !pkgSel;
                       return(
-                        <button key={sess.id} onClick={()=>{if(!disabled){setSelDate(d);setSelSess(sess);}}}
-                          style={{background:isSel?`${C.red}18`:disabled?"#0a0908":"#0d0b08",border:`1px solid ${isSel?C.red:disabled?"#1a1a1a":C.cardBorder}`,borderRadius:9,padding:"10px 14px",cursor:disabled?"not-allowed":"pointer",textAlign:"left",opacity:disabled?0.5:1}}>
-                          <div style={{fontSize:12,fontWeight:600,color:isSel?C.red:C.white,fontFamily:D.display,marginBottom:4}}>{sess.time}</div>
-                          <div style={{fontSize:10,color:blocked?"#666":spots===0?"#666":spots<=2?C.red:C.green,fontFamily:D.body}}>
-                            {blocked?"Unavailable":spots===0?"Full":`${spots} spot${spots!==1?"s":""} left`}
+                        <button key={sess.id} onClick={()=>{
+                          if(disabled) return;
+                          if(isPackage){ togglePackDate(d,sess); }
+                          else{ setSelDate(d);setSelSess(sess); }
+                        }}
+                          style={{background:isSel?`${C.green}15`:disabled||pkgFull?"#0a0908":"#0d0b08",border:`1px solid ${isSel?C.green:disabled||pkgFull?"#1a1a1a":C.cardBorder}`,borderRadius:9,padding:"10px 14px",cursor:disabled||pkgFull?"not-allowed":"pointer",textAlign:"left",opacity:disabled||pkgFull?0.4:1,position:"relative"}}>
+                          {isSel&&<div style={{position:"absolute",top:8,right:10,width:18,height:18,borderRadius:"50%",background:C.green,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#0a0a0a",fontWeight:700}}>✓</div>}
+                          <div style={{fontSize:12,fontWeight:600,color:isSel?C.green:C.white,fontFamily:D.display,marginBottom:4}}>{sess.time}</div>
+                          <div style={{fontSize:10,color:blocked_?"#666":spots===0?"#666":spots<=2?C.red:C.green,fontFamily:D.body}}>
+                            {blocked_?"Unavailable":spots===0?"Full":`${spots} spot${spots!==1?"s":""} left`}
                           </div>
                         </button>
                       );
@@ -480,24 +559,44 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
               );
             })}
           </div>
-          {selDate&&selSess&&(
-            <div style={{marginTop:16}}>
-              <AB onClick={()=>setStep(2)} disabled={!canNext1}>Continue →</AB>
-            </div>
-          )}
+          <div style={{marginTop:16,display:"flex",gap:10}}>
+            <GB onClick={()=>setStep(0)}>← Back</GB>
+            <AB onClick={()=>setStep(2)} disabled={!canNext1}>
+              {isPackage
+                ? selDates.length===needed ? "Continue →" : `Select ${needed-selDates.length} more…`
+                : "Continue →"
+              }
+            </AB>
+          </div>
         </div>
       )}
 
       {/* Step 2 — Details + waiver */}
       {step===2&&(
         <div style={{animation:"fadeUp 0.3s ease"}}>
-          <SC title="Session Summary" rows={[
-            {label:"Date",value:fmtDate(selDate)},
-            {label:"Time",value:selSess?.time},
-            {label:"Session",value:`${daySchedule?.skillIcon} ${daySchedule?.skill}`},
-            {label:"Players",value:`${effectiveCount} player${effectiveCount>1?"s":""}`},
-            {label:"Total Due",value:`$${total}`,accent:true},
-          ]}/>
+          {isPackage?(
+            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,overflow:"hidden",marginBottom:20}}>
+              <div style={{padding:"10px 18px",borderBottom:`1px solid ${C.cardBorder}`,fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body}}>{selPkg.name} Summary</div>
+              {selDates.map((s,i)=>(
+                <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"10px 18px",borderBottom:i<selDates.length-1?`1px solid ${C.cardBorder}`:"none"}}>
+                  <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Session {i+1}</span>
+                  <span style={{fontSize:12,color:C.white,fontFamily:D.body}}>{s.dateLabel} · {s.sess.time}</span>
+                </div>
+              ))}
+              <div style={{display:"flex",justifyContent:"space-between",padding:"12px 18px",background:"#0a0908"}}>
+                <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Total Due</span>
+                <span style={{fontSize:14,fontWeight:700,color:C.silver,fontFamily:D.display}}>${selPkg.price * effectiveCount}{effectiveCount>1?` (${effectiveCount} players)`:""}</span>
+              </div>
+            </div>
+          ):(
+            <SC title="Session Summary" rows={[
+              {label:"Date",value:fmtDate(selDate)},
+              {label:"Time",value:selSess?.time},
+              {label:"Session",value:"🔥 The Furnace"},
+              {label:"Players",value:`${effectiveCount} player${effectiveCount>1?"s":""}`},
+              {label:"Total Due",value:`$${total}`,accent:true},
+            ]}/>
+          )}
 
           {!user&&(
             <div style={{display:"grid",gap:10,margin:"20px 0"}}>
@@ -550,18 +649,33 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
         <div style={{animation:"slideUp 0.5s ease",textAlign:"center"}}>
           <div style={{width:80,height:80,borderRadius:"50%",margin:"0 auto 20px",background:`linear-gradient(135deg,${C.green},#0e7a47)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:34,color:C.white,boxShadow:`0 0 60px ${C.green}44`}}>⚒️</div>
           <h2 style={{margin:"0 0 8px",fontSize:28,fontWeight:700,color:C.white,fontFamily:D.display,letterSpacing:2}}>You're In The Forge</h2>
-          <p style={{margin:"0 0 28px",fontSize:13,color:C.textDim,fontFamily:D.body,lineHeight:1.8}}>A confirmation email is on its way. Send your Venmo payment to lock in your spot — then we'll see you on the field.</p>
+          <p style={{margin:"0 0 28px",fontSize:13,color:C.textDim,fontFamily:D.body,lineHeight:1.8}}>A confirmation email is on its way. Send your Venmo payment to lock in your spot{isPackage?"s":""}.</p>
 
-          {myBooking&&<SC title="Session Details" rows={[
-            {label:"Date",value:myBooking.dateLabel},
-            {label:"Time",value:myBooking.sessTime},
-            {label:"Session",value:`${myBooking.skillIcon} ${myBooking.skill}`},
-            {label:"Players",value:`${myBooking.count} player${myBooking.count>1?"s":""}`},
-          ]}/>}
+          {isPackage&&myBookings.length>0?(
+            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,overflow:"hidden",marginBottom:20,textAlign:"left"}}>
+              <div style={{padding:"10px 18px",borderBottom:`1px solid ${C.cardBorder}`,fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body}}>{selPkg.name} · {myBookings.length} Sessions Booked</div>
+              {myBookings.map((b,i)=>(
+                <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"10px 18px",borderBottom:i<myBookings.length-1?`1px solid ${C.cardBorder}`:"none",alignItems:"center"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <div style={{width:20,height:20,borderRadius:"50%",background:`${C.green}18`,border:`1px solid ${C.green}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:C.green}}>✓</div>
+                    <span style={{fontSize:12,color:C.white,fontFamily:D.body}}>{b.dateLabel}</span>
+                  </div>
+                  <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>{b.sessTime}</span>
+                </div>
+              ))}
+            </div>
+          ):myBookings.length>0&&(
+            <SC title="Session Details" rows={[
+              {label:"Date",value:myBookings[0].dateLabel},
+              {label:"Time",value:myBookings[0].sessTime},
+              {label:"Session",value:"🔥 The Furnace"},
+              {label:"Players",value:`${effectiveCount} player${effectiveCount>1?"s":""}`},
+            ]}/>
+          )}
 
           <div style={{background:"#0a0805",border:`1px solid ${C.silver}22`,borderRadius:12,padding:"16px 20px",margin:"20px 0",textAlign:"center"}}>
             <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Pay via Venmo</div>
-            <div style={{fontSize:16,color:C.textMid,fontFamily:D.body,marginBottom:8}}>Send <strong style={{color:C.white,fontSize:24}}>${myBooking?.total||total}</strong></div>
+            <div style={{fontSize:16,color:C.textMid,fontFamily:D.body,marginBottom:8}}>Send <strong style={{color:C.white,fontSize:24}}>${total}</strong></div>
             <a href="https://venmo.com/u/carlos-cepeda-41" target="_blank" rel="noopener noreferrer" style={{display:"inline-block",background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,color:"#0a0a0a",borderRadius:9,padding:"11px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",fontFamily:D.body,fontWeight:700,textDecoration:"none"}}>Pay on Venmo →</a>
             <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginTop:8}}>@carlos-cepeda-41 · Include your name in the note</div>
           </div>
