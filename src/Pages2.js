@@ -531,7 +531,7 @@ export function PackagesPage({setPage}){
         {[
           {name:"Single Session",price:"$40",rate:"$40/session",sessions:"1 session",desc:"Try it out. No commitment. Show up, work hard, see what La Forja is about.",cta:"Book Now",highlight:false},
           {name:"4 Sessions",price:"$140",rate:"$35/session",sessions:"4 sessions",save:"Save $20",desc:"One Friday per week for a month. Good for players building a rhythm.",cta:"Book 4 Sessions",highlight:false},
-          {name:"Full Month",price:"$260",rate:"$32/session",sessions:"8 sessions",save:"Save $60",desc:"Both Friday sessions every week for a full month. This is where real development happens.",cta:"Book Full Month",highlight:true},
+          {name:"8 Sessions",price:"$260",rate:"$32/session",sessions:"8 sessions",save:"Save $60",desc:"Two months of Fridays. For players locked in and serious about development.",cta:"Book 8 Sessions",highlight:true},
         ].map((p,i)=>(
           <div key={i} style={{background:p.highlight?"linear-gradient(135deg,#1a1618,#141416)":C.card,border:p.highlight?`1px solid ${C.silver}44`:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"22px 24px",position:"relative"}}>
             {p.highlight&&<div style={{position:"absolute",top:-10,left:24,background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,color:"#0a0a0a",fontSize:8,letterSpacing:2,fontWeight:700,textTransform:"uppercase",fontFamily:D.body,padding:"3px 12px",borderRadius:10}}>Best Value</div>}
