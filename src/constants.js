@@ -7,7 +7,7 @@ export const stripePromise = loadStripe("pk_test_51TW0MzFU9deEKlhCmhj0SXJS0kQ4ZF
 
 // ── CONFIG ────────────────────────────────────────────────
 export const BRAND = { name:"La Forja", coach:"Carlos Cepeda", venmo:"carlos-cepeda-41", tagline:"Where Champions Are Forged", coachPw:"LAForja37" };
-export const STRIPE_ENABLED = false;
+export const STRIPE_ENABLED = true;
 export const SITE_READY = true;
 export const MAX_PLAYERS = 6;
 export const PRICE_GROUP = 40;
