@@ -630,16 +630,20 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
             </label>
           </div>
 
-          {/* Venmo reminder */}
-          <div style={{background:"#0a0805",border:`1px solid ${C.silver}22`,borderRadius:10,padding:"14px 16px",marginBottom:16,textAlign:"center"}}>
-            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Payment</div>
-            <div style={{fontSize:13,color:C.textMid,fontFamily:D.body,marginBottom:4}}>Send <strong style={{color:C.white,fontSize:18}}>${total}</strong> via Venmo to lock in your spot</div>
-            <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>@carlos-cepeda-41 · Include your name in the note</div>
-          </div>
+          {/* Venmo reminder or Stripe */}
+          {STRIPE_ENABLED ? (
+            <StripePaymentForm total={total} onSuccess={doBook} loading={bookingLoading} disabled={!canNext2||bookingLoading}/>
+          ) : (
+            <div style={{background:"#0a0805",border:`1px solid ${C.silver}22`,borderRadius:10,padding:"14px 16px",marginBottom:16,textAlign:"center"}}>
+              <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Payment</div>
+              <div style={{fontSize:13,color:C.textMid,fontFamily:D.body,marginBottom:4}}>Send <strong style={{color:C.white,fontSize:18}}>${total}</strong> via Venmo to lock in your spot</div>
+              <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>@carlos-cepeda-41 · Include your name in the note</div>
+            </div>
+          )}
 
           <div style={{display:"flex",gap:10}}>
             <GB onClick={()=>setStep(1)}>← Back</GB>
-            <AB disabled={!canNext2||bookingLoading} onClick={doBook}>{bookingLoading?"Reserving…":"Reserve My Spot →"}</AB>
+            {!STRIPE_ENABLED&&<AB disabled={!canNext2||bookingLoading} onClick={doBook}>{bookingLoading?"Reserving…":"Reserve My Spot →"}</AB>}
           </div>
         </div>
       )}
@@ -691,6 +695,61 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
         </div>
       )}
     </div>
+  );
+}
+
+// ── STRIPE PAYMENT FORM ───────────────────────────────────
+import { useStripe, useElements, PaymentElement } from "@stripe/react-stripe-js";
+
+function StripePaymentFormInner({total,onSuccess,disabled}){
+  const stripe  = useStripe();
+  const elements = useElements();
+  const [err,setErr]   = useState("");
+  const [busy,setBusy] = useState(false);
+
+  async function handlePay(e){
+    e.preventDefault();
+    if(!stripe||!elements||disabled) return;
+    setBusy(true); setErr("");
+    const {error} = await stripe.confirmPayment({elements,redirect:"if_required"});
+    if(error){ setErr(error.message||"Payment failed"); setBusy(false); }
+    else{ await onSuccess(); }
+  }
+
+  return(
+    <form onSubmit={handlePay} style={{marginBottom:16}}>
+      <div style={{background:"#0a0805",border:`1px solid ${C.silver}22`,borderRadius:10,padding:"16px",marginBottom:12}}>
+        <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Card Payment · ${total}</div>
+        <PaymentElement/>
+      </div>
+      {err&&<div style={{color:C.red,fontSize:11,fontFamily:D.body,marginBottom:10}}>{err}</div>}
+      <button type="submit" disabled={!stripe||busy||disabled} style={{width:"100%",background:stripe&&!busy&&!disabled?`linear-gradient(135deg,${C.red},${C.redDim})`:"#1a1a1a",border:"none",borderRadius:10,padding:"13px",color:stripe&&!busy&&!disabled?C.white:C.textDim,fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:stripe&&!busy&&!disabled?"pointer":"not-allowed",fontFamily:D.body,fontWeight:600}}>
+        {busy?"Processing…":`Pay $${total} →`}
+      </button>
+    </form>
+  );
+}
+
+function StripePaymentForm({total,onSuccess,loading,disabled}){
+  const [clientSecret,setClientSecret] = useState(null);
+  const [err,setErr] = useState("");
+
+  useEffect(()=>{
+    if(!total) return;
+    fetch("/api/create-payment-intent",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({amount:total*100,currency:"usd"}),
+    }).then(r=>r.json()).then(d=>{ if(d.clientSecret) setClientSecret(d.clientSecret); else setErr("Could not load payment form"); }).catch(()=>setErr("Could not load payment form"));
+  },[total]);
+
+  if(err) return <div style={{color:C.red,fontSize:11,fontFamily:D.body,padding:"12px 0"}}>{err}</div>;
+  if(!clientSecret) return <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,padding:"12px 0"}}>Loading payment form…</div>;
+
+  return(
+    <Elements stripe={stripePromise} options={{clientSecret,appearance:{theme:"night",variables:{colorPrimary:C.red,colorBackground:"#0a0908",colorText:C.white,colorDanger:C.red,fontFamily:D.body,borderRadius:"10px"}}}}>
+      <StripePaymentFormInner total={total} onSuccess={onSuccess} disabled={disabled||loading}/>
+    </Elements>
   );
 }
 
