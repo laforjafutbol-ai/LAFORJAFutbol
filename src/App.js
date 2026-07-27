@@ -337,6 +337,13 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
   const canNext1 = isPackage ? canNext1Pkg : canNext1Single;
   const canNext2 = (form.name||selPlayerIds.length>0) && form.email && waiverAgreed;
 
+  // Auto-populate user info when reaching step 2
+  useEffect(()=>{
+    if(step===2&&user&&!form.email){
+      setForm(f=>({...f,email:user.email||"",name:user.displayName||f.name}));
+    }
+  },[step,user]);
+
   function togglePackDate(date, sess){
     const dk = dKey(date);
     const existing = selDates.findIndex(s=>s.dk===dk&&s.sess.id===sess.id);
@@ -353,10 +360,11 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
     setBookingLoading(true);
     const selectedPlayers = players.filter(p=>selPlayerIds.includes(p.id));
     const bookingName = selectedPlayers.length>0 ? selectedPlayers.map(p=>p.name).join(", ") : form.name;
+    const bookingEmail = form.email || (user?.email||"");
     const base = {
       skill:"The Furnace", skillIcon:"🔥",
       count:effectiveCount,
-      name:bookingName, email:form.email, phone:form.phone, notes:form.notes,
+      name:bookingName, email:bookingEmail, phone:form.phone, notes:form.notes,
       parentName:user?user.displayName||form.name:null,
       status:"pending",
       packageName:selPkg?.name||"Single Session",
@@ -608,11 +616,15 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
               ))}
             </div>
           )}
-          {user&&!form.email&&(
+          {user&&(
             <div style={{margin:"16px 0"}}>
               <div style={{fontSize:9,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>Confirm Email</div>
-              <input type="email" value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))} placeholder={user.email||""} style={{...IS}}/>
-              {!form.email&&user.email&&<button onClick={()=>setForm(p=>({...p,email:user.email,name:user.displayName||""}))} style={{marginTop:8,background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"6px 14px",color:C.silver,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Use {user.email}</button>}
+              <input type="email" value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))} placeholder={user.email||"your@email.com"} style={{...IS}}/>
+              {!form.email&&user.email&&(
+                <button onClick={()=>setForm(p=>({...p,email:user.email,name:user.displayName||p.name}))} style={{marginTop:8,background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"6px 14px",color:C.silver,fontSize:10,cursor:"pointer",fontFamily:D.body}}>
+                  Use {user.email}
+                </button>
+              )}
             </div>
           )}
 
@@ -653,7 +665,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
         <div style={{animation:"slideUp 0.5s ease",textAlign:"center"}}>
           <div style={{width:80,height:80,borderRadius:"50%",margin:"0 auto 20px",background:`linear-gradient(135deg,${C.green},#0e7a47)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:34,color:C.white,boxShadow:`0 0 60px ${C.green}44`}}>⚒️</div>
           <h2 style={{margin:"0 0 8px",fontSize:28,fontWeight:700,color:C.white,fontFamily:D.display,letterSpacing:2}}>You're In The Forge</h2>
-          <p style={{margin:"0 0 28px",fontSize:13,color:C.textDim,fontFamily:D.body,lineHeight:1.8}}>A confirmation email is on its way. Send your Venmo payment to lock in your spot{isPackage?"s":""}.</p>
+          <p style={{margin:"0 0 28px",fontSize:13,color:C.textDim,fontFamily:D.body,lineHeight:1.8}}>{STRIPE_ENABLED?"Payment confirmed. A confirmation email is on its way.":"A confirmation email is on its way. Send your Venmo payment to lock in your spot."}</p>
 
           {isPackage&&myBookings.length>0?(
             <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,overflow:"hidden",marginBottom:20,textAlign:"left"}}>
@@ -677,12 +689,14 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
             ]}/>
           )}
 
-          <div style={{background:"#0a0805",border:`1px solid ${C.silver}22`,borderRadius:12,padding:"16px 20px",margin:"20px 0",textAlign:"center"}}>
-            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Pay via Venmo</div>
-            <div style={{fontSize:16,color:C.textMid,fontFamily:D.body,marginBottom:8}}>Send <strong style={{color:C.white,fontSize:24}}>${total}</strong></div>
-            <a href="https://venmo.com/u/carlos-cepeda-41" target="_blank" rel="noopener noreferrer" style={{display:"inline-block",background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,color:"#0a0a0a",borderRadius:9,padding:"11px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",fontFamily:D.body,fontWeight:700,textDecoration:"none"}}>Pay on Venmo →</a>
-            <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginTop:8}}>@carlos-cepeda-41 · Include your name in the note</div>
-          </div>
+          {!STRIPE_ENABLED&&(
+            <div style={{background:"#0a0805",border:`1px solid ${C.silver}22`,borderRadius:12,padding:"16px 20px",margin:"20px 0",textAlign:"center"}}>
+              <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Pay via Venmo</div>
+              <div style={{fontSize:16,color:C.textMid,fontFamily:D.body,marginBottom:8}}>Send <strong style={{color:C.white,fontSize:24}}>${total}</strong></div>
+              <a href="https://venmo.com/u/carlos-cepeda-41" target="_blank" rel="noopener noreferrer" style={{display:"inline-block",background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,color:"#0a0a0a",borderRadius:9,padding:"11px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",fontFamily:D.body,fontWeight:700,textDecoration:"none"}}>Pay on Venmo →</a>
+              <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginTop:8}}>@carlos-cepeda-41 · Include your name in the note</div>
+            </div>
+          )}
 
           <div style={{background:"#0e0b08",border:"1px solid #1e1810",borderRadius:12,padding:"16px 20px",textAlign:"left",marginBottom:24}}>
             <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>What to Bring</div>
@@ -739,7 +753,7 @@ function StripePaymentForm({total,onSuccess,loading,disabled}){
     fetch("/api/create-payment-intent",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({amount:total*100,currency:"usd"}),
+      body:JSON.stringify({amount:total,currency:"usd"}),
     }).then(r=>r.json()).then(d=>{ if(d.clientSecret) setClientSecret(d.clientSecret); else setErr("Could not load payment form"); }).catch(()=>setErr("Could not load payment form"));
   },[total]);
 
