@@ -1,7 +1,7 @@
 const Stripe = require("stripe");
 
 // Test mode secret key
-const stripe = Stripe("sk_test_51TW0MzFU9deEKlhCQdCpU6zZeeSKKffjLFJVLKLcwaU9N0dNpwdfLk3e7OaglckppivQ3bsFgJ0kJGlLzQKBC45i00TPqsBM3S");
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -15,6 +15,11 @@ module.exports = async function handler(req, res) {
 
     if (!amount || amount < 1) {
       return res.status(400).json({ error: "Invalid amount" });
+    }
+
+    // Safety cap — max single charge is $600 (8 sessions × 2 players)
+    if (amount > 600) {
+      return res.status(400).json({ error: "Amount exceeds maximum allowed charge" });
     }
 
     const paymentIntent = await stripe.paymentIntents.create({
