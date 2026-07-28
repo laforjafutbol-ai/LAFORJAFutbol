@@ -118,11 +118,17 @@ export default function App(){
 // ── HOME PAGE ─────────────────────────────────────────────
 function HomePage({setPage,user}){
   return(
-    <div>
-      {/* ── MAINTENANCE BANNER ── */}
-      <div style={{background:"#111116",borderBottom:`1px solid ${C.cardBorder}`,padding:"12px 24px",textAlign:"center"}}>
-        <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>🔧 We're making some updates — to schedule a session in the meantime email us at </span>
-        <a href="mailto:laforjafutbol@gmail.com" style={{fontSize:11,color:C.red,fontFamily:D.body,textDecoration:"none",fontWeight:600}}>laforjafutbol@gmail.com</a>
+    <div style={{position:"relative"}}>
+      {/* ── MAINTENANCE OVERLAY ── */}
+      <div style={{position:"fixed",inset:0,background:"rgba(9,9,11,0.85)",zIndex:200,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,backdropFilter:"blur(4px)"}}>
+        <div style={{textAlign:"center",maxWidth:480}}>
+          <div style={{fontSize:32,marginBottom:16}}>⚒️</div>
+          <div style={{fontSize:9,letterSpacing:5,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>La Forja Futbol</div>
+          <h2 style={{fontSize:28,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:12,letterSpacing:1}}>We're Making Updates</h2>
+          <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:28}}>The booking system is temporarily unavailable while we make improvements. To schedule a session in the meantime, reach out directly.</p>
+          <a href="mailto:laforjafutbol@gmail.com?subject=Session Inquiry" style={{display:"inline-block",background:`linear-gradient(135deg,${C.red},${C.redDim})`,color:C.white,borderRadius:10,padding:"13px 32px",fontSize:11,letterSpacing:3,textTransform:"uppercase",fontFamily:D.body,fontWeight:600,textDecoration:"none"}}>Email Coach Carlos →</a>
+          <div style={{marginTop:16,fontSize:10,color:C.textDim,fontFamily:D.body}}>laforjafutbol@gmail.com</div>
+        </div>
       </div>
       {/* Hero */}
       <div style={{minHeight:"92vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"60px 24px",textAlign:"center",background:`radial-gradient(ellipse at 50% 80%,${C.redDark} 0%,transparent 55%)`}}>
