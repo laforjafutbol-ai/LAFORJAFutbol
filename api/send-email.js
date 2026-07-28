@@ -16,7 +16,7 @@ module.exports = async function handler(req, res) {
   booking.sessTime = booking.sessTime || booking.slotTime || booking._time || "";
   booking.dateLabel = booking.dateLabel || booking.dateKey || "";
 
-  var RESEND_KEY = "re_BCWt84sh_J1QCDjV2yxyiFwr4Fs1SqyYi";
+  var RESEND_KEY = process.env.RESEND_API_KEY;
   var FROM = "La Forja <laforjafutbol@laforjafutbol.com>";
   var REPLY = "laforjafutbol@gmail.com";
 
