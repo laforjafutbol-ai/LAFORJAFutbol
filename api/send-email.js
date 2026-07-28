@@ -54,7 +54,7 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  var policyBlock = '<div style="background:#111111;border:1px solid #222222;border-radius:12px;padding:16px 20px;margin-bottom:20px;"><div style="font-size:10px;letter-spacing:3px;color:#7a6030;text-transform:uppercase;margin-bottom:8px;">Need to Reschedule?</div><div style="font-size:12px;color:#666666;line-height:1.8;">No problem — email <a href=\"mailto:laforjafutbol@gmail.com\" style=\"color:#c9a84c;text-decoration:none;\">laforjafutbol@gmail.com</a> and Coach Carlos will work something out with you.</div></div>';
+  var policyBlock = '<div style="background:#111111;border:1px solid #222222;border-radius:12px;padding:16px 20px;margin-bottom:20px;"><div style="font-size:10px;letter-spacing:3px;color:#7a6030;text-transform:uppercase;margin-bottom:8px;">Need to Reschedule?</div><div style="font-size:12px;color:#666666;line-height:1.8;">Log into your account at <a href=\"https://laforjafutbol.com\" style=\"color:#c9a84c;text-decoration:none;\">laforjafutbol.com</a>, go to <strong style=\"color:#c0c0c0;">My Account</strong>, and tap <strong style=\"color:#c0c0c0;">Reschedule</strong> next to your session. You can move to any open Friday slot — no approval needed, no back and forth. If you run into any issues, reach out to <a href=\"mailto:laforjafutbol@gmail.com\" style=\"color:#c9a84c;text-decoration:none;\">laforjafutbol@gmail.com</a>.</div></div>';
 
   var quotes = [
     "The best players in the world were once beginners who refused to quit. Every rep counts — show up ready to work.",
@@ -70,7 +70,7 @@ module.exports = async function handler(req, res) {
   ];
   var randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
-  var gearBlock = '<div style="background:#0a0a0a;border:1px solid #222222;border-radius:12px;padding:20px 20px;margin-bottom:20px;"><div style="font-size:10px;letter-spacing:3px;color:#7a6030;text-transform:uppercase;margin-bottom:14px;">What to Bring</div><table style="width:100%;border-collapse:collapse;"><tr><td style="font-size:12px;color:#888888;padding:5px 0;width:50%;">💧 Water</td><td style="font-size:12px;color:#888888;padding:5px 0;">👟 Cleats</td></tr><tr><td style="font-size:12px;color:#888888;padding:5px 0;" colspan="2">🎽 Elastic band <span style="color:#555555;font-size:11px;">(one will be provided)</span></td></tr></table><div style="font-size:11px;color:#555555;margin-top:12px;line-height:1.7;border-top:1px solid #1a1a1a;padding-top:12px;">Please arrive <strong style="color:#c0c0c0;">15 minutes early</strong> to warm up. Sessions start and end on time.</div><div style="margin-top:14px;padding:14px 16px;background:#161410;border-left:3px solid #c9a84c;border-radius:4px;font-size:13px;color:#c9a84c;font-style:italic;line-height:1.7;">&ldquo;' + randomQuote + '&rdquo;<div style="font-size:10px;color:#7a6030;margin-top:6px;letter-spacing:2px;text-transform:uppercase;font-style:normal;">— Coach Carlos</div></div></div>';
+  var gearBlock = '<div style="background:#0a0a0a;border:1px solid #222222;border-radius:12px;padding:20px 20px;margin-bottom:20px;"><div style="font-size:10px;letter-spacing:3px;color:#7a6030;text-transform:uppercase;margin-bottom:14px;">What to Bring</div><table style="width:100%;border-collapse:collapse;"><tr><td style="font-size:12px;color:#888888;padding:6px 0;width:50%;">💧 Water bottle</td><td style="font-size:12px;color:#888888;padding:6px 0;">👟 Cleats or turf shoes</td></tr><tr><td style="font-size:12px;color:#888888;padding:6px 0;" colspan="2">🎽 Elastic band <span style="color:#555555;font-size:11px;">(one will be provided if needed)</span></td></tr></table><div style="font-size:11px;color:#555555;margin-top:12px;line-height:1.7;border-top:1px solid #1a1a1a;padding-top:12px;">Please arrive <strong style="color:#c0c0c0;">15 minutes early</strong> to warm up and get ready. Sessions start and end on time — late arrivals miss the warmup.</div><div style="margin-top:14px;padding:14px 16px;background:#161410;border-left:3px solid #c9a84c;border-radius:4px;font-size:13px;color:#c9a84c;font-style:italic;line-height:1.7;">&ldquo;' + randomQuote + '&rdquo;<div style="font-size:10px;color:#7a6030;margin-top:6px;letter-spacing:2px;text-transform:uppercase;font-style:normal;">— Coach Carlos</div></div></div>';
 
   var locName   = booking.location       || "Bayview Park";
   var locDetail = booking.locationDetail || "James Island Youth Soccer Club Fields · James Island, SC";
@@ -105,13 +105,8 @@ module.exports = async function handler(req, res) {
     html = wrap(
       '<h1 style="text-align:center;font-size:28px;font-weight:normal;color:#c9a84c;letter-spacing:2px;margin-bottom:20px;">You\'re In The Forge ⚒️</h1>' +
       '<div style="background:#141414;border:1px solid #222;border-radius:14px;padding:24px;margin-bottom:20px;">' +
-      '<p style="margin:0 0 16px;font-size:14px;color:#999;line-height:1.8;">Hi <strong style="color:#f0f0f0;">' + booking.name + '</strong>,<br/>Your spot is confirmed. Send payment via Venmo to lock it in, then we\'ll see you on the field! ⚽</p>' +
-      '<div style="border-top:1px solid #222;padding-top:14px;"><div style="font-size:9px;letter-spacing:3px;color:#c9a84c;text-transform:uppercase;margin-bottom:12px;">Session Details</div>' + rows + '</div></div>' +
-      venmoBtn +
-      '<div style="background:#0f0f0f;border-radius:10px;padding:16px;margin-top:16px;">' +
-      '<div style="font-size:9px;letter-spacing:3px;color:#c9a84c;text-transform:uppercase;margin-bottom:10px;">What to Bring</div>' +
-      '<p style="font-size:12px;color:#888;line-height:1.8;margin:0;">👟 Cleats or turf shoes &nbsp;·&nbsp; 💧 Water bottle &nbsp;·&nbsp; ⚽ Your own ball if you have one<br/>Arrive 5-10 minutes early to warm up.</p>' +
-      '</div>'
+      '<p style="margin:0 0 16px;font-size:14px;color:#999;line-height:1.8;">Hi <strong style="color:#f0f0f0;">' + booking.name + '</strong>,<br/>Your spot is confirmed and your payment has been received. We\'ll see you on the field! ⚽</p>' +
+      '<div style="border-top:1px solid #222;padding-top:14px;"><div style="font-size:9px;letter-spacing:3px;color:#c9a84c;text-transform:uppercase;margin-bottom:12px;">Session Details</div>' + rows + '</div></div>'
     );
 
   } else if (type === "1on1_booking") {
