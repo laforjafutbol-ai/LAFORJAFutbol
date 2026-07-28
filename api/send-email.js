@@ -1,262 +1,163 @@
+const https = require("https");
+
+const RESEND_KEY = process.env.RESEND_API_KEY;
+const FIREBASE_PROJECT = "laforja-4be1d";
+const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
+const FROM = "La Forja <laforjafutbol@laforjafutbol.com>";
+const REPLY = "laforjafutbol@gmail.com";
+
+const QUOTES = [
+  "The best players in the world were once beginners who refused to quit. Every rep counts — show up ready to work.",
+  "Talent gets you to the door. Work ethic gets you through it. See you on the field.",
+  "Champions are built in the moments nobody is watching. Today is one of those moments.",
+  "One session will not make you great. But skipping one might be the reason you are not. Let's get to work.",
+  "The pitch doesn't care how you feel. It only cares what you do. Come ready to do the work.",
+  "Every touch, every rep, every drill — it all adds up. Trust the process.",
+  "The players who make it aren't the most talented. They're the ones who outwork everyone else.",
+  "Your future self will thank you for showing up today. See you out there.",
+  "Iron sharpens iron. Come ready to be pushed.",
+  "Greatness is not given. It is forged. Welcome to La Forja.",
+];
+
+function sendEmail(to, subject, html) {
+  const body = JSON.stringify({ from: FROM, reply_to: REPLY, to: [to], subject, html });
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: "api.resend.com", path: "/emails", method: "POST",
+      headers: { "Authorization": `Bearer ${RESEND_KEY}`, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+    }, (r) => { let d = ""; r.on("data", c => d += c); r.on("end", () => resolve(d)); });
+    req.on("error", reject); req.write(body); req.end();
+  });
+}
+
+function makeHtml(name, dateLabel, time, sessionLabel) {
+  const quote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  return `<div style="font-family:Georgia,serif;background:#0a0a0a;color:#f0f0f0;padding:40px;max-width:560px;margin:0 auto;border-radius:16px;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="font-size:10px;letter-spacing:5px;color:#707070;text-transform:uppercase;">La Forja · Private Training</div>
+      <div style="width:40px;height:2px;background:linear-gradient(90deg,#c9a84c,#cc2222);margin:10px auto;border-radius:1px;"></div>
+    </div>
+    <h1 style="text-align:center;font-size:26px;font-weight:normal;color:#c9a84c;margin-bottom:20px;">See You Today! ⚽</h1>
+    <div style="background:#141414;border:1px solid #222;border-radius:14px;padding:24px;margin-bottom:20px;">
+      <p style="margin:0 0 16px;font-size:14px;color:#999;line-height:1.8;">Hi <strong style="color:#f0f0f0;">${name}</strong>,<br/>Your La Forja session is <strong style="color:#c9a84c;">today</strong>. Come ready to work!</p>
+      <div style="border-top:1px solid #222;padding-top:14px;">
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1a1a1a;"><span style="font-size:12px;color:#666;">Date</span><span style="font-size:13px;color:#c0c0c0;">${dateLabel}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1a1a1a;"><span style="font-size:12px;color:#666;">Time</span><span style="font-size:13px;color:#c0c0c0;">${time}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;"><span style="font-size:12px;color:#666;">Session</span><span style="font-size:13px;color:#c0c0c0;">${sessionLabel}</span></div>
+      </div>
+    </div>
+    <div style="background:#0a0a0a;border:1px solid #222222;border-radius:12px;padding:20px;margin-bottom:20px;">
+      <div style="font-size:10px;letter-spacing:3px;color:#7a6030;text-transform:uppercase;margin-bottom:14px;">What to Bring</div>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr><td style="font-size:12px;color:#888;padding:6px 0;width:50%;">💧 Water bottle</td><td style="font-size:12px;color:#888;padding:6px 0;">👟 Cleats or turf shoes</td></tr>
+        <tr><td style="font-size:12px;color:#888;padding:6px 0;" colspan="2">🎽 Elastic band <span style="color:#555;font-size:11px;">(one will be provided if needed)</span></td></tr>
+      </table>
+      <div style="font-size:11px;color:#555;margin-top:12px;line-height:1.7;border-top:1px solid #1a1a1a;padding-top:12px;">Please arrive <strong style="color:#c0c0c0;">15 minutes early</strong> to warm up. Sessions start and end on time — late arrivals miss the warmup.</div>
+      <div style="margin-top:14px;padding:14px 16px;background:#161410;border-left:3px solid #c9a84c;border-radius:4px;font-size:13px;color:#c9a84c;font-style:italic;line-height:1.7;">&ldquo;${quote}&rdquo;<div style="font-size:10px;color:#7a6030;margin-top:6px;letter-spacing:2px;text-transform:uppercase;font-style:normal;">— Coach Carlos</div></div>
+    </div>
+    <div style="background:#1a0808;border:1px solid #cc222233;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+      <div style="font-size:11px;color:#cc2222;margin-bottom:6px;">📍 Training Location</div>
+      <div style="font-size:14px;color:#f0f0f0;margin-bottom:2px;">Bayview Park</div>
+      <div style="font-size:12px;color:#888;">James Island, SC</div>
+      <div style="margin-top:8px;"><a href="https://maps.google.com/?q=Bayview+Park+James+Island+SC" style="font-size:11px;color:#cc2222;text-decoration:none;">📍 Get Directions →</a></div>
+    </div>
+    <div style="background:#111111;border:1px solid #222222;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+      <div style="font-size:10px;letter-spacing:3px;color:#7a6030;text-transform:uppercase;margin-bottom:8px;">Need to Reschedule?</div>
+      <div style="font-size:12px;color:#666666;line-height:1.8;">Log into your account at <a href="https://laforjafutbol.com" style="color:#c9a84c;text-decoration:none;">laforjafutbol.com</a>, go to <strong style="color:#c0c0c0;">My Account</strong>, and tap <strong style="color:#c0c0c0;">Reschedule</strong> next to your session. No approval needed.</div>
+    </div>
+    <div style="text-align:center;padding-top:16px;border-top:1px solid #1a1a1a;">
+      <div style="font-size:11px;color:#444;">Questions?</div>
+      <a href="mailto:laforjafutbol@gmail.com" style="color:#c9a84c;font-size:12px;text-decoration:none;">laforjafutbol@gmail.com</a>
+      <div style="font-size:10px;color:#333;margin-top:10px;letter-spacing:2px;text-transform:uppercase;">La Forja · Where Champions Are Forged</div>
+    </div>
+  </div>`;
+}
+
 module.exports = async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-
-  var body = req.body;
-  var booking = body.booking;
-  var type = body.type;
-  console.log("send-email called:", type, booking?.email, booking?.name);
-  if (!booking) return res.status(400).json({ error: "Missing booking data" });
-  if (!booking.email && type !== "contact") return res.status(400).json({ error: "No email for: " + booking?.name });
-
-  // Normalize common field aliases
-  booking.sessTime = booking.sessTime || booking.slotTime || booking._time || "";
-  booking.dateLabel = booking.dateLabel || booking.dateKey || "";
-
-  var RESEND_KEY = process.env.RESEND_API_KEY;
-  var FROM = "La Forja <laforjafutbol@laforjafutbol.com>";
-  var REPLY = "laforjafutbol@gmail.com";
-
-  // ── CONTACT FORM — sends TO Carlos, not to the client ──
-  if (type === "contact") {
-    var contactHtml = '<div style="font-family:Georgia,serif;background:#0a0a0a;color:#f0f0f0;padding:40px;max-width:560px;margin:0 auto;border-radius:16px;">' +
-      '<div style="text-align:center;margin-bottom:24px;"><div style="font-size:10px;letter-spacing:5px;color:#707070;text-transform:uppercase;margin-bottom:6px;">La Forja · Account Message</div><div style="width:40px;height:2px;background:linear-gradient(90deg,#c9a84c,#cc2222);margin:10px auto;border-radius:1px;"></div></div>' +
-      '<h1 style="text-align:center;font-size:22px;font-weight:normal;color:#c9a84c;margin-bottom:20px;">New Message from a Client</h1>' +
-      '<div style="background:#141414;border:1px solid #222;border-radius:14px;padding:20px;margin-bottom:20px;">' +
-      '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1a1a1a;"><span style="font-size:12px;color:#666;">From</span><span style="font-size:13px;color:#c0c0c0;">' + (booking.name || "Account holder") + '</span></div>' +
-      '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1a1a1a;"><span style="font-size:12px;color:#666;">Email</span><span style="font-size:13px;color:#c0c0c0;">' + booking.email + '</span></div>' +
-      '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1a1a1a;"><span style="font-size:12px;color:#666;">Subject</span><span style="font-size:13px;color:#c0c0c0;">' + (booking.subject || "General Question") + '</span></div>' +
-      '<div style="padding:14px 0 0;"><div style="font-size:11px;color:#7a6030;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">Message</div><div style="font-size:13px;color:#e0e0e0;line-height:1.8;white-space:pre-wrap;">' + (booking.message || "") + '</div></div>' +
-      '</div>' +
-      '<div style="text-align:center;padding-top:12px;border-top:1px solid #1a1a1a;"><a href="mailto:' + booking.email + '" style="color:#c9a84c;font-size:12px;text-decoration:none;">Reply to ' + (booking.name || "this client") + ' →</a></div>' +
-      '</div>';
-
-    try {
-      var https0 = require("https");
-      var emailBody0 = JSON.stringify({ from: FROM, reply_to: booking.email, to: ["laforjafutbol@gmail.com"], subject: "📩 New Message: " + (booking.subject || "General Question"), html: contactHtml });
-      await new Promise(function(resolve, reject) {
-        var options0 = {
-          hostname: "api.resend.com", path: "/emails", method: "POST",
-          headers: { "Authorization": "Bearer " + RESEND_KEY, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(emailBody0) },
-        };
-        var req0 = https0.request(options0, function(r) {
-          var data = ""; r.on("data", function(c){ data += c; }); r.on("end", function(){ if (r.statusCode >= 400) reject(new Error(data)); else resolve(data); });
-        });
-        req0.on("error", reject); req0.write(emailBody0); req0.end();
-      });
-      return res.status(200).json({ success: true });
-    } catch (err) {
-      console.error("Resend error:", err.message);
-      return res.status(500).json({ error: err.message });
-    }
-  }
-
-  var policyBlock = '<div style="background:#111111;border:1px solid #222222;border-radius:12px;padding:16px 20px;margin-bottom:20px;"><div style="font-size:10px;letter-spacing:3px;color:#7a6030;text-transform:uppercase;margin-bottom:8px;">Need to Reschedule?</div><div style="font-size:12px;color:#666666;line-height:1.8;">Log into your account at <a href=\"https://laforjafutbol.com\" style=\"color:#c9a84c;text-decoration:none;\">laforjafutbol.com</a>, go to <strong style=\"color:#c0c0c0;">My Account</strong>, and tap <strong style=\"color:#c0c0c0;">Reschedule</strong> next to your session. You can move to any open Friday slot — no approval needed, no back and forth. If you run into any issues, reach out to <a href=\"mailto:laforjafutbol@gmail.com\" style=\"color:#c9a84c;text-decoration:none;\">laforjafutbol@gmail.com</a>.</div></div>';
-
-  var quotes = [
-    "The best players in the world were once beginners who refused to quit. Every rep counts — show up ready to work.",
-    "Talent gets you to the door. Work ethic gets you through it. See you on the field.",
-    "Champions are built in the moments nobody is watching. Today is one of those moments.",
-    "One session will not make you great. But skipping one might be the reason you are not. Lets get to work.",
-    "The pitch doesn't care how you feel. It only cares what you do. Come ready to do the work.",
-    "Every touch, every rep, every drill — it all adds up. Trust the process.",
-    "The players who make it aren't the most talented. They're the ones who outwork everyone else.",
-    "Your future self will thank you for showing up today. See you out there.",
-    "Iron sharpens iron. Come ready to be pushed.",
-    "Greatness is not given. It is forged. Welcome to La Forja.",
-  ];
-  var randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-
-  var gearBlock = '<div style="background:#0a0a0a;border:1px solid #222222;border-radius:12px;padding:20px 20px;margin-bottom:20px;"><div style="font-size:10px;letter-spacing:3px;color:#7a6030;text-transform:uppercase;margin-bottom:14px;">What to Bring</div><table style="width:100%;border-collapse:collapse;"><tr><td style="font-size:12px;color:#888888;padding:6px 0;width:50%;">💧 Water bottle</td><td style="font-size:12px;color:#888888;padding:6px 0;">👟 Cleats or turf shoes</td></tr><tr><td style="font-size:12px;color:#888888;padding:6px 0;" colspan="2">🎽 Elastic band <span style="color:#555555;font-size:11px;">(one will be provided if needed)</span></td></tr></table><div style="font-size:11px;color:#555555;margin-top:12px;line-height:1.7;border-top:1px solid #1a1a1a;padding-top:12px;">Please arrive <strong style="color:#c0c0c0;">15 minutes early</strong> to warm up and get ready. Sessions start and end on time — late arrivals miss the warmup.</div><div style="margin-top:14px;padding:14px 16px;background:#161410;border-left:3px solid #c9a84c;border-radius:4px;font-size:13px;color:#c9a84c;font-style:italic;line-height:1.7;">&ldquo;' + randomQuote + '&rdquo;<div style="font-size:10px;color:#7a6030;margin-top:6px;letter-spacing:2px;text-transform:uppercase;font-style:normal;">— Coach Carlos</div></div></div>';
-
-  var locName   = booking.location       || "Bayview Park";
-  var locDetail = booking.locationDetail || "James Island Youth Soccer Club Fields · James Island, SC";
-  var locMaps   = booking.locationMaps   || "https://maps.google.com/?q=Bayview+Park+James+Island+SC";
-
-  var locationBlock = '<div style="background:#1a0808;border:1px solid #cc222233;border-radius:12px;padding:16px 20px;margin-bottom:20px;"><div style="font-size:11px;color:#cc2222;margin-bottom:6px;">📍 Training Location</div><div style="font-size:14px;color:#f0f0f0;margin-bottom:2px;">' + locName + '</div><div style="font-size:12px;color:#888;">' + locDetail + '</div><div style="margin-top:8px;"><a href=\"' + locMaps + '\" style=\"font-size:11px;color:#cc2222;text-decoration:none;\">📍 Get Directions →</a></div></div>';
-
-  var footerBlock = '<div style="text-align:center;padding-top:16px;border-top:1px solid #1a1a1a;"><div style="font-size:11px;color:#444;">Questions?</div><a href="mailto:laforjafutbol@gmail.com" style="color:#c9a84c;font-size:12px;text-decoration:none;">laforjafutbol@gmail.com</a><div style="font-size:10px;color:#333;margin-top:10px;letter-spacing:2px;text-transform:uppercase;">La Forja · Where Champions Are Forged</div></div>';
-
-  function wrap(content) {
-    return '<div style="font-family:Georgia,serif;background:#0a0a0a;color:#f0f0f0;padding:40px;max-width:560px;margin:0 auto;border-radius:16px;"><div style="text-align:center;margin-bottom:28px;"><div style="font-size:10px;letter-spacing:5px;color:#707070;text-transform:uppercase;margin-bottom:6px;">La Forja · Private Training</div><div style="width:40px;height:2px;background:linear-gradient(90deg,#c9a84c,#cc2222);margin:10px auto;border-radius:1px;"></div></div>' + content + gearBlock + policyBlock + locationBlock + footerBlock + '</div>';
-  }
-
-  function row(label, value) {
-    return '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1a1a1a;"><span style="font-size:12px;color:#666;">' + label + '</span><span style="font-size:13px;color:#c0c0c0;">' + (value || "") + '</span></div>';
-  }
-
-  var venmoBtn = '<div style="background:#1a1000;border:1px solid #c9a84c44;border-radius:12px;padding:20px;margin-bottom:20px;text-align:center;"><div style="font-size:11px;color:#7a6030;margin-bottom:8px;letter-spacing:2px;text-transform:uppercase;">Complete Your Payment</div><div style="font-size:13px;color:#999;margin-bottom:14px;">Send <strong style="color:#f0f0f0;font-size:22px;">$' + booking.price + '</strong> to lock in your spot</div><a href="https://venmo.com/u/carlos-cepeda-41" style="display:inline-block;background:linear-gradient(135deg,#c9a84c,#7a6030);color:#0a0a0a;text-decoration:none;padding:12px 28px;border-radius:10px;font-size:12px;letter-spacing:3px;text-transform:uppercase;font-weight:bold;">Pay on Venmo →</a><div style="font-size:11px;color:#444;margin-top:10px;">@carlos-cepeda-41 · Include your name in the note</div></div>';
-
-  var subject, html;
-
-  if (type === "group") {
-    subject = "✅ You're Booked — La Forja Session Confirmed!";
-    var rows = [
-      row("Date", booking.dateLabel),
-      row("Time", booking.sessTime),
-      row("Session", (booking.skillIcon || "🔥") + " " + (booking.skill || "The Furnace")),
-      row("Players", booking.count + " player" + (booking.count > 1 ? "s" : "")),
-      row("Location", booking.locationDetail || "Bayview Complex · James Island"),
-      row("Amount Due", "$" + booking.total),
-    ].join("");
-    html = wrap(
-      '<h1 style="text-align:center;font-size:28px;font-weight:normal;color:#c9a84c;letter-spacing:2px;margin-bottom:20px;">You\'re In The Forge ⚒️</h1>' +
-      '<div style="background:#141414;border:1px solid #222;border-radius:14px;padding:24px;margin-bottom:20px;">' +
-      '<p style="margin:0 0 16px;font-size:14px;color:#999;line-height:1.8;">Hi <strong style="color:#f0f0f0;">' + booking.name + '</strong>,<br/>Your spot is confirmed and your payment has been received. We\'ll see you on the field! ⚽</p>' +
-      '<div style="border-top:1px solid #222;padding-top:14px;"><div style="font-size:9px;letter-spacing:3px;color:#c9a84c;text-transform:uppercase;margin-bottom:12px;">Session Details</div>' + rows + '</div></div>'
-    );
-
-  } else if (type === "1on1_booking") {
-    // Step 1 — slot confirmed, now pay
-    subject = "📅 Your La Forja Slot is Confirmed — Send Payment to Lock It In";
-    html = wrap(
-      '<h1 style="text-align:center;font-size:26px;font-weight:normal;color:#c9a84c;letter-spacing:2px;margin-bottom:20px;">Slot Confirmed ✓</h1>' +
-      '<div style="background:#141414;border:1px solid #222;border-radius:14px;padding:24px;margin-bottom:20px;">' +
-      '<p style="margin:0 0 16px;font-size:14px;color:#999;line-height:1.8;">Hi <strong style="color:#f0f0f0;">' + booking.name + '</strong>,<br/>Coach Carlos has confirmed your slot! Send your payment on Venmo to fully lock it in.</p>' +
-      '<div style="border-top:1px solid #222;padding-top:14px;"><div style="font-size:9px;letter-spacing:3px;color:#c9a84c;text-transform:uppercase;margin-bottom:12px;">Session Details</div>' +
-      row("Scheduled Time", booking.scheduledTime) +
-      row("Session Type", "1-on-1 Private Training") +
-      row("Amount Due", "$" + booking.price) +
-      '</div></div>' +
-      venmoBtn
-    );
-
-  } else if (type === "1on1_paid") {
-    // Step 2 — payment confirmed, fully set
-    subject = "🏆 Payment Confirmed — You're All Set for Your La Forja Session!";
-    html = wrap(
-      '<h1 style="text-align:center;font-size:26px;font-weight:normal;color:#22c55e;letter-spacing:2px;margin-bottom:20px;">You\'re All Set! ✓</h1>' +
-      '<div style="background:#141414;border:1px solid #222;border-radius:14px;padding:24px;margin-bottom:20px;">' +
-      '<p style="margin:0 0 16px;font-size:14px;color:#999;line-height:1.8;">Hi <strong style="color:#f0f0f0;">' + booking.name + '</strong>,<br/>Coach Carlos has confirmed your payment. Your 1-on-1 session is fully booked — see you on the field! ⚽</p>' +
-      '<div style="border-top:1px solid #222;padding-top:14px;"><div style="font-size:9px;letter-spacing:3px;color:#c9a84c;text-transform:uppercase;margin-bottom:12px;">Session Details</div>' +
-      row("Scheduled Time", booking.scheduledTime) +
-      row("Session Type", "1-on-1 Private Training") +
-      row("Amount Paid", "$" + booking.price) +
-      '</div></div>'
-    );
-
-  } else if (type === "reminder_group") {
-    subject = "⏰ Reminder — Your La Forja Session is Today!";
-    var rows2 = [
-      row("Date", booking.dateLabel),
-      row("Time", booking.sessTime),
-      row("Location", "Bayview Park · James Island Youth Soccer Club Fields"),
-      row("Age Group", booking.ageGroup),
-      row("Skill Focus", (booking.skillIcon||"") + " " + (booking.skill||"")),
-    ].join("");
-    html = wrap(
-      '<h1 style="text-align:center;font-size:26px;font-weight:normal;color:#c9a84c;letter-spacing:2px;margin-bottom:20px;">See You Tonight! ⚽</h1>' +
-      '<div style="background:#141414;border:1px solid #222;border-radius:14px;padding:24px;margin-bottom:20px;">' +
-      '<p style="margin:0 0 16px;font-size:14px;color:#999;line-height:1.8;">Hi <strong style="color:#f0f0f0;">' + booking.name + '</strong>,<br/>Just a reminder that your La Forja session is <strong style="color:#c9a84c;">today</strong>. See you tonight — come ready to work!</p>' +
-      '<div style="border-top:1px solid #222;padding-top:14px;"><div style="font-size:9px;letter-spacing:3px;color:#c9a84c;text-transform:uppercase;margin-bottom:12px;">Session Details</div>' +
-      rows2 + '</div></div>'
-    );
-
-  } else if (type === "reminder_1on1") {
-    subject = "⏰ Reminder — Your La Forja 1-on-1 is Today!";
-    html = wrap(
-      '<h1 style="text-align:center;font-size:26px;font-weight:normal;color:#c9a84c;letter-spacing:2px;margin-bottom:20px;">See You Tonight! ⚽</h1>' +
-      '<div style="background:#141414;border:1px solid #222;border-radius:14px;padding:24px;margin-bottom:20px;">' +
-      '<p style="margin:0 0 16px;font-size:14px;color:#999;line-height:1.8;">Hi <strong style="color:#f0f0f0;">' + booking.name + '</strong>,<br/>Your 1-on-1 session with Coach Carlos is <strong style="color:#c9a84c;">tomorrow</strong>. Come ready to work!</p>' +
-      '<div style="border-top:1px solid #222;padding-top:14px;"><div style="font-size:9px;letter-spacing:3px;color:#c9a84c;text-transform:uppercase;margin-bottom:12px;">Session Details</div>' +
-      row("Date", booking.dateLabel) +
-      row("Time", booking.slotTime || booking.sessTime) +
-      row("Location", "Bayview Park · James Island Youth Soccer Club Fields") +
-      row("Position", booking.position) +
-      '</div></div>'
-    );
-
-  } else if (type === "reminder_pending_group" || type === "reminder_pending_1on1") {
-    // Reminder but payment not yet confirmed
-    const is1on1 = type === "reminder_pending_1on1";
-    subject = "⚠️ Reminder — Your La Forja Session is Today · Payment Required";
-    html = wrap(
-      '<h1 style="text-align:center;font-size:24px;font-weight:normal;color:#c9a84c;letter-spacing:2px;margin-bottom:20px;">See You Tonight! ⚽</h1>' +
-      '<div style="background:#141414;border:1px solid #222;border-radius:14px;padding:24px;margin-bottom:20px;">' +
-      '<p style="margin:0 0 16px;font-size:14px;color:#999;line-height:1.8;">Hi <strong style="color:#f0f0f0;">' + booking.name + '</strong>,<br/>Your session is <strong style="color:#c9a84c;">tomorrow</strong> — but we have not received your payment yet. Please send it as soon as possible to confirm your spot.</p>' +
-      '<div style="border-top:1px solid #222;padding-top:14px;">' +
-      row("Date", booking.dateLabel) +
-      row("Time", is1on1 ? (booking.slotTime||booking.sessTime) : booking.sessTime) +
-      row("Amount Due", "$" + booking.total) +
-      '</div></div>' +
-      '<div style="background:#1a1000;border:1px solid #c9a84c44;border-radius:12px;padding:20px;margin-bottom:20px;text-align:center;">' +
-      '<div style="font-size:11px;color:#7a6030;margin-bottom:8px;letter-spacing:2px;text-transform:uppercase;">⚠️ Payment Still Required</div>' +
-      '<div style="font-size:13px;color:#999;margin-bottom:14px;">Send <strong style="color:#f0f0f0;font-size:20px;">$' + booking.total + '</strong> on Venmo to lock in your spot.</div>' +
-      '<a href="https://venmo.com/u/carlos-cepeda-41" style="display:inline-block;background:linear-gradient(135deg,#c9a84c,#7a6030);color:#0a0a0a;text-decoration:none;padding:12px 28px;border-radius:10px;font-size:12px;letter-spacing:3px;text-transform:uppercase;font-weight:bold;">Pay on Venmo →</a>' +
-      '<div style="font-size:11px;color:#444;margin-top:10px;">@carlos-cepeda-41 · Include your name in the note</div></div>'
-    );
-
-  } else if (type === "reminder") {
-    // Generic reminder — auto-detect group vs 1on1 from booking data
-    const is1on1 = !booking.sessId || booking.slotTime || booking._type === "1on1";
-    subject = "⏰ Reminder — Your La Forja Session";
-    html = wrap(
-      '<h1 style="text-align:center;font-size:24px;font-weight:normal;color:#c9a84c;letter-spacing:2px;margin-bottom:20px;">' +
-      (is1on1 ? "⚒️ Your Tempering Session" : "🔥 Your Furnace Session") + '</h1>' +
-      '<div style="background:#141414;border:1px solid #222;border-radius:14px;padding:24px;margin-bottom:20px;">' +
-      '<p style="margin:0 0 16px;font-size:14px;color:#999;line-height:1.8;">Hi <strong style="color:#f0f0f0;">' + (booking.name||"") + '</strong>,</p>' +
-      (booking.message ? '<p style="margin:0 0 16px;font-size:13px;color:#bbb;line-height:1.8;">' + booking.message + '</p>' : '') +
-      '<div style="border-top:1px solid #222;padding-top:14px;margin-top:8px;">' +
-      row("Date", booking.dateLabel) +
-      row("Time", booking.sessTime || booking.slotTime || "") +
-      row("Location", booking.locationDetail || "Bayview Park · James Island") +
-      '</div></div>' +
-      '<p style="font-size:12px;color:#555;text-align:center;">Reply to this email with any questions.</p>'
-    );
-
-  } else if (type === "reschedule") {
-    subject = "📅 Your La Forja Session Has Been Moved";
-    html = wrap(
-      '<h1 style="text-align:center;font-size:26px;font-weight:normal;color:#c9a84c;letter-spacing:2px;margin-bottom:20px;">Session Updated ✓</h1>' +
-      '<div style="background:#141414;border:1px solid #222;border-radius:14px;padding:24px;margin-bottom:20px;">' +
-      '<p style="margin:0 0 16px;font-size:14px;color:#999;line-height:1.8;">Hi <strong style="color:#f0f0f0;">' + booking.name + '</strong>,<br/>Coach Carlos has moved your session to a new date and time. Here are your updated details:</p>' +
-      '<div style="border-top:1px solid #222;padding-top:14px;"><div style="font-size:9px;letter-spacing:3px;color:#c9a84c;text-transform:uppercase;margin-bottom:12px;">Updated Session Details</div>' +
-      row("New Date", booking.dateLabel) +
-      row("New Time", booking.sessTime) +
-      row("Location", booking.locationDetail || "Bayview Park · James Island Youth Soccer Club Fields") +
-      row("Session", (booking.skillIcon||"🔥") + " " + (booking.skill||"The Furnace")) +
-      '</div></div>' +
-      '<p style="font-size:12px;color:#555;text-align:center;">Questions? Reply to this email or reach out directly.</p>'
-    );
-
-  } else {
-    return res.status(400).json({ error: "Unknown type" });
-  }
+  // Allow manual trigger via POST, or automated cron via GET
+  if (req.method !== "GET" && req.method !== "POST") return res.status(405).end();
 
   try {
-    var https = require("https");
-    var emailBody = JSON.stringify({ from: FROM, reply_to: REPLY, to: [booking.email], subject: subject, html: html });
+    // Query TODAY's sessions (cron runs at 8 AM Friday)
+    const today = new Date();
+    const todayKey = today.toISOString().split("T")[0];
 
-    await new Promise(function(resolve, reject) {
-      var options = {
-        hostname: "api.resend.com",
-        path: "/emails",
-        method: "POST",
-        headers: {
-          "Authorization": "Bearer " + RESEND_KEY,
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(emailBody),
+    const baseUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents`;
+
+    async function queryBookings(collectionId, dateKey) {
+      const url = `${baseUrl}:runQuery?key=${FIREBASE_API_KEY}`;
+      const body = JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId }],
+          where: {
+            compositeFilter: {
+              op: "AND",
+              filters: [
+                { fieldFilter: { field: { fieldPath: "dateKey" }, op: "EQUAL", value: { stringValue: dateKey } } },
+                { fieldFilter: { field: { fieldPath: "status" }, op: "EQUAL", value: { stringValue: "confirmed" } } },
+              ],
+            },
+          },
         },
-      };
-      var req2 = https.request(options, function(r) {
-        var data = "";
-        r.on("data", function(chunk) { data += chunk; });
-        r.on("end", function() {
-          if (r.statusCode >= 400) reject(new Error(data));
-          else resolve(data);
-        });
       });
-      req2.on("error", reject);
-      req2.write(emailBody);
-      req2.end();
-    });
+      return new Promise((resolve, reject) => {
+        const urlObj = new URL(url);
+        const r = https.request({
+          hostname: urlObj.hostname, path: urlObj.pathname + urlObj.search, method: "POST",
+          headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+        }, (res) => { let d = ""; res.on("data", c => d += c); res.on("end", () => { try { resolve(JSON.parse(d)); } catch(e){ resolve([]); } }); });
+        r.on("error", reject); r.write(body); r.end();
+      });
+    }
 
-    return res.status(200).json({ success: true });
+    function getStr(fields, key) { return fields?.[key]?.stringValue || ""; }
+
+    let sent = 0;
+    const errors = [];
+
+    // Group bookings
+    const bookingsResult = await queryBookings("bookings", todayKey);
+    for (const item of (bookingsResult || [])) {
+      const f = item?.document?.fields;
+      if (!f) continue;
+      const email = getStr(f, "email");
+      const name  = getStr(f, "name");
+      if (!email || !name) continue;
+      try {
+        await sendEmail(email, "⏰ Reminder — Your La Forja Session is Today!", makeHtml(
+          name,
+          getStr(f, "dateLabel"),
+          getStr(f, "sessTime"),
+          "🔥 The Furnace"
+        ));
+        sent++;
+      } catch(e) { errors.push(`${name}: ${e.message}`); }
+    }
+
+    // 1-on-1 inquiries
+    const inquiriesResult = await queryBookings("inquiries", todayKey);
+    for (const item of (inquiriesResult || [])) {
+      const f = item?.document?.fields;
+      if (!f) continue;
+      const email = getStr(f, "email");
+      const name  = getStr(f, "name");
+      if (!email || !name) continue;
+      try {
+        await sendEmail(email, "⏰ Reminder — Your La Forja Session is Today!", makeHtml(
+          name,
+          getStr(f, "dateLabel"),
+          getStr(f, "slotTime") || getStr(f, "sessTime"),
+          "⚒️ The Tempering"
+        ));
+        sent++;
+      } catch(e) { errors.push(`${name}: ${e.message}`); }
+    }
+
+    console.log(`Reminders sent: ${sent} for ${todayKey}`);
+    return res.status(200).json({ success: true, sent, date: todayKey, errors });
+
   } catch (err) {
-    console.error("Resend error:", err.message);
+    console.error("Reminder cron error:", err);
     return res.status(500).json({ error: err.message });
   }
 };
