@@ -119,6 +119,11 @@ export default function App(){
 function HomePage({setPage,user}){
   return(
     <div>
+      {/* ── MAINTENANCE BANNER ── */}
+      <div style={{background:"#111116",borderBottom:`1px solid ${C.cardBorder}`,padding:"12px 24px",textAlign:"center"}}>
+        <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>🔧 We're making some updates — to schedule a session in the meantime email us at </span>
+        <a href="mailto:laforjafutbol@gmail.com" style={{fontSize:11,color:C.red,fontFamily:D.body,textDecoration:"none",fontWeight:600}}>laforjafutbol@gmail.com</a>
+      </div>
       {/* Hero */}
       <div style={{minHeight:"92vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"60px 24px",textAlign:"center",background:`radial-gradient(ellipse at 50% 80%,${C.redDark} 0%,transparent 55%)`}}>
         <Crest size={80}/>
