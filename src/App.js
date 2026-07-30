@@ -80,7 +80,6 @@ export default function App(){
   return(
     <div style={{background:C.black,minHeight:"100vh",color:C.white}}>
       <GStyles/>
-      {/* ── NAV ── */}
       <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,background:"rgba(9,9,11,0.95)",backdropFilter:"blur(12px)",borderBottom:`1px solid ${C.cardBorder}`,padding:"0 24px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <button onClick={()=>setPage("home")} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:10}}>
           <Crest size={32}/>
@@ -97,7 +96,6 @@ export default function App(){
         </div>
       </nav>
 
-      {/* ── PAGES ── */}
       <div style={{paddingTop:60}}>
         {page==="home"      && <HomePage setPage={setPage} user={user}/>}
         {page==="about"     && <AboutPage setPage={setPage}/>}
@@ -118,18 +116,7 @@ export default function App(){
 // ── HOME PAGE ─────────────────────────────────────────────
 function HomePage({setPage,user}){
   return(
-    <div style={{position:"relative"}}>
-      {/* ── MAINTENANCE OVERLAY ── */}
-      <div style={{position:"fixed",inset:0,background:"rgba(9,9,11,0.85)",zIndex:200,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,backdropFilter:"blur(4px)"}}>
-        <div style={{textAlign:"center",maxWidth:480}}>
-          <div style={{fontSize:32,marginBottom:16}}>⚒️</div>
-          <div style={{fontSize:9,letterSpacing:5,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>La Forja Futbol</div>
-          <h2 style={{fontSize:28,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:12,letterSpacing:1}}>We're Making Updates</h2>
-          <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:28}}>The booking system is temporarily unavailable while we make improvements. To schedule a session in the meantime, reach out directly.</p>
-          <a href="mailto:laforjafutbol@gmail.com?subject=Session Inquiry" style={{display:"inline-block",background:`linear-gradient(135deg,${C.red},${C.redDim})`,color:C.white,borderRadius:10,padding:"13px 32px",fontSize:11,letterSpacing:3,textTransform:"uppercase",fontFamily:D.body,fontWeight:600,textDecoration:"none"}}>Email Coach Carlos →</a>
-          <div style={{marginTop:16,fontSize:10,color:C.textDim,fontFamily:D.body}}>laforjafutbol@gmail.com</div>
-        </div>
-      </div>
+    <div>
       {/* Hero */}
       <div style={{minHeight:"92vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"60px 24px",textAlign:"center",background:`radial-gradient(ellipse at 50% 80%,${C.redDark} 0%,transparent 55%)`}}>
         <Crest size={80}/>
@@ -144,7 +131,6 @@ function HomePage({setPage,user}){
       </div>
 
       <div style={{maxWidth:960,margin:"0 auto",padding:"80px 24px 60px"}}>
-        {/* Programs */}
         <div style={{textAlign:"center",marginBottom:48}}>
           <div style={{fontSize:8,letterSpacing:6,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>The Programs</div>
           <h2 style={{fontSize:"clamp(26px,4vw,40px)",color:C.white,fontFamily:D.display,fontWeight:600,margin:0}}>Built Around One Thing</h2>
@@ -152,7 +138,6 @@ function HomePage({setPage,user}){
         </div>
 
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:16,marginBottom:60}}>
-          {/* Furnace */}
           <div style={{background:"#100c08",border:"1px solid #241a10",borderTop:`3px solid ${C.red}`,borderRadius:16,padding:"28px 24px"}}>
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
               <div style={{width:46,height:46,borderRadius:12,background:C.redDark,border:`1px solid ${C.red}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🔥</div>
@@ -182,7 +167,6 @@ function HomePage({setPage,user}){
             </div>
           </div>
 
-          {/* Tempering */}
           <div style={{background:"#0d0c08",border:"1px solid #201c10",borderTop:`3px solid ${C.silver}`,borderRadius:16,padding:"28px 24px",position:"relative"}}>
             <div style={{position:"absolute",top:16,right:16,background:`${C.silver}18`,border:`1px solid ${C.silver}33`,borderRadius:20,padding:"3px 12px",fontSize:8,letterSpacing:2,color:C.silver,textTransform:"uppercase",fontFamily:D.body}}>Coming Soon</div>
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
@@ -218,7 +202,6 @@ function HomePage({setPage,user}){
           </div>
         </div>
 
-        {/* Stats */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:60}}>
           {[
             {val:MAX_PLAYERS,label:"Max Players",sub:"small group, real reps"},
@@ -233,17 +216,15 @@ function HomePage({setPage,user}){
           ))}
         </div>
 
-        {/* Packages teaser */}
         <div style={{background:"linear-gradient(135deg,#141416,#0f0f12)",border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"28px 28px",marginBottom:60,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:20}}>
           <div>
             <div style={{fontSize:8,letterSpacing:4,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Training Packages</div>
             <h3 style={{fontSize:20,color:C.white,fontFamily:D.display,fontWeight:600,margin:"0 0 6px"}}>Lock In Your Spot & Save</h3>
-            <p style={{fontSize:12,color:C.textDim,fontFamily:D.body,lineHeight:1.8,margin:0}}>Single · 4 Sessions · Full Month — pick what works for you.</p>
+            <p style={{fontSize:12,color:C.textDim,fontFamily:D.body,lineHeight:1.8,margin:0}}>Single · 4 Sessions · 8 Sessions — pick what works for you.</p>
           </div>
           <button onClick={()=>setPage("packages")} style={{background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,border:"none",color:"#0a0a0a",borderRadius:10,padding:"13px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",fontFamily:D.body,fontWeight:700,flexShrink:0,cursor:"pointer"}}>View Packages →</button>
         </div>
 
-        {/* What to expect */}
         <div style={{marginBottom:60}}>
           <div style={{textAlign:"center",marginBottom:32}}>
             <div style={{fontSize:8,letterSpacing:6,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>First Session</div>
@@ -251,7 +232,7 @@ function HomePage({setPage,user}){
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:12}}>
             {[
-              {icon:"👟",title:"Gear Up",desc:"Cleats or turf shoes. Water bottle. Your own ball if you have one. Arrive 5 minutes early."},
+              {icon:"👟",title:"Gear Up",desc:"Cleats or turf shoes. Water bottle. Elastic band. Arrive 15 minutes early."},
               {icon:"🔥",title:"Full Intensity",desc:"High-pressure drills from minute one. Every rep has a purpose. No standing around."},
               {icon:"🎯",title:"Real Feedback",desc:"Coach Carlos is on you every rep. Direct, specific, actionable feedback."},
               {icon:"📋",title:"Debrief",desc:"Sessions end with one win and one focus area. You leave knowing what to work on."},
@@ -265,7 +246,6 @@ function HomePage({setPage,user}){
           </div>
         </div>
 
-        {/* FAQ */}
         <div style={{marginBottom:60}}>
           <div style={{textAlign:"center",marginBottom:32}}>
             <div style={{fontSize:8,letterSpacing:6,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Questions</div>
@@ -275,10 +255,10 @@ function HomePage({setPage,user}){
             {[
               {q:"What age can my player train?",a:"U11 and up — players who are on full 11v11 fields. Younger players can reach out directly."},
               {q:"What if it rains?",a:"Light rain we train. Lightning or severe weather we reschedule at no charge."},
-              {q:"How do I pay?",a:"Via Venmo to @carlos-cepeda-41 once your spot is reserved. Reference your name and session date."},
+              {q:"How do I pay?",a:"By card at checkout — secure payment powered by Stripe."},
               {q:"Can I reschedule?",a:"Yes — log into your account and reschedule directly to any open Friday slot. No approval needed."},
               {q:"How many players per session?",a:`Maximum ${MAX_PLAYERS} players. Small on purpose — every player gets real reps and real feedback.`},
-              {q:"What should my player bring?",a:"Cleats or turf shoes, water, and their own ball. Arrive 5 minutes early."},
+              {q:"What should my player bring?",a:"Cleats or turf shoes, water bottle, and an elastic band. Arrive 15 minutes early."},
             ].map((item,i)=>(
               <div key={i} style={{background:"#0e0b08",border:"1px solid #1e1810",borderRadius:10,padding:"16px 20px"}}>
                 <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:6}}>{item.q}</div>
@@ -288,7 +268,6 @@ function HomePage({setPage,user}){
           </div>
         </div>
 
-        {/* Location */}
         <div style={{background:"#0e0b08",border:"1px solid #1e1810",borderRadius:14,padding:"22px 26px",marginBottom:50,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
           <div style={{fontSize:28}}>📍</div>
           <div style={{flex:1}}>
@@ -299,7 +278,6 @@ function HomePage({setPage,user}){
           <a href="https://maps.google.com/?q=Bayview+Park+James+Island+SC" target="_blank" rel="noopener noreferrer" style={{background:"transparent",border:`1px solid ${C.silver}33`,color:C.silver,borderRadius:8,padding:"10px 18px",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,textDecoration:"none"}}>Directions →</a>
         </div>
 
-        {/* CTA */}
         <div style={{textAlign:"center"}}>
           <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"15px 48px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 8px 32px ${C.red}44`,fontFamily:D.body,fontWeight:600,marginBottom:14}}>Book The Furnace</button>
           <div style={{marginTop:12}}>
@@ -317,9 +295,9 @@ function HomePage({setPage,user}){
 // ── BOOK PAGE ─────────────────────────────────────────────
 function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
   const [step,setStep]         = useState(0);
-  const [selPkg,setSelPkg]     = useState(null); // {name,sessions,price,rate}
-  const [selDates,setSelDates] = useState([]); // [{date,sess}] for packages
-  const [selDate,setSelDate]   = useState(null); // single session
+  const [selPkg,setSelPkg]     = useState(null);
+  const [selDates,setSelDates] = useState([]);
+  const [selDate,setSelDate]   = useState(null);
   const [selSess,setSelSess]   = useState(null);
   const [form,setForm]         = useState({name:"",email:"",phone:"",notes:""});
   const [waiverAgreed,setWaiverAgreed] = useState(false);
@@ -341,14 +319,11 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
   const effectiveCount = user&&selPlayerIds.length>0 ? selPlayerIds.length : count;
   const total      = isPackage ? selPkg.price * effectiveCount : effectiveCount * PRICE_GROUP;
 
-  // Single: can continue if date+session selected
   const canNext1Single = selDate && selSess && !isBlocked(dKey(selDate),selSess.id) && spotsLeft(dKey(selDate),selSess.id)>=effectiveCount;
-  // Package: can continue if all sessions picked
   const canNext1Pkg = selDates.length === needed;
   const canNext1 = isPackage ? canNext1Pkg : canNext1Single;
   const canNext2 = (form.name||selPlayerIds.length>0) && form.email && waiverAgreed;
 
-  // Auto-populate user info when reaching step 2
   useEffect(()=>{
     if(step===2&&user&&!form.email){
       setForm(f=>({...f,email:user.email||"",name:user.displayName||f.name}));
@@ -358,11 +333,8 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
   function togglePackDate(date, sess){
     const dk = dKey(date);
     const existing = selDates.findIndex(s=>s.dk===dk&&s.sess.id===sess.id);
-    if(existing>=0){
-      setSelDates(selDates.filter((_,i)=>i!==existing));
-    } else if(selDates.length < needed){
-      setSelDates([...selDates, {dk, date, sess, dateLabel:fmtDate(date)}]);
-    }
+    if(existing>=0){ setSelDates(selDates.filter((_,i)=>i!==existing)); }
+    else if(selDates.length < needed){ setSelDates([...selDates, {dk, date, sess, dateLabel:fmtDate(date)}]); }
   }
 
   function reset(){ setStep(0);setSelPkg(null);setSelDate(null);setSelSess(null);setSelDates([]);setForm({name:"",email:"",phone:"",notes:""});setMyBookings([]);setWaiverAgreed(false);setSelPlayerIds([]);setCount(1); }
@@ -385,7 +357,6 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
       ...(user?{userId:user.uid}:{}),
       ...(selPlayerIds.length>0?{playerIds:selPlayerIds}:{}),
     };
-
     let refs = [];
     if(isPackage){
       for(const s of selDates){
@@ -393,18 +364,12 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
         const ref = await addBooking(booking);
         if(ref?.id) refs.push({...booking,id:ref.id});
       }
-      // Send one confirmation email with all dates
-      if(refs.length>0&&form.email){
-        await callEmailAPI({...refs[0], packageBooking:true, packageDates:selDates.map(s=>s.dateLabel).join(", "), packageName:selPkg.name, total},"group");
-      }
+      if(refs.length>0&&bookingEmail) await callEmailAPI({...refs[0], packageBooking:true, packageDates:selDates.map(s=>s.dateLabel).join(", "), packageName:selPkg.name, total},"group");
     } else {
       const daySchedule = DAY_SCHEDULE[selDate.getDay()];
       const booking = {...base, dateKey:dKey(selDate), dateLabel:fmtDate(selDate), sessId:selSess.id, sessTime:selSess.time, total};
       const ref = await addBooking(booking);
-      if(ref?.id){
-        refs.push({...booking,id:ref.id});
-        if(form.email) await callEmailAPI(booking,"group");
-      }
+      if(ref?.id){ refs.push({...booking,id:ref.id}); if(bookingEmail) await callEmailAPI(booking,"group"); }
     }
     setMyBookings(refs);
     setBookingLoading(false);
@@ -415,7 +380,6 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
     <div style={{maxWidth:680,margin:"0 auto",padding:"40px 20px 100px"}}>
       <SH eyebrow="Reserve" title="Book a Session"/>
 
-      {/* Step indicators */}
       {step>0&&step<3&&(
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:28}}>
           {["Pick a Date","Your Details","Confirmed"].map((s,i)=>(
@@ -427,15 +391,14 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
         </div>
       )}
 
-      {/* Step 0 — Packages overview */}
       {step===0&&(
-        <div style={{animation:"fadeUp 0.3s ease"}}>
+        <div>
           <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:28}}>Choose how you want to train. Single session to try it out, or lock in a package for a better rate.</p>
           <div style={{display:"grid",gap:12,marginBottom:24}}>
             {[
-              {id:"single",name:"Single Session",price:40,  rate:"$40/session",sessions:1,desc:"Try it out. No commitment.",highlight:false},
-              {id:"month4",name:"4 Sessions",    price:140, rate:"$35/session",sessions:4,save:"Save $20",desc:"One Friday per week for a month.",highlight:false},
-              {id:"month8",name:"8 Sessions",    price:260, rate:"$32/session",sessions:8,save:"Save $60",desc:"Two months of Fridays. Commit to the process.",highlight:true},
+              {id:"single",name:"Single Session",price:40,rate:"$40/session",sessions:1,desc:"Try it out. No commitment.",highlight:false},
+              {id:"month4",name:"4 Sessions",price:140,rate:"$35/session",sessions:4,save:"Save $20",desc:"One Friday per week for a month.",highlight:false},
+              {id:"month8",name:"8 Sessions",price:260,rate:"$32/session",sessions:8,save:"Save $60",desc:"Two months of Fridays. Commit to the process.",highlight:true},
             ].map((p,i)=>(
               <div key={i} style={{background:p.highlight?"linear-gradient(135deg,#1a1618,#141416)":C.card,border:p.highlight?`1px solid ${C.silver}44`:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"18px 22px",position:"relative",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap"}}>
                 {p.highlight&&<div style={{position:"absolute",top:-9,left:20,background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,color:"#0a0a0a",fontSize:7,letterSpacing:2,fontWeight:700,textTransform:"uppercase",fontFamily:D.body,padding:"2px 10px",borderRadius:8}}>Best Value</div>}
@@ -450,9 +413,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:16,flexShrink:0}}>
                   <div style={{fontSize:26,fontWeight:700,color:C.white,fontFamily:D.display}}>${p.price}</div>
-                  <button onClick={()=>{setSelPkg(p);setSelDates([]);setSelDate(null);setSelSess(null);setStep(1);}} style={{background:p.highlight?`linear-gradient(135deg,${C.silver},${C.silverDim})`:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:p.highlight?"#0a0a0a":C.white,borderRadius:9,padding:"10px 20px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700,whiteSpace:"nowrap"}}>
-                    Select →
-                  </button>
+                  <button onClick={()=>{setSelPkg(p);setSelDates([]);setSelDate(null);setSelSess(null);setStep(1);}} style={{background:p.highlight?`linear-gradient(135deg,${C.silver},${C.silverDim})`:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:p.highlight?"#0a0a0a":C.white,borderRadius:9,padding:"10px 20px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700,whiteSpace:"nowrap"}}>Select →</button>
                 </div>
               </div>
             ))}
@@ -464,46 +425,31 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
         </div>
       )}
 
-      {/* Step 1 — Pick date(s) */}
       {step===1&&(
-        <div style={{animation:"fadeUp 0.3s ease"}}>
-
-          {/* Package progress tracker */}
+        <div>
           {isPackage&&(
             <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 18px",marginBottom:20}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                 <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display}}>{selPkg.name}</div>
-                <div style={{fontSize:11,color:selDates.length===needed?C.green:C.silver,fontFamily:D.body,fontWeight:600}}>
-                  {selDates.length} of {needed} selected
-                </div>
+                <div style={{fontSize:11,color:selDates.length===needed?C.green:C.silver,fontFamily:D.body,fontWeight:600}}>{selDates.length} of {needed} selected</div>
               </div>
               <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
                 {Array.from({length:needed}).map((_,i)=>{
                   const filled = selDates[i];
                   return(
-                    <div key={i} style={{flex:"1 1 auto",minWidth:60,background:filled?`${C.green}18`:"#0a0908",border:`1px solid ${filled?C.green:C.cardBorder}`,borderRadius:8,padding:"6px 8px",textAlign:"center",position:"relative"}}>
-                      {filled?(
-                        <>
-                          <div style={{fontSize:9,color:C.green,fontFamily:D.body,fontWeight:600,marginBottom:1}}>✓</div>
-                          <div style={{fontSize:8,color:C.green,fontFamily:D.body,lineHeight:1.3}}>{filled.dateLabel.split(",")[0]}</div>
-                        </>
-                      ):(
-                        <div style={{fontSize:18,color:C.cardBorder}}>·</div>
-                      )}
+                    <div key={i} style={{flex:"1 1 auto",minWidth:60,background:filled?`${C.green}18`:"#0a0908",border:`1px solid ${filled?C.green:C.cardBorder}`,borderRadius:8,padding:"6px 8px",textAlign:"center"}}>
+                      {filled?(<><div style={{fontSize:9,color:C.green,fontFamily:D.body,fontWeight:600,marginBottom:1}}>✓</div><div style={{fontSize:8,color:C.green,fontFamily:D.body,lineHeight:1.3}}>{filled.dateLabel.split(",")[0]}</div></>):(<div style={{fontSize:18,color:C.cardBorder}}>·</div>)}
                     </div>
                   );
                 })}
               </div>
-              {selDates.length>0&&selDates.length<needed&&(
-                <div style={{fontSize:10,color:C.silver,fontFamily:D.body}}>{needed-selDates.length} more session{needed-selDates.length>1?"s":""} to pick</div>
-              )}
-              {selDates.length===needed&&(
-                <div style={{fontSize:10,color:C.green,fontFamily:D.body,fontWeight:600}}>✓ All sessions selected — continue below</div>
-              )}
+              {selDates.length===needed
+                ?<div style={{fontSize:10,color:C.green,fontFamily:D.body,fontWeight:600}}>✓ All sessions selected — continue below</div>
+                :selDates.length>0&&<div style={{fontSize:10,color:C.silver,fontFamily:D.body}}>{needed-selDates.length} more to pick</div>
+              }
             </div>
           )}
 
-          {/* Player selection for logged-in users */}
           {user&&players.length>0&&(
             <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"18px",marginBottom:20}}>
               <FL>Select Players</FL>
@@ -511,8 +457,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
                 {players.map(p=>{
                   const sel=selPlayerIds.includes(p.id);
                   return(
-                    <button key={p.id} onClick={()=>setSelPlayerIds(sel?selPlayerIds.filter(id=>id!==p.id):[...selPlayerIds,p.id])}
-                      style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",background:sel?`${C.red}12`:C.black,border:`1px solid ${sel?C.red:C.cardBorder}`,borderRadius:9,cursor:"pointer"}}>
+                    <button key={p.id} onClick={()=>setSelPlayerIds(sel?selPlayerIds.filter(id=>id!==p.id):[...selPlayerIds,p.id])} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",background:sel?`${C.red}12`:C.black,border:`1px solid ${sel?C.red:C.cardBorder}`,borderRadius:9,cursor:"pointer"}}>
                       <div style={{textAlign:"left"}}>
                         <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display}}>{p.name}</div>
                         <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{p.age?"Age "+p.age:""}{p.age&&p.position?" · ":""}{p.position||""}</div>
@@ -530,9 +475,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
             <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"12px 16px",marginBottom:20,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
               <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,display:"flex",alignItems:"center",gap:6}}>
                 <span>Players:</span>
-                {[1,2,3,4,5,6].map(n=>(
-                  <button key={n} onClick={()=>setCount(n)} style={{background:count===n?`${C.red}22`:"transparent",border:`1px solid ${count===n?C.red:C.cardBorder}`,borderRadius:6,padding:"3px 10px",color:count===n?C.red:C.textDim,fontSize:11,cursor:"pointer",fontFamily:D.body}}>{n}</button>
-                ))}
+                {[1,2,3,4,5,6].map(n=>(<button key={n} onClick={()=>setCount(n)} style={{background:count===n?`${C.red}22`:"transparent",border:`1px solid ${count===n?C.red:C.cardBorder}`,borderRadius:6,padding:"3px 10px",color:count===n?C.red:C.textDim,fontSize:11,cursor:"pointer",fontFamily:D.body}}>{n}</button>))}
               </div>
               <div style={{fontSize:11,color:C.silver,fontFamily:D.body,fontWeight:600}}>${count*(isPackage?selPkg.price:PRICE_GROUP)} total</div>
             </div>
@@ -550,26 +493,18 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
                   <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:8}}>
                     {sched.sessions.map(sess=>{
                       const spots=spotsLeft(dk,sess.id);
-                      const blocked_=isBlocked(dk,sess.id);
+                      const blk=isBlocked(dk,sess.id);
                       const cutoff=isCutoffHour(d,sess.time);
-                      const disabled=blocked_||spots<effectiveCount||cutoff;
-                      // Package: check if this slot is already selected
+                      const disabled=blk||spots<effectiveCount||cutoff;
                       const pkgSel = isPackage && selDates.some(s=>s.dk===dk&&s.sess.id===sess.id);
                       const isSel = isPackage ? pkgSel : (isSelDate&&selSess?.id===sess.id);
-                      // Package: at capacity and this slot not selected
                       const pkgFull = isPackage && selDates.length>=needed && !pkgSel;
                       return(
-                        <button key={sess.id} onClick={()=>{
-                          if(disabled) return;
-                          if(isPackage){ togglePackDate(d,sess); }
-                          else{ setSelDate(d);setSelSess(sess); }
-                        }}
+                        <button key={sess.id} onClick={()=>{ if(disabled) return; if(isPackage){ togglePackDate(d,sess); } else{ setSelDate(d);setSelSess(sess); } }}
                           style={{background:isSel?`${C.green}15`:disabled||pkgFull?"#0a0908":"#0d0b08",border:`1px solid ${isSel?C.green:disabled||pkgFull?"#1a1a1a":C.cardBorder}`,borderRadius:9,padding:"10px 14px",cursor:disabled||pkgFull?"not-allowed":"pointer",textAlign:"left",opacity:disabled||pkgFull?0.4:1,position:"relative"}}>
                           {isSel&&<div style={{position:"absolute",top:8,right:10,width:18,height:18,borderRadius:"50%",background:C.green,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#0a0a0a",fontWeight:700}}>✓</div>}
                           <div style={{fontSize:12,fontWeight:600,color:isSel?C.green:C.white,fontFamily:D.display,marginBottom:4}}>{sess.time}</div>
-                          <div style={{fontSize:10,color:blocked_?"#666":spots===0?"#666":spots<=2?C.red:C.green,fontFamily:D.body}}>
-                            {blocked_?"Unavailable":spots===0?"Full":`${spots} spot${spots!==1?"s":""} left`}
-                          </div>
+                          <div style={{fontSize:10,color:blk?"#666":spots===0?"#666":spots<=2?C.red:C.green,fontFamily:D.body}}>{blk?"Unavailable":spots===0?"Full":`${spots} spot${spots!==1?"s":""} left`}</div>
                         </button>
                       );
                     })}
@@ -580,19 +515,13 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
           </div>
           <div style={{marginTop:16,display:"flex",gap:10}}>
             <GB onClick={()=>setStep(0)}>← Back</GB>
-            <AB onClick={()=>setStep(2)} disabled={!canNext1}>
-              {isPackage
-                ? selDates.length===needed ? "Continue →" : `Select ${needed-selDates.length} more…`
-                : "Continue →"
-              }
-            </AB>
+            <AB onClick={()=>setStep(2)} disabled={!canNext1}>{isPackage ? selDates.length===needed ? "Continue →" : `Select ${needed-selDates.length} more…` : "Continue →"}</AB>
           </div>
         </div>
       )}
 
-      {/* Step 2 — Details + waiver */}
       {step===2&&(
-        <div style={{animation:"fadeUp 0.3s ease"}}>
+        <div>
           {isPackage?(
             <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,overflow:"hidden",marginBottom:20}}>
               <div style={{padding:"10px 18px",borderBottom:`1px solid ${C.cardBorder}`,fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body}}>{selPkg.name} Summary</div>
@@ -632,14 +561,11 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
               <div style={{fontSize:9,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>Confirm Email</div>
               <input type="email" value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))} placeholder={user.email||"your@email.com"} style={{...IS}}/>
               {!form.email&&user.email&&(
-                <button onClick={()=>setForm(p=>({...p,email:user.email,name:user.displayName||p.name}))} style={{marginTop:8,background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"6px 14px",color:C.silver,fontSize:10,cursor:"pointer",fontFamily:D.body}}>
-                  Use {user.email}
-                </button>
+                <button onClick={()=>setForm(p=>({...p,email:user.email,name:user.displayName||p.name}))} style={{marginTop:8,background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"6px 14px",color:C.silver,fontSize:10,cursor:"pointer",fontFamily:D.body}}>Use {user.email}</button>
               )}
             </div>
           )}
 
-          {/* Waiver */}
           <div style={{background:"#0d0b08",border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"16px",marginTop:16,marginBottom:16}}>
             <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Waiver & Session Policy</div>
             <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.8,marginBottom:12}}>
@@ -653,7 +579,6 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
             </label>
           </div>
 
-          {/* Venmo reminder or Stripe */}
           {STRIPE_ENABLED ? (
             <StripePaymentForm total={total} onSuccess={doBook} loading={bookingLoading} disabled={!canNext2||bookingLoading}/>
           ) : (
@@ -671,9 +596,8 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
         </div>
       )}
 
-      {/* Step 3 — Confirmed */}
       {step===3&&(
-        <div style={{animation:"slideUp 0.5s ease",textAlign:"center"}}>
+        <div style={{textAlign:"center"}}>
           <div style={{width:80,height:80,borderRadius:"50%",margin:"0 auto 20px",background:`linear-gradient(135deg,${C.green},#0e7a47)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:34,color:C.white,boxShadow:`0 0 60px ${C.green}44`}}>⚒️</div>
           <h2 style={{margin:"0 0 8px",fontSize:28,fontWeight:700,color:C.white,fontFamily:D.display,letterSpacing:2}}>You're In The Forge</h2>
           <p style={{margin:"0 0 28px",fontSize:13,color:C.textDim,fontFamily:D.body,lineHeight:1.8}}>{STRIPE_ENABLED?"Payment confirmed. A confirmation email is on its way.":"A confirmation email is on its way. Send your Venmo payment to lock in your spot."}</p>
@@ -711,7 +635,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
 
           <div style={{background:"#0e0b08",border:"1px solid #1e1810",borderRadius:12,padding:"16px 20px",textAlign:"left",marginBottom:24}}>
             <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>What to Bring</div>
-            {["👟 Cleats or turf shoes","💧 Water bottle","⚽ Your own ball if you have one","⏰ Arrive 5 minutes early"].map((item,i)=>(
+            {["👟 Cleats or turf shoes","💧 Water bottle","🎽 Elastic band","⏰ Arrive 15 minutes early"].map((item,i)=>(
               <div key={i} style={{fontSize:12,color:C.textMid,fontFamily:D.body,marginBottom:6}}>{item}</div>
             ))}
           </div>
