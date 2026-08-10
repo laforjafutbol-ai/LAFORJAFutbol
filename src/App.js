@@ -123,7 +123,7 @@ function HomePage({setPage,user}){
         <div style={{fontSize:9,letterSpacing:6,color:C.silverDim,textTransform:"uppercase",marginTop:20,marginBottom:8,fontFamily:D.body}}>James Island · Charleston SC</div>
         <h1 style={{margin:"0 0 10px",fontFamily:D.display,fontWeight:700,fontSize:"clamp(48px,9vw,80px)",letterSpacing:6,textTransform:"uppercase",color:C.white,lineHeight:1}}>La Forja</h1>
         <p style={{fontSize:11,letterSpacing:5,color:C.silver,marginBottom:14,textTransform:"uppercase",fontFamily:D.body}}>{BRAND.tagline}</p>
-        <p style={{fontSize:15,color:C.textMid,marginBottom:48,maxWidth:480,lineHeight:2,fontFamily:D.display,fontStyle:"italic"}}>We perfect the basics and iron out imperfections — building players who are smooth on the ball, sharp in their decisions, and confident on the field.</p>
+        <p style={{fontSize:15,color:C.textMid,marginBottom:48,maxWidth:480,lineHeight:2,fontFamily:D.display,fontStyle:"italic"}}>Pure technique. Zero filler. Every session is built around perfecting the details that make the difference on game day — first touch, decision making, 1v1 dominance, and composure under pressure.</p>
         <div style={{display:"flex",gap:12,flexWrap:"wrap",justifyContent:"center"}}>
           <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 8px 32px ${C.red}44`,fontFamily:D.body,fontWeight:600}}>Book a Session</button>
           <button onClick={()=>setPage("about")} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.silver,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>About the Program</button>
@@ -134,7 +134,7 @@ function HomePage({setPage,user}){
         <div style={{textAlign:"center",marginBottom:48}}>
           <div style={{fontSize:8,letterSpacing:6,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>The Programs</div>
           <h2 style={{fontSize:"clamp(26px,4vw,40px)",color:C.white,fontFamily:D.display,fontWeight:600,margin:0}}>Built Around One Thing</h2>
-          <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,marginTop:12,maxWidth:480,margin:"12px auto 0",lineHeight:1.8}}>Making you dangerous on the ball. Everything else follows.</p>
+          <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,marginTop:12,maxWidth:480,margin:"12px auto 0",lineHeight:1.8}}>Pure technical development. Game-ready players. No fitness work — just ball mastery, decision making, and the details that show up on game day.</p>
         </div>
 
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:16,marginBottom:60}}>
@@ -146,12 +146,12 @@ function HomePage({setPage,user}){
                 <div style={{fontSize:8,letterSpacing:2,color:C.red,textTransform:"uppercase",fontFamily:D.body}}>Fridays · Group · U11+</div>
               </div>
             </div>
-            <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:20}}>Most players fall apart when the game speeds up. The Furnace is built for players who want to be dangerous when it matters — tight spaces, real defenders, real decisions, full speed.</p>
+            <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:20}}>No fitness drills. No running laps. The Furnace is 100% focused on the technical details that make you dangerous on game day. Small group, full attention, every rep with a purpose.</p>
             {[
-              {icon:"⚔️",text:"1v1 dominance in tight spaces — beat defenders with technique"},
-              {icon:"🎯",text:"Receiving under pressure — first touch that puts you in control"},
-              {icon:"⚡",text:"Split-second decisions — the right move at the right time"},
-              {icon:"🥅",text:"Finishing with composure — clinical regardless of pressure"},
+              {icon:"🎯",text:"First touch and ball control — receive any pass cleanly and be in control immediately"},
+              {icon:"⚔️",text:"1v1 technique — beat defenders with skill, not speed"},
+              {icon:"⚡",text:"Decision making — reading the game and picking the right move before the ball arrives"},
+              {icon:"🥅",text:"Finishing — clinical in front of goal regardless of pressure or angle"},
             ].map((item,i)=>(
               <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:10}}>
                 <span style={{fontSize:14,flexShrink:0,marginTop:1}}>{item.icon}</span>
@@ -232,8 +232,8 @@ function HomePage({setPage,user}){
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:12}}>
             {[
-              {icon:"👟",title:"Gear Up",desc:"Cleats or turf shoes. Water bottle. Elastic band. Arrive 15 minutes early."},
-              {icon:"🔥",title:"Full Intensity",desc:"High-pressure drills from minute one. Every rep has a purpose. No standing around."},
+              {icon:"👟",title:"Gear Up",desc:"Cleats or turf shoes. Water bottle. Elastic band. Arrive 15 minutes early. No extra gear needed — this is technical work, not a workout."},
+              {icon:"🎯",title:"Technical Focus",desc:"Every minute is spent on the ball. Touches, decisions, movement patterns — the details that separate good players from great ones."},
               {icon:"🎯",title:"Real Feedback",desc:"Coach Carlos is on you every rep. Direct, specific, actionable feedback."},
               {icon:"📋",title:"Debrief",desc:"Sessions end with one win and one focus area. You leave knowing what to work on."},
             ].map((item,i)=>(
@@ -255,7 +255,7 @@ function HomePage({setPage,user}){
             {[
               {q:"What age can my player train?",a:"U11 and up — players who are on full 11v11 fields. Younger players can reach out directly."},
               {q:"What if it rains?",a:"Light rain we train. Lightning or severe weather we reschedule at no charge."},
-              {q:"How do I pay?",a:"By card at checkout — secure payment powered by Stripe."},
+              {q:"Is this a fitness or conditioning program?",a:"No. La Forja is purely technical training — ball work, decision making, and game situations. If your player needs fitness training this is not the right program. If they need to be better on the ball, this is exactly where they should be."},
               {q:"Can I reschedule?",a:"Yes — log into your account and reschedule directly to any open Friday slot. No approval needed."},
               {q:"How many players per session?",a:`Maximum ${MAX_PLAYERS} players. Small on purpose — every player gets real reps and real feedback.`},
               {q:"What should my player bring?",a:"Cleats or turf shoes, water bottle, and an elastic band. Arrive 15 minutes early."},
