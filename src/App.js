@@ -339,17 +339,19 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
 
   function reset(){ setStep(0);setSelPkg(null);setSelDate(null);setSelSess(null);setSelDates([]);setForm({name:"",email:"",phone:"",notes:""});setMyBookings([]);setWaiverAgreed(false);setSelPlayerIds([]);setCount(1); }
 
-  async function doBook(){
+  async function doBook(paymentMethod="card"){
     setBookingLoading(true);
     const selectedPlayers = players.filter(p=>selPlayerIds.includes(p.id));
     const bookingName = selectedPlayers.length>0 ? selectedPlayers.map(p=>p.name).join(", ") : form.name;
     const bookingEmail = form.email || (user?.email||"");
+    const isCash = paymentMethod==="cash";
     const base = {
       skill:"The Furnace", skillIcon:"🔥",
       count:effectiveCount,
       name:bookingName, email:bookingEmail, phone:form.phone, notes:form.notes,
       parentName:user?user.displayName||form.name:null,
-      status:"pending",
+      status: "confirmed",
+      paymentMethod: isCash ? "cash" : "card",
       packageName:selPkg?.name||"Single Session",
       packageTotal:total,
       waiverAgreed:true, waiverSignedAt:new Date().toISOString(),
@@ -585,7 +587,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
               <div style={{textAlign:"center",margin:"8px 0 16px"}}>
                 <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>or</span>
               </div>
-              <button disabled={!canNext2||bookingLoading} onClick={doBook} style={{width:"100%",background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:10,padding:"13px",color:canNext2?C.silver:C.silverDark,fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:canNext2?"pointer":"not-allowed",fontFamily:D.body,marginBottom:8}}>
+              <button disabled={!canNext2||bookingLoading} onClick={()=>doBook("cash")} style={{width:"100%",background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:10,padding:"13px",color:canNext2?C.silver:C.silverDark,fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:canNext2?"pointer":"not-allowed",fontFamily:D.body,marginBottom:8}}>
                 {bookingLoading?"Reserving…":"Pay with Cash at Session →"}
               </button>
               <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,textAlign:"center",marginBottom:16}}>Your spot is reserved. Bring exact cash on the day — ${total}. Coach does not carry change so please come prepared with the exact amount.</div>
@@ -600,7 +602,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
               <div style={{textAlign:"center",margin:"8px 0"}}>
                 <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>or</span>
               </div>
-              <button disabled={!canNext2||bookingLoading} onClick={doBook} style={{width:"100%",background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:10,padding:"13px",color:canNext2?C.silver:C.silverDark,fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:canNext2?"pointer":"not-allowed",fontFamily:D.body,marginBottom:8}}>
+              <button disabled={!canNext2||bookingLoading} onClick={()=>doBook("cash")} style={{width:"100%",background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:10,padding:"13px",color:canNext2?C.silver:C.silverDark,fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:canNext2?"pointer":"not-allowed",fontFamily:D.body,marginBottom:8}}>
                 {bookingLoading?"Reserving…":"Pay with Cash at Session →"}
               </button>
               <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,textAlign:"center"}}>Your spot is reserved. Bring exact cash on the day — ${total}. Coach does not carry change so please come prepared with the exact amount.</div>
