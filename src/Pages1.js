@@ -200,6 +200,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3,flexWrap:"wrap"}}>
                       <span style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display}}>{s.name}</span>
                       <span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:s.status==="confirmed"?`${C.green}18`:`${C.silver}12`,color:s.status==="confirmed"?C.green:C.silver,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>{s.status}</span>
+                      {s.paymentMethod==="cash"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#1a1200",border:"1px solid #c9a84c44",color:"#c9a84c",fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>💵 Cash</span>}
                     </div>
                     <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
                       <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>📅 {s.dateLabel}</span>
@@ -209,7 +210,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
                     {s.coachNote&&<div style={{fontSize:9,color:C.silver,fontFamily:D.body,marginTop:4,fontStyle:"italic"}}>📝 {s.coachNote}</div>}
                   </div>
                   <div style={{display:"flex",gap:6,flexShrink:0}}>
-                    {s.status==="pending"&&<button onClick={()=>confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings")} style={{background:`${C.green}18`,border:`1px solid ${C.green}33`,borderRadius:7,padding:"5px 12px",color:C.green,fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓ Confirm</button>}
+                    {s.status==="pending"&&s.paymentMethod!=="cash"&&<button onClick={()=>confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings")} style={{background:`${C.green}18`,border:`1px solid ${C.green}33`,borderRadius:7,padding:"5px 12px",color:C.green,fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓ Confirm</button>}
                     <button onClick={()=>setReminderModal(s)} style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:7,padding:"5px 10px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📧</button>
                     <button onClick={()=>openAction(s)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"5px 10px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>⋯</button>
                   </div>
@@ -349,6 +350,7 @@ function PlayerCard({s,onAction,onConfirm,onReminder}){
           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
             <span style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display}}>{s.name}</span>
             <span style={{fontSize:7,padding:"1px 6px",borderRadius:4,background:s.status==="confirmed"?`${C.green}18`:`${C.silver}12`,color:s.status==="confirmed"?C.green:C.silver,fontFamily:D.body}}>{s.status==="confirmed"?"✓":"Pending"}</span>
+            {s.paymentMethod==="cash"&&<span style={{fontSize:7,padding:"1px 6px",borderRadius:4,background:"#1a1200",border:"1px solid #c9a84c44",color:"#c9a84c",fontFamily:D.body}}>💵 Cash</span>}
           </div>
           <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>🕐 {s._time}</div>
           {s.email&&<div style={{fontSize:9,color:C.textDim,fontFamily:D.body,marginTop:2}}>{s.email}</div>}
