@@ -580,12 +580,30 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
           </div>
 
           {STRIPE_ENABLED ? (
-            <StripePaymentForm total={total} onSuccess={doBook} loading={bookingLoading} disabled={!canNext2||bookingLoading}/>
+            <div>
+              <StripePaymentForm total={total} onSuccess={doBook} loading={bookingLoading} disabled={!canNext2||bookingLoading}/>
+              <div style={{textAlign:"center",margin:"8px 0 16px"}}>
+                <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>or</span>
+              </div>
+              <button disabled={!canNext2||bookingLoading} onClick={doBook} style={{width:"100%",background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:10,padding:"13px",color:canNext2?C.silver:C.silverDark,fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:canNext2?"pointer":"not-allowed",fontFamily:D.body,marginBottom:8}}>
+                {bookingLoading?"Reserving…":"Pay with Cash at Session →"}
+              </button>
+              <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,textAlign:"center",marginBottom:16}}>Your spot is reserved. Bring exact cash on the day — ${total}. Coach does not carry change so please come prepared with the exact amount.</div>
+            </div>
           ) : (
-            <div style={{background:"#0a0805",border:`1px solid ${C.silver}22`,borderRadius:10,padding:"14px 16px",marginBottom:16,textAlign:"center"}}>
-              <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Payment</div>
-              <div style={{fontSize:13,color:C.textMid,fontFamily:D.body,marginBottom:4}}>Send <strong style={{color:C.white,fontSize:18}}>${total}</strong> via Venmo to lock in your spot</div>
-              <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>@carlos-cepeda-41 · Include your name in the note</div>
+            <div style={{marginBottom:16}}>
+              <div style={{background:"#0a0805",border:`1px solid ${C.silver}22`,borderRadius:10,padding:"14px 16px",marginBottom:10,textAlign:"center"}}>
+                <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Payment</div>
+                <div style={{fontSize:13,color:C.textMid,fontFamily:D.body,marginBottom:4}}>Send <strong style={{color:C.white,fontSize:18}}>${total}</strong> via Venmo to lock in your spot</div>
+                <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>@carlos-cepeda-41 · Include your name in the note</div>
+              </div>
+              <div style={{textAlign:"center",margin:"8px 0"}}>
+                <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>or</span>
+              </div>
+              <button disabled={!canNext2||bookingLoading} onClick={doBook} style={{width:"100%",background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:10,padding:"13px",color:canNext2?C.silver:C.silverDark,fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:canNext2?"pointer":"not-allowed",fontFamily:D.body,marginBottom:8}}>
+                {bookingLoading?"Reserving…":"Pay with Cash at Session →"}
+              </button>
+              <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,textAlign:"center"}}>Your spot is reserved. Bring exact cash on the day — ${total}. Coach does not carry change so please come prepared with the exact amount.</div>
             </div>
           )}
 
@@ -600,7 +618,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
         <div style={{textAlign:"center"}}>
           <div style={{width:80,height:80,borderRadius:"50%",margin:"0 auto 20px",background:`linear-gradient(135deg,${C.green},#0e7a47)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:34,color:C.white,boxShadow:`0 0 60px ${C.green}44`}}>⚒️</div>
           <h2 style={{margin:"0 0 8px",fontSize:28,fontWeight:700,color:C.white,fontFamily:D.display,letterSpacing:2}}>You're In The Forge</h2>
-          <p style={{margin:"0 0 28px",fontSize:13,color:C.textDim,fontFamily:D.body,lineHeight:1.8}}>{STRIPE_ENABLED?"Payment confirmed. A confirmation email is on its way.":"A confirmation email is on its way. Send your Venmo payment to lock in your spot."}</p>
+          <p style={{margin:"0 0 28px",fontSize:13,color:C.textDim,fontFamily:D.body,lineHeight:1.8}}>{STRIPE_ENABLED?"Payment confirmed. A confirmation email is on its way. If you chose cash, bring exact payment to the session.":"A confirmation email is on its way. Complete payment via Venmo or bring cash to the session."}</p>
 
           {isPackage&&myBookings.length>0?(
             <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,overflow:"hidden",marginBottom:20,textAlign:"left"}}>
