@@ -15,6 +15,10 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
   const [sending,setSending]             = useState(false);
   const [actionItem,setActionItem]       = useState(null);
   const [cancelConfirm,setCancelConfirm] = useState(false);
+  const [rescheduleItem,setRescheduleItem] = useState(null);
+  const [reschedDate,setReschedDate]       = useState(null);
+  const [reschedSess,setReschedSess]       = useState(null);
+  const [reschedLoading,setReschedLoading] = useState(false);
   const [filterStatus,setFilterStatus]   = useState("all");
   const [searchQ,setSearchQ]             = useState("");
 
@@ -72,6 +76,22 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
 
   function openAction(item){
     setActionItem(item); setNoteText(item.coachNote||""); setNoteColl(item._coll||"bookings"); setCancelConfirm(false);
+  }
+
+  async function doCoachReschedule(){
+    if(!reschedDate||!reschedSess||!rescheduleItem) return;
+    setReschedLoading(true);
+    const coll = rescheduleItem._coll||"bookings";
+    await updateDoc(doc(db,coll,rescheduleItem.id),{
+      dateKey:dKey(reschedDate), dateLabel:fmtDate(reschedDate),
+      sessId:reschedSess.id, sessTime:reschedSess.time,
+      rescheduledAt:new Date().toISOString(), rescheduledBy:"coach",
+    });
+    if(rescheduleItem.email){
+      await callEmailAPI({...rescheduleItem, dateLabel:fmtDate(reschedDate), sessTime:reschedSess.time},"reschedule");
+    }
+    setRescheduleItem(null); setReschedDate(null); setReschedSess(null);
+    setReschedLoading(false); setActionItem(null);
   }
 
   async function saveNote(){
@@ -281,6 +301,10 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
                 ↩ Unconfirm
               </button>
             )}
+            <button onClick={()=>{setRescheduleItem(actionItem);setReschedDate(null);setReschedSess(null);}}
+              style={{display:"block",width:"100%",background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:9,padding:"10px",color:C.silver,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,marginBottom:8,textAlign:"center"}}>
+              📅 Reschedule
+            </button>
             {actionItem.status==="pending"&&(
               <button onClick={()=>confirmBooking(actionItem.id,actionItem._coll||"bookings")}
                 style={{display:"block",width:"100%",background:`${C.green}18`,border:`1px solid ${C.green}33`,borderRadius:9,padding:"10px",color:C.green,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,marginBottom:8,textAlign:"center",fontWeight:600}}>
@@ -309,7 +333,56 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
         </div>
       )}
 
-      {/* ── REMINDER MODAL ── */}
+      {/* ── RESCHEDULE MODAL ── */}
+      {rescheduleItem&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>{setRescheduleItem(null);setReschedDate(null);setReschedSess(null);}}>
+          <div style={{background:"#111",border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"22px",maxWidth:480,width:"100%",maxHeight:"80vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <div style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display}}>Reschedule Session</div>
+              <button onClick={()=>setRescheduleItem(null)} style={{background:"transparent",border:"none",color:C.textDim,fontSize:18,cursor:"pointer"}}>✕</button>
+            </div>
+            <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,marginBottom:16}}>Moving: <strong style={{color:C.white}}>{rescheduleItem.name} — {rescheduleItem.dateLabel} · {rescheduleItem._time}</strong></div>
+            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Pick New Date & Session</div>
+            <div style={{display:"grid",gap:8,marginBottom:16}}>
+              {getDates(8).map((d,i)=>{
+                if(dKey(d)===rescheduleItem.dateKey) return null;
+                const sched=DAY_SCHEDULE[d.getDay()];
+                const isSelDate=reschedDate&&dKey(reschedDate)===dKey(d);
+                return(
+                  <div key={i} style={{background:isSelDate?`${C.red}08`:C.card,border:`1px solid ${isSelDate?C.red:C.cardBorder}`,borderRadius:10,padding:"12px 14px"}}>
+                    <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:8}}>{fmtDate(d)}</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                      {sched.sessions.map(sess=>{
+                        const isSel=isSelDate&&reschedSess?.id===sess.id;
+                        return(
+                          <button key={sess.id} onClick={()=>{setReschedDate(d);setReschedSess(sess);}}
+                            style={{background:isSel?`${C.red}18`:"#0d0b08",border:`1px solid ${isSel?C.red:C.cardBorder}`,borderRadius:8,padding:"8px 10px",cursor:"pointer",textAlign:"left"}}>
+                            <div style={{fontSize:11,fontWeight:600,color:isSel?C.red:C.white,fontFamily:D.display,marginBottom:2}}>{sess.time}</div>
+                            <div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{sess.label}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {reschedDate&&reschedSess&&(
+              <div style={{background:`${C.red}08`,border:`1px solid ${C.red}22`,borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:11,color:C.silver,fontFamily:D.body}}>
+                Moving to: <strong style={{color:C.white}}>{fmtDate(reschedDate)} · {reschedSess.time}</strong>
+                <br/><span style={{fontSize:10,color:C.textDim}}>A reschedule confirmation email will be sent to {rescheduleItem.email||"the client"}.</span>
+              </div>
+            )}
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>{setRescheduleItem(null);setReschedDate(null);setReschedSess(null);}} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:9,padding:"11px 18px",fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+              <button disabled={!reschedDate||!reschedSess||reschedLoading} onClick={doCoachReschedule}
+                style={{flex:1,background:reschedDate&&reschedSess?`linear-gradient(135deg,${C.red},${C.redDim})`:"#1a1a1a",border:"none",color:reschedDate&&reschedSess?C.white:C.textDim,borderRadius:9,padding:"11px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:reschedDate&&reschedSess?"pointer":"not-allowed",fontFamily:D.body,fontWeight:600}}>
+                {reschedLoading?"Rescheduling…":"Confirm Reschedule →"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {reminderModal&&(()=>{
         const isGroup=reminderModal.group;
         const recipients=isGroup?reminderModal.players:[reminderModal];
