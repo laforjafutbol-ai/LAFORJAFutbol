@@ -10,14 +10,17 @@ import { AuthPage, AccountPage, SessionsPage, AboutPage, ContactPage, PackagesPa
 // ── BOOKING CUTOFF ─────────────────────────────────────────
 function isCutoffHour(date, sessTime){
   const now = new Date();
-  const sessionDate = new Date(date);
+  // Build session datetime in local time
   const match = (sessTime||"").match(/(\d+):(\d+)\s*(AM|PM)/i);
-  if(match){
-    let h=parseInt(match[1]); const m=parseInt(match[2]); const ampm=match[3].toUpperCase();
-    if(ampm==="PM"&&h!==12) h+=12; if(ampm==="AM"&&h===12) h=0;
-    sessionDate.setHours(h,m,0,0);
-  }
-  return now >= new Date(sessionDate.getTime()-3*60*60*1000);
+  if(!match) return false;
+  let h=parseInt(match[1]); const m=parseInt(match[2]); const ampm=match[3].toUpperCase();
+  if(ampm==="PM"&&h!==12) h+=12; if(ampm==="AM"&&h===12) h=0;
+  const sessionDate = new Date(date);
+  sessionDate.setHours(h,m,0,0);
+  // Only cut off if it's the same day AND within 2 hours of session
+  const sameDay = now.toDateString()===sessionDate.toDateString();
+  if(!sameDay) return false;
+  return now >= new Date(sessionDate.getTime()-2*60*60*1000);
 }
 
 export default function App(){
