@@ -45,7 +45,7 @@ export function AuthPage({setPage,authChecked,user}){
   }
 
   if(mode==="reset") return(
-    <div style={{maxWidth:420,margin:"60px auto",padding:"0 24px"}}>
+    <div style={{maxWidth:420,margin:"clamp(20px,5vw,60px) auto",padding:"0 clamp(14px,4vw,24px)"}}>
       <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"32px 28px"}}>
         <div style={{textAlign:"center",marginBottom:24}}><div style={{fontSize:24,marginBottom:8}}>🔑</div><div style={{fontSize:18,fontWeight:600,color:C.white,fontFamily:D.display}}>Reset Password</div></div>
         {resetSent?(
@@ -66,7 +66,7 @@ export function AuthPage({setPage,authChecked,user}){
   );
 
   return(
-    <div style={{maxWidth:420,margin:"60px auto",padding:"0 24px"}}>
+    <div style={{maxWidth:420,margin:"clamp(20px,5vw,60px) auto",padding:"0 clamp(14px,4vw,24px)"}}>
       <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"32px 28px"}}>
         <div style={{textAlign:"center",marginBottom:24}}>
           <div style={{fontSize:24,marginBottom:8}}>{mode==="signup"?"⚒️":"🔥"}</div>
@@ -180,7 +180,7 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
   const availDates = getDates(8);
 
   return(
-    <div style={{maxWidth:600,margin:"0 auto",padding:"80px 20px 80px"}}>
+    <div style={{maxWidth:600,margin:"0 auto",padding:"clamp(60px,8vw,80px) clamp(14px,4vw,20px) 80px"}}>
 
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
@@ -193,14 +193,14 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
       </div>
 
       {/* Stats */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:24}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6,marginBottom:20}}>
         {[
           {label:"Upcoming",value:upcoming.length,color:C.red},
           {label:"Completed",value:completedCount,color:C.green},
           {label:"Players",value:players.length,color:C.silverBright},
         ].map((s,i)=>(
           <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"16px 12px",textAlign:"center"}}>
-            <div style={{fontSize:30,fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:5}}>{s.value}</div>
+            <div style={{fontSize:"clamp(22px,5vw,30px)",fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:5}}>{s.value}</div>
             <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
           </div>
         ))}
@@ -501,7 +501,7 @@ export function ContactPage({setPage,user}){
   );
 
   return(
-    <div style={{maxWidth:520,margin:"0 auto",padding:"60px 24px 100px"}}>
+    <div style={{maxWidth:520,margin:"0 auto",padding:"clamp(30px,5vw,60px) clamp(14px,4vw,24px) 100px"}}>
       <SH eyebrow="Get in Touch" title="Contact Coach Carlos"/>
       <form onSubmit={handleSubmit}>
         {[{label:"Your Name",key:"name",type:"text"},{label:"Email",key:"email",type:"email"},{label:"Message",key:"message",type:"textarea"}].map(f=>(
@@ -524,7 +524,7 @@ export function ContactPage({setPage,user}){
 // ── PACKAGES PAGE ─────────────────────────────────────────
 export function PackagesPage({setPage}){
   return(
-    <div style={{maxWidth:700,margin:"0 auto",padding:"60px 24px 100px"}}>
+    <div style={{maxWidth:700,margin:"0 auto",padding:"clamp(30px,5vw,60px) clamp(14px,4vw,24px) 100px"}}>
       <SH eyebrow="Invest in the Process" title="Training Packages"/>
       <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:36}}>Single sessions are great to start. Packages are for players who are serious about getting better.</p>
       <div style={{display:"grid",gap:14,marginBottom:40}}>
