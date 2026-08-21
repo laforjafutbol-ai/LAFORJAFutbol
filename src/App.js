@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { db, auth, googleProvider } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where } from "firebase/firestore";
-import { Elements } from "@stripe/react-stripe-js";
-import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, PACKAGES, POSITIONS, DAY_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, SITE_READY, stripePromise, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles } from "./constants";
+import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, PACKAGES, POSITIONS, DAY_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, SITE_READY, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles } from "./constants";
 import { Dashboard } from "./Pages1";
 import { AuthPage, AccountPage, SessionsPage, AboutPage, ContactPage, PackagesPage } from "./Pages2";
 
@@ -328,6 +327,14 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
   const canNext2 = (form.name||selPlayerIds.length>0) && form.email && waiverAgreed;
 
   useEffect(()=>{
+    const params = new URLSearchParams(window.location.search);
+    if(params.get("checkout")==="success"){
+      setStep(3);
+      window.history.replaceState({},"","/");
+    }
+  },[]);
+
+  useEffect(()=>{
     if(step===2&&user&&!form.email){
       setForm(f=>({...f,email:user.email||"",name:user.displayName||f.name}));
     }
@@ -338,6 +345,29 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
     const existing = selDates.findIndex(s=>s.dk===dk&&s.sess.id===sess.id);
     if(existing>=0){ setSelDates(selDates.filter((_,i)=>i!==existing)); }
     else if(selDates.length < needed){ setSelDates([...selDates, {dk, date, sess, dateLabel:fmtDate(date)}]); }
+  }
+
+  async function redirectToCheckout(savedBookingRef){
+    setBookingLoading(true);
+    try{
+      const pricePerSession = isPackage ? selPkg.price / selPkg.sessions : PRICE_GROUP;
+      const res = await fetch("/api/create-checkout-session",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          packageName: selPkg?.name || "Single Session",
+          sessions: isPackage ? selPkg.sessions : 1,
+          players: effectiveCount,
+          pricePerSession,
+          total,
+          bookingRef: savedBookingRef || "",
+          email: form.email || user?.email || "",
+        }),
+      });
+      const data = await res.json();
+      if(data.url){ window.location.href = data.url; }
+      else{ console.error("Checkout error:", data.error); setBookingLoading(false); }
+    }catch(e){ console.error("Checkout fetch error:",e); setBookingLoading(false); }
   }
 
   function reset(){ setStep(0);setSelPkg(null);setSelDate(null);setSelSess(null);setSelDates([]);setForm({name:"",email:"",phone:"",notes:""});setMyBookings([]);setWaiverAgreed(false);setSelPlayerIds([]);setCount(1); }
@@ -377,8 +407,16 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
       if(ref?.id){ refs.push({...booking,id:ref.id}); if(bookingEmail) await callEmailAPI(booking,"group"); }
     }
     setMyBookings(refs);
-    setBookingLoading(false);
-    setStep(3);
+
+    if(paymentMethod==="cash"){
+      // Cash — go straight to confirmation
+      setBookingLoading(false);
+      setStep(3);
+    } else {
+      // Card — redirect to Stripe Checkout
+      const firstRef = refs[0]?.id || "";
+      await redirectToCheckout(firstRef);
+    }
   }
 
   return(
@@ -584,33 +622,55 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
             </label>
           </div>
 
-          {STRIPE_ENABLED ? (
-            <div>
-              <StripePaymentForm total={total} onSuccess={doBook} loading={bookingLoading} disabled={!canNext2||bookingLoading}/>
-              <div style={{textAlign:"center",margin:"8px 0 16px"}}>
-                <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>or</span>
-              </div>
-              <button disabled={!canNext2||bookingLoading} onClick={()=>doBook("cash")} style={{width:"100%",background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:10,padding:"13px",color:canNext2?C.silver:C.silverDark,fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:canNext2?"pointer":"not-allowed",fontFamily:D.body,marginBottom:8}}>
-                {bookingLoading?"Reserving…":"Pay with Cash at Session →"}
-              </button>
-              <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,textAlign:"center",marginBottom:16}}>Your spot is reserved. Bring exact cash on the day — ${total}. Coach does not carry change so please come prepared with the exact amount.</div>
+          {/* Price Breakdown */}
+          <div style={{background:"#0a0908",border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"16px 20px",marginBottom:16}}>
+            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Payment Summary</div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+              <span style={{fontSize:12,color:C.textDim,fontFamily:D.body}}>{selPkg?.name || "Single Session"}</span>
+              <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>${isPackage ? selPkg.price : PRICE_GROUP}/session</span>
             </div>
-          ) : (
-            <div style={{marginBottom:16}}>
-              <div style={{background:"#0a0805",border:`1px solid ${C.silver}22`,borderRadius:10,padding:"14px 16px",marginBottom:10,textAlign:"center"}}>
-                <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Payment</div>
-                <div style={{fontSize:13,color:C.textMid,fontFamily:D.body,marginBottom:4}}>Send <strong style={{color:C.white,fontSize:18}}>${total}</strong> via Venmo to lock in your spot</div>
-                <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>@carlos-cepeda-41 · Include your name in the note</div>
+            {effectiveCount>1&&(
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                <span style={{fontSize:12,color:C.textDim,fontFamily:D.body}}>Players</span>
+                <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>× {effectiveCount}</span>
               </div>
-              <div style={{textAlign:"center",margin:"8px 0"}}>
-                <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>or</span>
+            )}
+            {isPackage&&(
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                <span style={{fontSize:12,color:C.textDim,fontFamily:D.body}}>Sessions</span>
+                <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>{selPkg.sessions} sessions</span>
               </div>
-              <button disabled={!canNext2||bookingLoading} onClick={()=>doBook("cash")} style={{width:"100%",background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:10,padding:"13px",color:canNext2?C.silver:C.silverDark,fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:canNext2?"pointer":"not-allowed",fontFamily:D.body,marginBottom:8}}>
-                {bookingLoading?"Reserving…":"Pay with Cash at Session →"}
-              </button>
-              <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,textAlign:"center"}}>Your spot is reserved. Bring exact cash on the day — ${total}. Coach does not carry change so please come prepared with the exact amount.</div>
+            )}
+            <div style={{borderTop:`1px solid ${C.cardBorder}`,marginTop:10,paddingTop:10,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display}}>Total</span>
+              <span style={{fontSize:22,fontWeight:700,color:C.white,fontFamily:D.display}}>${total}</span>
             </div>
-          )}
+          </div>
+
+          {/* Pay by Card — Stripe Checkout */}
+          <button disabled={!canNext2||bookingLoading} onClick={()=>doBook("card")}
+            style={{display:"block",width:"100%",background:canNext2?`linear-gradient(135deg,${C.red},${C.redDim})`:"#1a1a1a",border:"none",borderRadius:10,padding:"14px",color:canNext2?C.white:C.textDim,fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:canNext2?"pointer":"not-allowed",fontFamily:D.body,fontWeight:600,marginBottom:8}}>
+            {bookingLoading?"Please wait…":"Pay Securely with Card →"}
+          </button>
+          <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,textAlign:"center",marginBottom:12}}>
+            🔒 You'll be redirected to Stripe's secure checkout — card, Apple Pay, or Google Pay
+          </div>
+
+          {/* Divider */}
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+            <div style={{flex:1,height:1,background:C.cardBorder}}/>
+            <span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>or</span>
+            <div style={{flex:1,height:1,background:C.cardBorder}}/>
+          </div>
+
+          {/* Pay with Cash */}
+          <button disabled={!canNext2||bookingLoading} onClick={()=>doBook("cash")}
+            style={{display:"block",width:"100%",background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:10,padding:"13px",color:canNext2?C.silver:C.silverDark,fontSize:11,letterSpacing:2,textTransform:"uppercase",cursor:canNext2?"pointer":"not-allowed",fontFamily:D.body,marginBottom:8}}>
+            {bookingLoading?"Reserving…":"Pay with Cash at Session →"}
+          </button>
+          <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,textAlign:"center",marginBottom:16}}>
+            Bring exact cash — ${total}. Coach does not carry change.
+          </div>
 
           <div style={{display:"flex",gap:10}}>
             <GB onClick={()=>setStep(1)}>← Back</GB>
@@ -667,61 +727,6 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
         </div>
       )}
     </div>
-  );
-}
-
-// ── STRIPE PAYMENT FORM ───────────────────────────────────
-import { useStripe, useElements, PaymentElement } from "@stripe/react-stripe-js";
-
-function StripePaymentFormInner({total,onSuccess,disabled}){
-  const stripe  = useStripe();
-  const elements = useElements();
-  const [err,setErr]   = useState("");
-  const [busy,setBusy] = useState(false);
-
-  async function handlePay(e){
-    e.preventDefault();
-    if(!stripe||!elements||disabled) return;
-    setBusy(true); setErr("");
-    const {error} = await stripe.confirmPayment({elements,redirect:"if_required"});
-    if(error){ setErr(error.message||"Payment failed"); setBusy(false); }
-    else{ await onSuccess(); }
-  }
-
-  return(
-    <form onSubmit={handlePay} style={{marginBottom:16}}>
-      <div style={{background:"#0a0805",border:`1px solid ${C.silver}22`,borderRadius:10,padding:"16px",marginBottom:12}}>
-        <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Card Payment · ${total}</div>
-        <PaymentElement/>
-      </div>
-      {err&&<div style={{color:C.red,fontSize:11,fontFamily:D.body,marginBottom:10}}>{err}</div>}
-      <button type="submit" disabled={!stripe||busy||disabled} style={{width:"100%",background:stripe&&!busy&&!disabled?`linear-gradient(135deg,${C.red},${C.redDim})`:"#1a1a1a",border:"none",borderRadius:10,padding:"13px",color:stripe&&!busy&&!disabled?C.white:C.textDim,fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:stripe&&!busy&&!disabled?"pointer":"not-allowed",fontFamily:D.body,fontWeight:600}}>
-        {busy?"Processing…":`Pay $${total} →`}
-      </button>
-    </form>
-  );
-}
-
-function StripePaymentForm({total,onSuccess,loading,disabled}){
-  const [clientSecret,setClientSecret] = useState(null);
-  const [err,setErr] = useState("");
-
-  useEffect(()=>{
-    if(!total) return;
-    fetch("/api/create-payment-intent",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({amount:total,currency:"usd"}),
-    }).then(r=>r.json()).then(d=>{ if(d.clientSecret) setClientSecret(d.clientSecret); else setErr("Could not load payment form"); }).catch(()=>setErr("Could not load payment form"));
-  },[total]);
-
-  if(err) return <div style={{color:C.red,fontSize:11,fontFamily:D.body,padding:"12px 0"}}>{err}</div>;
-  if(!clientSecret) return <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,padding:"12px 0"}}>Loading payment form…</div>;
-
-  return(
-    <Elements stripe={stripePromise} options={{clientSecret,appearance:{theme:"night",variables:{colorPrimary:C.red,colorBackground:"#0a0908",colorText:C.white,colorDanger:C.red,fontFamily:D.body,borderRadius:"10px"}}}}>
-      <StripePaymentFormInner total={total} onSuccess={onSuccess} disabled={disabled||loading}/>
-    </Elements>
   );
 }
 
