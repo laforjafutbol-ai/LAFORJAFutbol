@@ -399,12 +399,12 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
         const ref = await addBooking(booking);
         if(ref?.id) refs.push({...booking,id:ref.id});
       }
-      if(refs.length>0&&bookingEmail) await callEmailAPI({...refs[0], packageBooking:true, packageDates:selDates.map(s=>s.dateLabel).join(", "), packageName:selPkg.name, total},"group");
+      if(refs.length>0&&bookingEmail&&isCash) await callEmailAPI({...refs[0], packageBooking:true, packageDates:selDates.map(s=>s.dateLabel).join(", "), packageName:selPkg.name, total},"group");
     } else {
       const daySchedule = DAY_SCHEDULE[selDate.getDay()];
       const booking = {...base, dateKey:dKey(selDate), dateLabel:fmtDate(selDate), sessId:selSess.id, sessTime:selSess.time, total};
       const ref = await addBooking(booking);
-      if(ref?.id){ refs.push({...booking,id:ref.id}); if(bookingEmail) await callEmailAPI(booking,"group"); }
+      if(ref?.id){ refs.push({...booking,id:ref.id}); if(bookingEmail&&isCash) await callEmailAPI(booking,"group"); }
     }
     setMyBookings(refs);
 
