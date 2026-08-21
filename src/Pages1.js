@@ -46,8 +46,8 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
 
   // Build allSessions combining bookings + inquiries, excluding cancelled
   const allSessions = [
-    ...(bookings||[]).filter(b=>b.status!=="cancelled"&&b.status!=="removed").map(b=>({...b,_type:"group",_coll:"bookings",_time:b.sessTime})),
-    ...(inquiries||[]).filter(i=>i.status!=="cancelled"&&i.status!=="removed").map(i=>({...i,_type:"1on1",_coll:"inquiries",_time:i.slotTime})),
+    ...(bookings||[]).filter(b=>b.status!=="cancelled"&&b.status!=="removed"&&b.status!=="awaiting_payment").map(b=>({...b,_type:"group",_coll:"bookings",_time:b.sessTime})),
+    ...(inquiries||[]).filter(i=>i.status!=="cancelled"&&i.status!=="removed"&&i.status!=="awaiting_payment").map(i=>({...i,_type:"1on1",_coll:"inquiries",_time:i.slotTime})),
   ];
 
   // Today's sessions
