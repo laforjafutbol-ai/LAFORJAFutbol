@@ -1,41 +1,12 @@
 const Stripe = require("stripe");
 const https = require("https");
 
-const stripe = Stripe("sk_test_51TW0MzFU9deEKlhCQdCpU6zZeeSKKffjLFJVLKLcwaU9N0dNpwdfLk3e7OaglckppivQ3bsFgJ0kJGlLzQKBC45i00TPqsBM3S");
-
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const FIREBASE_PROJECT = "laforja-4be1d";
-const FIREBASE_API_KEY = "AIzaSyCpdHWgEPYWtLlJrVcAm-QMBguT9okjLvs";
+const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
+const RESEND_KEY = process.env.RESEND_API_KEY;
 
-// Helper to ADD a new Firestore document
-function addFirestoreDoc(collectionName, fields) {
-  return new Promise((resolve, reject) => {
-    const fsFields = {};
-    for (const [key, value] of Object.entries(fields)) {
-      if (typeof value === "string") fsFields[key] = { stringValue: value };
-      else if (typeof value === "number") fsFields[key] = { doubleValue: value };
-      else if (typeof value === "boolean") fsFields[key] = { booleanValue: value };
-    }
-    const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/${collectionName}?key=${FIREBASE_API_KEY}`;
-    const body = JSON.stringify({ fields: fsFields });
-    const urlObj = new URL(url);
-    const options = {
-      hostname: urlObj.hostname,
-      path: urlObj.pathname + urlObj.search,
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
-    };
-    const req = https.request(options, (r) => {
-      let data = "";
-      r.on("data", (c) => (data += c));
-      r.on("end", () => resolve(data));
-    });
-    req.on("error", reject);
-    req.write(body);
-    req.end();
-  });
-}
-
-// Helper to PATCH a Firestore document via REST API
+// Update a Firestore doc
 function updateFirestoreDoc(collectionName, docId, fields) {
   return new Promise((resolve, reject) => {
     const fsFields = {};
@@ -46,24 +17,52 @@ function updateFirestoreDoc(collectionName, docId, fields) {
       else if (typeof value === "number") fsFields[key] = { doubleValue: value };
       else if (typeof value === "boolean") fsFields[key] = { booleanValue: value };
     }
-    const maskQuery = updateMask.join("&");
-    const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/${collectionName}/${docId}?${maskQuery}&key=${FIREBASE_API_KEY}`;
+    const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents/${collectionName}/${docId}?${updateMask.join("&")}&key=${FIREBASE_API_KEY}`;
     const body = JSON.stringify({ fields: fsFields });
     const urlObj = new URL(url);
-    const options = {
-      hostname: urlObj.hostname,
-      path: urlObj.pathname + urlObj.search,
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
-    };
-    const req = https.request(options, (r) => {
-      let data = "";
-      r.on("data", (c) => (data += c));
-      r.on("end", () => resolve(data));
+    const req = https.request({ hostname: urlObj.hostname, path: urlObj.pathname + urlObj.search, method: "PATCH", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) } }, (r) => { let d = ""; r.on("data", c => d += c); r.on("end", () => resolve(d)); });
+    req.on("error", reject); req.write(body); req.end();
+  });
+}
+
+// Query Firestore for bookings by bookingRef
+function queryFirestore(collectionId, bookingRef) {
+  return new Promise((resolve, reject) => {
+    const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents:runQuery?key=${FIREBASE_API_KEY}`;
+    const body = JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId }],
+        where: { fieldFilter: { field: { fieldPath: "id" }, op: "EQUAL", value: { stringValue: bookingRef } } },
+        limit: 10,
+      }
     });
-    req.on("error", reject);
-    req.write(body);
-    req.end();
+    const urlObj = new URL(url);
+    const req = https.request({ hostname: urlObj.hostname, path: urlObj.pathname + urlObj.search, method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) } }, (r) => { let d = ""; r.on("data", c => d += c); r.on("end", () => { try{ resolve(JSON.parse(d)); }catch(e){ resolve([]); } }); });
+    req.on("error", reject); req.write(body); req.end();
+  });
+}
+
+// Send email via Resend
+function sendConfirmationEmail(booking) {
+  return new Promise((resolve) => {
+    if (!booking.email || !RESEND_KEY) return resolve();
+    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://laforjafutbol.com";
+    const body = JSON.stringify({ booking, type: "group" });
+    const req = https.request({
+      hostname: "api.resend.com", path: "/emails", method: "POST",
+      headers: { "Authorization": `Bearer ${RESEND_KEY}`, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
+    }, (r) => { let d = ""; r.on("data", c => d += c); r.on("end", () => { console.log("Email sent:", d); resolve(); }); });
+    req.on("error", (e) => { console.error("Email error:", e); resolve(); });
+
+    // Actually call our own send-email endpoint
+    const emailPayload = JSON.stringify({ booking: { ...booking, paymentMethod: "card" }, type: "group" });
+    const emailReq = https.request({
+      hostname: "laforjafutbol.com", path: "/api/send-email", method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(emailPayload) }
+    }, (r) => { let d = ""; r.on("data", c => d += c); r.on("end", () => { console.log("Confirmation email response:", d); resolve(); }); });
+    emailReq.on("error", (e) => { console.error("Email send error:", e); resolve(); });
+    emailReq.write(emailPayload);
+    emailReq.end();
   });
 }
 
@@ -72,51 +71,51 @@ module.exports = async function handler(req, res) {
 
   let event;
   try {
-    // Note: signature verification requires the raw body + webhook secret from Stripe dashboard.
-    // Once you set up the webhook in Stripe, add STRIPE_WEBHOOK_SECRET as an env var and verify here.
-    event = req.body;
+    event = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
   } catch (err) {
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    return res.status(400).send("Invalid payload");
   }
 
-  if (event.type === "payment_intent.succeeded") {
-    const intent = event.data.object;
-    const meta = intent.metadata || {};
-    const { docId, collectionName } = meta;
+  console.log("Webhook event:", event.type);
 
-    if (docId && collectionName) {
+  // Handle Stripe Checkout completion
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    const meta = session.metadata || {};
+    const bookingRef = meta.bookingRef;
+    const total = parseFloat(meta.total || "0");
+    const customerEmail = session.customer_details?.email || session.customer_email || "";
+
+    console.log("Checkout completed, bookingRef:", bookingRef, "email:", customerEmail);
+
+    if (bookingRef) {
       try {
-        await updateFirestoreDoc(collectionName, docId, {
+        // Update the booking status to confirmed and mark as card payment
+        await updateFirestoreDoc("bookings", bookingRef, {
           status: "confirmed",
-          paymentMethod: "stripe",
-          paymentIntentId: intent.id,
+          paymentMethod: "card",
+          stripeSessionId: session.id,
+          paidAt: new Date().toISOString(),
         });
+        console.log("Booking confirmed:", bookingRef);
 
-        // Auto-log income to finance tracker
-        const bookingData = JSON.parse(meta.bookingData || "{}");
-        if (intent.amount > 0) {
-          await addFirestoreDoc("finance_entries", {
-            type: "income",
-            date: bookingData.dateKey || new Date().toISOString().split("T")[0],
-            category: collectionName === "inquiries" ? "1-on-1" : "Session — Single",
-            description: `${bookingData.name || ""} · ${bookingData.dateLabel || ""}`.trim().replace(/^·\s*/,""),
-            amount: intent.amount / 100,
-            stripeBookingId: docId,
-            stripePaymentId: intent.id,
-            auto: true,
-            createdAt: new Date().toISOString(),
-          });
-        }
+        // Build booking data for email from metadata
+        const bookingForEmail = {
+          name: customerEmail, // will be overridden if we find the booking
+          email: customerEmail,
+          dateLabel: "",
+          sessTime: "",
+          skill: "The Furnace",
+          skillIcon: "🔥",
+          count: parseInt(meta.players || "1"),
+          total,
+          paymentMethod: "card",
+          packageName: meta.packageName || "Session",
+        };
 
-        // Trigger confirmation email
-        await fetch(`https://${req.headers.host}/api/send-email`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            booking: JSON.parse(meta.bookingData || "{}"),
-            type: collectionName === "inquiries" ? "1on1_booking" : "group",
-          }),
-        });
+        // Send confirmation email
+        await sendConfirmationEmail(bookingForEmail);
+
       } catch (err) {
         console.error("Webhook processing error:", err.message);
       }
