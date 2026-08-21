@@ -82,14 +82,14 @@ export default function App(){
   return(
     <div style={{background:C.black,minHeight:"100vh",color:C.white}}>
       <GStyles/>
-      <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,background:"rgba(9,9,11,0.95)",backdropFilter:"blur(12px)",borderBottom:`1px solid ${C.cardBorder}`,padding:"0 24px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,background:"rgba(9,9,11,0.95)",backdropFilter:"blur(12px)",borderBottom:`1px solid ${C.cardBorder}`,padding:"0 16px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <button onClick={()=>setPage("home")} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:10}}>
           <Crest size={32}/>
           <span style={{fontSize:14,letterSpacing:3,color:C.white,fontFamily:D.display,fontWeight:600}}>La Forja</span>
         </button>
         <div style={{display:"flex",gap:4,alignItems:"center"}}>
           {navItems.map(([key,lbl])=>(
-            <button key={key} onClick={()=>setPage(key)} style={{background:page===key?"rgba(255,77,46,0.12)":"transparent",border:page===key?`1px solid ${C.red}33`:"1px solid transparent",color:page===key?C.red:C.textMid,borderRadius:8,padding:"6px 14px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>
+            <button key={key} onClick={()=>setPage(key)} style={{background:page===key?"rgba(255,77,46,0.12)":"transparent",border:page===key?`1px solid ${C.red}33`:"1px solid transparent",color:page===key?C.red:C.textMid,borderRadius:8,padding:"5px 10px",fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>
               {lbl}
             </button>
           ))}
@@ -120,7 +120,7 @@ function HomePage({setPage,user}){
   return(
     <div>
       {/* Hero */}
-      <div style={{minHeight:"92vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"60px 24px",textAlign:"center",background:`radial-gradient(ellipse at 50% 80%,${C.redDark} 0%,transparent 55%)`}}>
+      <div style={{minHeight:"92vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"clamp(40px,8vw,60px) 20px",textAlign:"center",background:`radial-gradient(ellipse at 50% 80%,${C.redDark} 0%,transparent 55%)`}}>
         <Crest size={80}/>
         <div style={{fontSize:9,letterSpacing:6,color:C.silverDim,textTransform:"uppercase",marginTop:20,marginBottom:8,fontFamily:D.body}}>James Island · Charleston SC</div>
         <h1 style={{margin:"0 0 10px",fontFamily:D.display,fontWeight:700,fontSize:"clamp(48px,9vw,80px)",letterSpacing:6,textTransform:"uppercase",color:C.white,lineHeight:1}}>La Forja</h1>
@@ -132,7 +132,7 @@ function HomePage({setPage,user}){
         </div>
       </div>
 
-      <div style={{maxWidth:960,margin:"0 auto",padding:"80px 24px 60px"}}>
+      <div style={{maxWidth:960,margin:"0 auto",padding:"clamp(40px,6vw,80px) clamp(16px,4vw,24px) 60px"}}>
         <div style={{textAlign:"center",marginBottom:48}}>
           <div style={{fontSize:8,letterSpacing:6,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>The Programs</div>
           <h2 style={{fontSize:"clamp(26px,4vw,40px)",color:C.white,fontFamily:D.display,fontWeight:600,margin:0}}>Built Around One Thing</h2>
@@ -204,14 +204,14 @@ function HomePage({setPage,user}){
           </div>
         </div>
 
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:60}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10,marginBottom:60}}>
           {[
             {val:MAX_PLAYERS,label:"Max Players",sub:"small group, real reps"},
             {val:`$${PRICE_GROUP}`,label:"Per Session",sub:"no contracts"},
             {val:"U11+",label:"Age Requirement",sub:"11v11 players only"},
           ].map(s=>(
             <div key={s.label} style={{background:`#0e0b08`,border:`1px solid #1e1810`,borderRadius:14,padding:"24px 18px",textAlign:"center"}}>
-              <div style={{fontSize:36,fontWeight:700,color:C.white,marginBottom:4,fontFamily:D.display}}>{s.val}</div>
+              <div style={{fontSize:"clamp(24px,6vw,36px)",fontWeight:700,color:C.white,marginBottom:4,fontFamily:D.display}}>{s.val}</div>
               <div style={{fontSize:10,color:C.silver,letterSpacing:2,textTransform:"uppercase",fontFamily:D.body,fontWeight:500,marginBottom:4}}>{s.label}</div>
               <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{s.sub}</div>
             </div>
@@ -253,7 +253,7 @@ function HomePage({setPage,user}){
             <div style={{fontSize:8,letterSpacing:6,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Questions</div>
             <h2 style={{fontSize:"clamp(24px,4vw,36px)",color:C.white,fontFamily:D.display,fontWeight:600,margin:0}}>Quick Answers</h2>
           </div>
-          <div style={{display:"grid",gap:8,maxWidth:680,margin:"0 auto"}}>
+          <div style={{display:"grid",gap:8,maxWidth:680,margin:"0 auto",padding:"0 4px"}}>
             {[
               {q:"What age can my player train?",a:"U11 and up — players who are on full 11v11 fields. Younger players can reach out directly."},
               {q:"What if it rains?",a:"Light rain we train. Lightning or severe weather we reschedule at no charge."},
@@ -420,7 +420,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
   }
 
   return(
-    <div style={{maxWidth:680,margin:"0 auto",padding:"40px 20px 100px"}}>
+    <div style={{maxWidth:680,margin:"0 auto",padding:"clamp(20px,4vw,40px) clamp(14px,4vw,20px) 100px"}}>
       <SH eyebrow="Reserve" title="Book a Session"/>
 
       {step>0&&step<3&&(
@@ -428,7 +428,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
           {["Pick a Date","Your Details","Confirmed"].map((s,i)=>(
             <div key={i}>
               <div style={{height:2,borderRadius:2,marginBottom:5,background:step>i+1?C.silver:step===i+1?C.silverBright:C.cardBorder}}/>
-              <div style={{fontSize:9,letterSpacing:2,color:step===i+1?C.silver:C.textDim,fontFamily:D.body,textTransform:"uppercase"}}>{s}</div>
+              <div style={{fontSize:"clamp(7px,2vw,9px)",letterSpacing:1,color:step===i+1?C.silver:C.textDim,fontFamily:D.body,textTransform:"uppercase"}}>{s}</div>
             </div>
           ))}
         </div>
@@ -443,7 +443,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
               {id:"month4",name:"4 Sessions",price:140,rate:"$35/session",sessions:4,save:"Save $20",desc:"One Friday per week for a month.",highlight:false},
               {id:"month8",name:"8 Sessions",price:260,rate:"$32/session",sessions:8,save:"Save $60",desc:"Two months of Fridays. Commit to the process.",highlight:true},
             ].map((p,i)=>(
-              <div key={i} style={{background:p.highlight?"linear-gradient(135deg,#1a1618,#141416)":C.card,border:p.highlight?`1px solid ${C.silver}44`:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"18px 22px",position:"relative",display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+              <div key={i} style={{background:p.highlight?"linear-gradient(135deg,#1a1618,#141416)":C.card,border:p.highlight?`1px solid ${C.silver}44`:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"16px 18px",position:"relative",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
                 {p.highlight&&<div style={{position:"absolute",top:-9,left:20,background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,color:"#0a0a0a",fontSize:7,letterSpacing:2,fontWeight:700,textTransform:"uppercase",fontFamily:D.body,padding:"2px 10px",borderRadius:8}}>Best Value</div>}
                 <div style={{flex:1}}>
                   <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:4}}>
@@ -733,7 +733,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
 // ── FOOTER ────────────────────────────────────────────────
 function Footer({setPage}){
   return(
-    <footer style={{borderTop:`1px solid ${C.cardBorder}`,padding:"32px 24px",marginTop:40}}>
+    <footer style={{borderTop:`1px solid ${C.cardBorder}`,padding:"24px 16px",marginTop:40}}>
       <div style={{maxWidth:960,margin:"0 auto",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:16}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <Crest size={28}/>
