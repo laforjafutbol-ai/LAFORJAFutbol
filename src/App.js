@@ -383,7 +383,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
       count:effectiveCount,
       name:bookingName, email:bookingEmail, phone:form.phone, notes:form.notes,
       parentName:user?user.displayName||form.name:null,
-      status: "confirmed",
+      status: isCash ? "confirmed" : "awaiting_payment",
       paymentMethod: isCash ? "cash" : "card",
       packageName:selPkg?.name||"Single Session",
       packageTotal:total,
