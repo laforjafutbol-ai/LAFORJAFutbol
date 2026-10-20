@@ -32,16 +32,16 @@ export const C = {
 };
 export const D = { display:"'Cormorant Garamond',Georgia,serif", body:"'Montserrat',sans-serif" };
 
-// ── SCHEDULE — Friday only ─────────────────────────────────
+// ── SCHEDULE ──────────────────────────────────────────────
 export const COACH_DAYS = [5]; // Friday only
 export const PRIVATE_DAYS = [];
 export const DAY_ABBR = {5:"FRI"};
 export const DAY_SCHEDULE = {
   5:{
-    skill:"The Furnace", skillDesc:"1v1 dominance · Tight space control · Decision making under pressure", skillIcon:"🔥",
+    skill:"The Furnace", skillDesc:"Ball mastery · 1v1 dominance · Decision making under pressure", skillIcon:"🔥",
+    dayLabel:"Friday",
     sessions:[
-      {id:"s1",label:"Session 1",time:"5:00 PM – 6:15 PM",ageGroup:"U11+",ageTag:"u11+"},
-      {id:"s2",label:"Session 2",time:"6:30 PM – 7:45 PM",ageGroup:"U11+",ageTag:"u11+"},
+      {id:"s1",label:"Session 1",time:"5:30 PM – 6:45 PM",ageGroup:"U9+",ageTag:"u9+",maxPlayers:5},
     ],
   },
 };
@@ -54,9 +54,18 @@ export const PACKAGES = [
 ];
 
 export const AGE_COLORS = {
+  "u9+":{bg:"#1c160c",border:C.red,text:C.red,badge:"#1f0a05"},
+  "u12+":{bg:"#1c160c",border:C.red,text:C.red,badge:"#1f0a05"},
+  "u9-u11":{bg:"#0d1520",border:"#4a9eff",text:"#4a9eff",badge:"#0d1520"},
   "u11+":{bg:"#1c160c",border:C.silver,text:C.silver,badge:"#1a181c"},
   "9-11":{bg:"#1c160c",border:C.silver,text:C.silver,badge:"#1a181c"},
 };
+
+// Helper: get max players for a specific session (falls back to MAX_PLAYERS)
+export function sessMax(dayNum, sessId){
+  const s = DAY_SCHEDULE[dayNum]?.sessions?.find(s=>s.id===sessId);
+  return s?.maxPlayers ?? MAX_PLAYERS;
+}
 export const SKILL_COLORS = {
   "The Furnace":  {color:C.red,bg:"#1f0a05"},
   "The Tempering":{color:C.silver,bg:"#1a181c"},
