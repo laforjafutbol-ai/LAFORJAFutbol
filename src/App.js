@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { db, auth, googleProvider } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where } from "firebase/firestore";
-import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, PACKAGES, POSITIONS, DAY_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, SITE_READY, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles } from "./constants";
+import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, PACKAGES, POSITIONS, DAY_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, SITE_READY, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles, sessMax } from "./constants";
 import { Dashboard } from "./Pages1";
 import { AuthPage, AccountPage, SessionsPage, AboutPage, ContactPage, PackagesPage } from "./Pages2";
+import { PrivacyPage } from "./Pages3";
 
 // ── BOOKING CUTOFF ─────────────────────────────────────────
 function isCutoffHour(date, sessTime){
@@ -20,6 +21,27 @@ function isCutoffHour(date, sessTime){
   const sameDay = now.toDateString()===sessionDate.toDateString();
   if(!sameDay) return false;
   return now >= new Date(sessionDate.getTime()-2*60*60*1000);
+}
+
+function CookiesBanner({setPage}){
+  const [visible,setVisible] = useState(false);
+  useEffect(()=>{
+    if(!localStorage.getItem("lf_cookie_ok")) setVisible(true);
+  },[]);
+  if(!visible) return null;
+  function accept(){ localStorage.setItem("lf_cookie_ok","1"); setVisible(false); }
+  return(
+    <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:9000,background:"#111116",borderTop:`1px solid ${C.cardBorder}`,padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+      <div style={{fontSize:11,color:C.textMid,fontFamily:D.body,flex:1,lineHeight:1.7}}>
+        We use essential cookies to keep your session and booking preferences. No tracking or advertising cookies.{" "}
+        <button onClick={()=>setPage("privacy")} style={{background:"none",border:"none",color:C.silver,cursor:"pointer",fontFamily:D.body,fontSize:11,textDecoration:"underline",padding:0}}>Privacy Policy</button>
+      </div>
+      <div style={{display:"flex",gap:8,flexShrink:0}}>
+        <button onClick={accept} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:C.white,borderRadius:8,padding:"8px 20px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>Accept</button>
+        <button onClick={accept} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:8,padding:"8px 14px",fontSize:10,cursor:"pointer",fontFamily:D.body}}>Dismiss</button>
+      </div>
+    </div>
+  );
 }
 
 export default function App(){
@@ -43,7 +65,10 @@ export default function App(){
   },[]);
 
   function spotsLeft(dateKey,sessId){
-    return MAX_PLAYERS - bookings.filter(b=>b.dateKey===dateKey&&b.sessId===sessId&&b.status!=="cancelled"&&b.status!=="removed").length;
+    // Find which day this sessId belongs to to get correct max
+    const dayNum = Object.keys(DAY_SCHEDULE).find(d=>DAY_SCHEDULE[d].sessions.some(s=>s.id===sessId));
+    const max = sessMax(dayNum ? parseInt(dayNum) : 5, sessId);
+    return max - bookings.filter(b=>b.dateKey===dateKey&&b.sessId===sessId&&b.status!=="cancelled"&&b.status!=="removed").length;
   }
   function isBlocked(dateKey,sessId){
     return blocked.some(b=>b.dateKey===dateKey&&b.sessId===sessId);
@@ -82,6 +107,7 @@ export default function App(){
   return(
     <div style={{background:C.black,minHeight:"100vh",color:C.white}}>
       <GStyles/>
+      <CookiesBanner setPage={setPage}/>
       <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,background:"rgba(9,9,11,0.95)",backdropFilter:"blur(12px)",borderBottom:`1px solid ${C.cardBorder}`,padding:"0 16px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <button onClick={()=>setPage("home")} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:10}}>
           <Crest size={32}/>
@@ -108,6 +134,7 @@ export default function App(){
         {page==="login"     && <AuthPage setPage={setPage} authChecked={authChecked} user={user}/>}
         {page==="account"   && <AccountPage setPage={setPage} user={user} authChecked={authChecked} bookings={bookings} inquiries={inquiries} getDates={getDates} getPrivateDates={getPrivateDates}/>}
         {page==="dashboard" && <Dashboard bookings={bookings} inquiries={inquiries} confirmBooking={confirmBooking} removeBooking={removeBooking} scheduleInquiry={scheduleInquiry} removeInquiry={removeInquiry} sendReminderEmail={sendReminderEmail} blocked={blocked} blockSession={blockSession} spotsLeft={spotsLeft} getDates={getDates} getPrivateDates={getPrivateDates}/>}
+        {page==="privacy"   && <PrivacyPage setPage={setPage}/>}
       </div>
 
       <Footer setPage={setPage}/>
@@ -120,15 +147,31 @@ function HomePage({setPage,user}){
   return(
     <div>
       {/* Hero */}
-      <div style={{minHeight:"92vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"clamp(40px,8vw,60px) 20px",textAlign:"center",background:`radial-gradient(ellipse at 50% 80%,${C.redDark} 0%,transparent 55%)`}}>
-        <Crest size={80}/>
-        <div style={{fontSize:9,letterSpacing:6,color:C.silverDim,textTransform:"uppercase",marginTop:20,marginBottom:8,fontFamily:D.body}}>James Island · Charleston SC</div>
-        <h1 style={{margin:"0 0 10px",fontFamily:D.display,fontWeight:700,fontSize:"clamp(48px,9vw,80px)",letterSpacing:6,textTransform:"uppercase",color:C.white,lineHeight:1}}>La Forja</h1>
-        <p style={{fontSize:11,letterSpacing:5,color:C.silver,marginBottom:14,textTransform:"uppercase",fontFamily:D.body}}>{BRAND.tagline}</p>
-        <p style={{fontSize:15,color:C.textMid,marginBottom:48,maxWidth:480,lineHeight:2,fontFamily:D.display,fontStyle:"italic"}}>Pure technique. Zero filler. Every session is built around perfecting the details that make the difference on game day — first touch, decision making, 1v1 dominance, and composure under pressure.</p>
-        <div style={{display:"flex",gap:12,flexWrap:"wrap",justifyContent:"center"}}>
-          <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 8px 32px ${C.red}44`,fontFamily:D.body,fontWeight:600}}>Book a Session</button>
-          <button onClick={()=>setPage("about")} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.silver,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>About the Program</button>
+      <div style={{minHeight:"92vh",position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"clamp(40px,8vw,60px) 20px",textAlign:"center",overflow:"hidden",background:C.black}}>
+        {/* Video background */}
+        <video
+          autoPlay muted loop playsInline
+          style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0,filter:"grayscale(30%) brightness(0.55)"}}
+        >
+          <source src="/field-action.mp4" type="video/mp4"/>
+          <source src="/field-action.mov" type="video/quicktime"/>
+          <source src="/field-action.webm" type="video/webm"/>
+        </video>
+        {/* Dark gradient overlay */}
+        <div style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",zIndex:1,background:`linear-gradient(to bottom,rgba(9,9,11,0.45) 0%,rgba(9,9,11,0.30) 40%,rgba(9,9,11,0.80) 100%)`}}/>
+        {/* Red ember glow at bottom */}
+        <div style={{position:"absolute",bottom:0,left:0,width:"100%",height:"40%",zIndex:2,background:`linear-gradient(to top,${C.redDark}99,transparent)`}}/>
+        {/* Content */}
+        <div style={{position:"relative",zIndex:3}}>
+          <Crest size={80}/>
+          <div style={{fontSize:9,letterSpacing:6,color:C.silverDim,textTransform:"uppercase",marginTop:20,marginBottom:8,fontFamily:D.body}}>James Island · Charleston SC</div>
+          <h1 style={{margin:"0 0 10px",fontFamily:D.display,fontWeight:700,fontSize:"clamp(48px,9vw,80px)",letterSpacing:6,textTransform:"uppercase",color:C.white,lineHeight:1}}>La Forja</h1>
+          <p style={{fontSize:11,letterSpacing:5,color:C.silver,marginBottom:14,textTransform:"uppercase",fontFamily:D.body}}>{BRAND.tagline}</p>
+          <p style={{fontSize:15,color:C.textMid,marginBottom:48,maxWidth:480,lineHeight:2,fontFamily:D.display,fontStyle:"italic"}}>Pure technique. Zero filler. Every session is built around perfecting the details that make the difference on game day — first touch, decision making, 1v1 dominance, and composure under pressure.</p>
+          <div style={{display:"flex",gap:12,flexWrap:"wrap",justifyContent:"center"}}>
+            <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 8px 32px ${C.red}44`,fontFamily:D.body,fontWeight:600}}>Book a Session</button>
+            <button onClick={()=>setPage("about")} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.silver,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>About the Program</button>
+          </div>
         </div>
       </div>
 
@@ -145,7 +188,7 @@ function HomePage({setPage,user}){
               <div style={{width:46,height:46,borderRadius:12,background:C.redDark,border:`1px solid ${C.red}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🔥</div>
               <div>
                 <div style={{fontSize:18,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:2}}>The Furnace</div>
-                <div style={{fontSize:8,letterSpacing:2,color:C.red,textTransform:"uppercase",fontFamily:D.body}}>Fridays · Group · U11+</div>
+                <div style={{fontSize:8,letterSpacing:2,color:C.red,textTransform:"uppercase",fontFamily:D.body}}>Fridays (U9+) · 5:30–6:45 PM · Group</div>
               </div>
             </div>
             <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:20}}>No fitness drills. No running laps. The Furnace is 100% focused on the technical details that make you dangerous on game day. Small group, full attention, every rep with a purpose.</p>
@@ -206,9 +249,9 @@ function HomePage({setPage,user}){
 
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10,marginBottom:60}}>
           {[
-            {val:MAX_PLAYERS,label:"Max Players",sub:"small group, real reps"},
+            {val:5,label:"Max Players",sub:"small group, real reps"},
             {val:`$${PRICE_GROUP}`,label:"Per Session",sub:"no contracts"},
-            {val:"U11+",label:"Age Requirement",sub:"11v11 players only"},
+            {val:"U9+",label:"Age Requirement",sub:"All ages · Fridays only"},
           ].map(s=>(
             <div key={s.label} style={{background:`#0e0b08`,border:`1px solid #1e1810`,borderRadius:14,padding:"24px 18px",textAlign:"center"}}>
               <div style={{fontSize:"clamp(24px,6vw,36px)",fontWeight:700,color:C.white,marginBottom:4,fontFamily:D.display}}>{s.val}</div>
@@ -255,11 +298,11 @@ function HomePage({setPage,user}){
           </div>
           <div style={{display:"grid",gap:8,maxWidth:680,margin:"0 auto",padding:"0 4px"}}>
             {[
-              {q:"What age can my player train?",a:"U11 and up — players who are on full 11v11 fields. Younger players can reach out directly."},
+              {q:"What age can my player train?",a:"U9 and up. All ages train together on Fridays from 5:30–6:45 PM at Bayview Park. Groups are capped at 5 players so every player gets individual attention."},
               {q:"What if it rains?",a:"Light rain we train. Lightning or severe weather we reschedule at no charge."},
               {q:"Is this a fitness or conditioning program?",a:"No. La Forja is purely technical training — ball work, decision making, and game situations. If your player needs fitness training this is not the right program. If they need to be better on the ball, this is exactly where they should be."},
-              {q:"Can I reschedule?",a:"Yes — log into your account and reschedule directly to any open Friday slot. No approval needed."},
-              {q:"How many players per session?",a:`Maximum ${MAX_PLAYERS} players. Small on purpose — every player gets real reps and real feedback.`},
+              {q:"Can I reschedule?",a:"Yes — log into your account and reschedule directly to any open slot that matches your age group. No approval needed."},
+              {q:"How many players per session?",a:"Maximum 5 players per session. Small on purpose — every player gets real reps and real feedback."},
               {q:"What should my player bring?",a:"Cleats or turf shoes, water bottle, and an elastic band. Arrive 15 minutes early."},
             ].map((item,i)=>(
               <div key={i} style={{background:"#0e0b08",border:"1px solid #1e1810",borderRadius:10,padding:"16px 20px"}}>
@@ -275,20 +318,62 @@ function HomePage({setPage,user}){
           <div style={{flex:1}}>
             <div style={{fontSize:8,letterSpacing:4,color:C.textDim,textTransform:"uppercase",marginBottom:4,fontFamily:D.body}}>Location</div>
             <div style={{fontSize:17,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:4}}>Bayview Park · James Island, SC</div>
-            <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Sessions every Friday evening.</div>
+            <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Fridays · 5:30–6:45 PM · U9 and up · Bayview Park, James Island.</div>
           </div>
           <a href="https://maps.google.com/?q=Bayview+Park+James+Island+SC" target="_blank" rel="noopener noreferrer" style={{background:"transparent",border:`1px solid ${C.silver}33`,color:C.silver,borderRadius:8,padding:"10px 18px",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,textDecoration:"none"}}>Directions →</a>
         </div>
 
-        <div style={{textAlign:"center"}}>
-          <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"15px 48px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 8px 32px ${C.red}44`,fontFamily:D.body,fontWeight:600,marginBottom:14}}>Book The Furnace</button>
-          <div style={{marginTop:12}}>
-            {!user
-              ?<button onClick={()=>setPage("login")} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.silver,borderRadius:8,padding:"10px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Create Account</button>
-              :<button onClick={()=>setPage("account")} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textMid,borderRadius:8,padding:"10px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>My Account →</button>
-            }
+        {/* Account CTA */}
+        {!user&&(
+          <div style={{background:`linear-gradient(135deg,#111116,#18141a)`,border:`1px solid ${C.silver}22`,borderRadius:16,padding:"28px 28px",marginBottom:40,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:20}}>
+            <div>
+              <div style={{fontSize:8,letterSpacing:4,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>Free Account</div>
+              <h3 style={{fontSize:20,color:C.white,fontFamily:D.display,fontWeight:600,margin:"0 0 6px"}}>Manage Everything in One Place</h3>
+              <p style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.8,margin:0}}>Track your sessions, reschedule any booking, and get reminders — all from your account.</p>
+              <div style={{display:"flex",gap:16,marginTop:12,flexWrap:"wrap"}}>
+                {["📅 View all your bookings","🔄 Reschedule anytime","📧 Confirmation emails","🏃 Add multiple players"].map((f,i)=>(
+                  <div key={i} style={{fontSize:10,color:C.textMid,fontFamily:D.body}}>{f}</div>
+                ))}
+              </div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:8,flexShrink:0}}>
+              <button onClick={()=>setPage("login")} style={{background:`linear-gradient(135deg,${C.silver},${C.silverDim})`,border:"none",color:"#0a0a0a",borderRadius:10,padding:"13px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",fontFamily:D.body,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>Create Free Account →</button>
+              <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:C.white,borderRadius:10,padding:"13px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,whiteSpace:"nowrap"}}>Book a Session →</button>
+            </div>
+          </div>
+        )}
+        {user&&(
+          <div style={{textAlign:"center",marginBottom:40}}>
+            <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"15px 48px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 8px 32px ${C.red}44`,fontFamily:D.body,fontWeight:600}}>Book The Furnace →</button>
+            <div style={{marginTop:12}}>
+              <button onClick={()=>setPage("account")} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textMid,borderRadius:8,padding:"10px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>My Account →</button>
+            </div>
+          </div>
+        )}
+
+        {/* Winter Camp Teaser */}
+        <div style={{background:"linear-gradient(135deg,#0f0b07,#13100a)",border:`1px solid #2a1f0e`,borderRadius:16,padding:"28px 28px",marginBottom:50,position:"relative",overflow:"hidden"}}>
+          <div style={{position:"absolute",top:0,right:0,width:180,height:180,background:`radial-gradient(circle at top right,#c8a44a18,transparent 70%)`,pointerEvents:"none"}}/>
+          <div style={{display:"flex",alignItems:"flex-start",gap:16,flexWrap:"wrap"}}>
+            <div style={{fontSize:32}}>⛺</div>
+            <div style={{flex:1,minWidth:200}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,flexWrap:"wrap"}}>
+                <div style={{fontSize:9,letterSpacing:4,color:"#c8a44a",textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Coming Soon</div>
+                <div style={{background:"#c8a44a22",border:"1px solid #c8a44a44",borderRadius:20,padding:"2px 10px",fontSize:8,color:"#c8a44a",letterSpacing:2,fontFamily:D.body,textTransform:"uppercase"}}>Winter 2026</div>
+              </div>
+              <h3 style={{fontSize:22,color:C.white,fontFamily:D.display,fontWeight:600,margin:"0 0 8px",letterSpacing:1}}>La Forja Winter Camp</h3>
+              <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.9,margin:0}}>An intensive multi-day training camp during winter break. Full-day sessions focused on technical development, game intelligence, and competing at a higher level. Registration opens soon — create a free account to be notified first.</p>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:10,alignSelf:"center"}}>
+              <div style={{background:"#c8a44a11",border:"1px solid #c8a44a33",borderRadius:10,padding:"12px 20px",textAlign:"center"}}>
+                <div style={{fontSize:9,letterSpacing:3,color:"#c8a44a88",textTransform:"uppercase",fontFamily:D.body,marginBottom:4}}>Status</div>
+                <div style={{fontSize:13,color:"#c8a44a",fontFamily:D.display,fontWeight:600}}>Registration Closed</div>
+                <div style={{fontSize:9,color:C.textDim,fontFamily:D.body,marginTop:2}}>Opening soon</div>
+              </div>
+            </div>
           </div>
         </div>
+
       </div>
     </div>
   );
@@ -733,21 +818,42 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
 // ── FOOTER ────────────────────────────────────────────────
 function Footer({setPage}){
   return(
-    <footer style={{borderTop:`1px solid ${C.cardBorder}`,padding:"24px 16px",marginTop:40}}>
-      <div style={{maxWidth:960,margin:"0 auto",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:16}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <Crest size={28}/>
+    <footer style={{borderTop:`1px solid ${C.cardBorder}`,padding:"32px 16px 24px",marginTop:40}}>
+      <div style={{maxWidth:960,margin:"0 auto"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:24,marginBottom:24}}>
           <div>
-            <div style={{fontSize:12,letterSpacing:2,color:C.white,fontFamily:D.display}}>La Forja Futbol</div>
-            <div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>James Island · Charleston SC</div>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+              <Crest size={28}/>
+              <div style={{fontSize:13,letterSpacing:2,color:C.white,fontFamily:D.display,fontWeight:600}}>La Forja Futbol</div>
+            </div>
+            <div style={{fontSize:9,color:C.textDim,fontFamily:D.body,lineHeight:1.7}}>James Island · Charleston SC<br/>Fridays · U9+ · 5:30–6:45 PM</div>
+          </div>
+          <div style={{display:"flex",gap:24,flexWrap:"wrap"}}>
+            <div>
+              <div style={{fontSize:8,letterSpacing:3,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Navigate</div>
+              <div style={{display:"flex",flexDirection:"column",gap:7}}>
+                {[["home","Home"],["about","About"],["book","Book a Session"],["packages","Packages"],["contact","Contact"]].map(([k,l])=>(
+                  <button key={k} onClick={()=>setPage(k)} style={{background:"none",border:"none",color:C.textDim,fontSize:10,letterSpacing:1,cursor:"pointer",fontFamily:D.body,textAlign:"left",padding:0}}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div style={{fontSize:8,letterSpacing:3,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Account</div>
+              <div style={{display:"flex",flexDirection:"column",gap:7}}>
+                {[["login","Sign In / Sign Up"],["account","My Account"],["privacy","Privacy Policy"]].map(([k,l])=>(
+                  <button key={k} onClick={()=>setPage(k)} style={{background:"none",border:"none",color:C.textDim,fontSize:10,letterSpacing:1,cursor:"pointer",fontFamily:D.body,textAlign:"left",padding:0}}>{l}</button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
-        <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-          {[["home","Home"],["about","About"],["book","Book"],["packages","Packages"],["contact","Contact"]].map(([k,l])=>(
-            <button key={k} onClick={()=>setPage(k)} style={{background:"none",border:"none",color:C.textDim,fontSize:10,letterSpacing:1,cursor:"pointer",fontFamily:D.body}}>{l}</button>
-          ))}
+        <div style={{borderTop:`1px solid ${C.cardBorder}`,paddingTop:16,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+          <div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>© {new Date().getFullYear()} La Forja Futbol LLC · All rights reserved</div>
+          <div style={{display:"flex",gap:12}}>
+            <button onClick={()=>setPage("privacy")} style={{background:"none",border:"none",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body,letterSpacing:1}}>Privacy Policy</button>
+            <button onClick={()=>setPage("privacy")} style={{background:"none",border:"none",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body,letterSpacing:1}}>Terms</button>
+          </div>
         </div>
-        <div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>© {new Date().getFullYear()} La Forja Futbol LLC</div>
       </div>
     </footer>
   );
