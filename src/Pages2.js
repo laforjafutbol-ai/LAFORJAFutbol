@@ -446,32 +446,72 @@ export function SessionsPage({setPage,user}){
 
 // ── ABOUT PAGE ────────────────────────────────────────────
 export function AboutPage({setPage}){
+  const coaches = [
+    {
+      img:"/carlos.jpg",
+      role:"Head Coach & Founder",
+      name:"Carlos Cepeda",
+      bio:"Former professional soccer player. Carlos built La Forja from the ground up — every drill, every session structure, every standard is his. Coaching is not just a job; it's a calling to give back what the game gave him.",
+      tag:"Pro background · James Island native"
+    },
+    {
+      img:"/waldo-jr.jpg",
+      role:"Assistant Coach",
+      name:"Waldo Cepeda Jr.",
+      bio:"A natural communicator on the field, Waldo Jr. brings energy and precision to every session. He pushes players to compete at a higher level and holds the standard on every rep.",
+      tag:"Technical focus · Player development"
+    },
+    {
+      img:"/waldo-sr.jpg",
+      role:"Coach",
+      name:"Waldo Cepeda Sr.",
+      bio:"A seasoned presence with a deep understanding of the game, Waldo Sr. brings experience and calm to the training environment. His knowledge of the game at every level keeps La Forja grounded in fundamentals.",
+      tag:"Experience · Fundamentals"
+    },
+  ];
   return(
-    <div style={{maxWidth:800,margin:"0 auto",padding:"60px 24px 100px"}}>
+    <div style={{maxWidth:860,margin:"0 auto",padding:"clamp(40px,6vw,70px) clamp(16px,4vw,28px) 100px"}}>
       <SH eyebrow="The Program" title="About La Forja"/>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:24,marginBottom:40}}>
-        <div>
-          <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,overflow:"hidden",marginBottom:20}}>
-            <img src="/carlos.jpg" alt="Coach Carlos" style={{width:"100%",height:240,objectFit:"cover",objectPosition:"top",display:"block"}}/>
-          </div>
-          <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>Head Coach</div>
-          <div style={{fontSize:20,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:4}}>Carlos Cepeda</div>
-          <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.8}}>Former professional soccer player. Coaching is not just a job — it's a calling to give back what the game gave him.</div>
-        </div>
-        <div>
-          <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:2,marginBottom:20}}>La Forja is not a fitness program. There are no laps, no generic drills, no running for the sake of running. Every single minute is spent on the ball — perfecting the technical details that actually show up on game day. First touch, decision making, 1v1 situations, finishing under pressure.</p>
-          <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:2,marginBottom:20}}>We keep groups small on purpose. Six players maximum means every player gets individual attention, real feedback on every rep, and a coach who knows exactly where their game needs to improve. This is player-focused development — not a class, not a camp, not a workout.</p>
-          <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,lineHeight:2}}>Players leave every session knowing exactly what they worked on and exactly what to focus on before next week. That's the standard. Show up, get better, come back ready.</p>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:20}}>
-            {[["📍","Bayview Park, James Island"],["⚽","U11+ · All positions"],["🔥","Fridays · 5–7:45 PM"],["👥",`Max ${MAX_PLAYERS} per session`]].map(([icon,text],i)=>(
-              <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
-                <span style={{fontSize:14,flexShrink:0}}>{icon}</span>
-                <span style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.6}}>{text}</span>
-              </div>
-            ))}
-          </div>
+
+      {/* Mission statement */}
+      <div style={{background:"#0d0b08",border:`1px solid #1e1810`,borderRadius:14,padding:"24px 28px",marginBottom:48}}>
+        <p style={{fontSize:14,color:C.textMid,fontFamily:D.body,lineHeight:2,margin:"0 0 16px"}}>La Forja is not a fitness program. There are no laps, no generic drills, no running for the sake of running. Every single minute is spent on the ball — perfecting the technical details that actually show up on game day. First touch, decision making, 1v1 situations, finishing under pressure.</p>
+        <p style={{fontSize:14,color:C.textMid,fontFamily:D.body,lineHeight:2,margin:"0 0 16px"}}>We keep groups small on purpose. Five players maximum means every player gets individual attention, real feedback on every rep, and a coach who knows exactly where their game needs to improve.</p>
+        <p style={{fontSize:14,color:C.textMid,fontFamily:D.body,lineHeight:2,margin:0}}>Players leave every session knowing exactly what they worked on and what to focus on before next week. That's the standard.</p>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:10,marginTop:24}}>
+          {[["📍","Bayview Park, James Island"],["⚽","U9+ · All positions"],["🔥","Fridays · 5:30–6:45 PM"],["👥","Max 5 per session"]].map(([icon,text],i)=>(
+            <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",background:C.card,borderRadius:9,padding:"10px 12px",border:`1px solid ${C.cardBorder}`}}>
+              <span style={{fontSize:14,flexShrink:0}}>{icon}</span>
+              <span style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.6}}>{text}</span>
+            </div>
+          ))}
         </div>
       </div>
+
+      {/* Coaching staff */}
+      <div style={{fontSize:9,letterSpacing:4,color:C.silverDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:20}}>Coaching Staff</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:20,marginBottom:48}}>
+        {coaches.map((coach,i)=>(
+          <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:16,overflow:"hidden"}}>
+            <div style={{width:"100%",height:260,overflow:"hidden",background:"#111",position:"relative"}}>
+              <img
+                src={coach.img}
+                alt={coach.name}
+                style={{width:"100%",height:"100%",objectFit:"cover",objectPosition:"center top",display:"block"}}
+                onError={e=>{e.target.style.display="none"; e.target.parentNode.style.background="#111116";}}
+              />
+              {i===0&&<div style={{position:"absolute",top:10,right:10,background:`${C.red}cc`,borderRadius:6,padding:"3px 8px",fontSize:8,color:C.white,letterSpacing:2,fontFamily:D.body,textTransform:"uppercase"}}>Founder</div>}
+            </div>
+            <div style={{padding:"16px 18px"}}>
+              <div style={{fontSize:8,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:5}}>{coach.role}</div>
+              <div style={{fontSize:18,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:8}}>{coach.name}</div>
+              <p style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.8,margin:"0 0 10px"}}>{coach.bio}</p>
+              <div style={{fontSize:9,color:C.silverDim,fontFamily:D.body,letterSpacing:1}}>{coach.tag}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div style={{textAlign:"center"}}>
         <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 6px 24px ${C.red}33`,fontFamily:D.body,fontWeight:600}}>Book The Furnace →</button>
       </div>
