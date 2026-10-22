@@ -44,10 +44,11 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
   const todayKey = dKey(new Date());
   const now = new Date();
 
-  // Build allSessions combining bookings + inquiries, excluding cancelled
+  // Build allSessions combining bookings + inquiries, excluding only truly removed/cancelled
+  // awaiting_payment IS shown — these are real clients who started checkout
   const allSessions = [
-    ...(bookings||[]).filter(b=>b.status!=="cancelled"&&b.status!=="removed"&&b.status!=="awaiting_payment").map(b=>({...b,_type:"group",_coll:"bookings",_time:b.sessTime})),
-    ...(inquiries||[]).filter(i=>i.status!=="cancelled"&&i.status!=="removed"&&i.status!=="awaiting_payment").map(i=>({...i,_type:"1on1",_coll:"inquiries",_time:i.slotTime})),
+    ...(bookings||[]).filter(b=>b.status!=="cancelled"&&b.status!=="removed").map(b=>({...b,_type:"group",_coll:"bookings",_time:b.sessTime})),
+    ...(inquiries||[]).filter(i=>i.status!=="cancelled"&&i.status!=="removed").map(i=>({...i,_type:"1on1",_coll:"inquiries",_time:i.slotTime})),
   ];
 
   // Today's sessions
@@ -99,7 +100,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
     setActionItem(null);
   }
 
-  // Next session slots for dashboard (Tue + Fri)
+  // Next session slots for dashboard (Fri only)
   const nextFridays = getDates(4);
 
   return(
@@ -216,11 +217,13 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
           ):(
             <div style={{display:"grid",gap:8}}>
               {filteredUpcoming.map((s,i)=>(
-                <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:`3px solid ${s.status==="confirmed"?C.green:s.status==="pending"?C.silver:C.silverDark}`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                <div key={i} style={{background:C.card,border:`1px solid ${s.status==="awaiting_payment"?"#c9a84c33":C.cardBorder}`,borderLeft:`3px solid ${s.status==="confirmed"?C.green:s.status==="awaiting_payment"?"#c9a84c":s.status==="pending"?C.silver:C.silverDark}`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
                   <div style={{flex:1,minWidth:180}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3,flexWrap:"wrap"}}>
                       <span style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display}}>{s.name}</span>
-                      <span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:s.status==="confirmed"?`${C.green}18`:`${C.silver}12`,color:s.status==="confirmed"?C.green:C.silver,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>{s.status}</span>
+                      {s.status==="confirmed"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.green}18`,color:C.green,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>✓ Confirmed</span>}
+                      {s.status==="awaiting_payment"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#1a1200",border:"1px solid #c9a84c55",color:"#c9a84c",fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>⏳ Awaiting Payment</span>}
+                      {s.status==="pending"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.silver}12`,color:C.silver,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>Pending</span>}
                       {s.paymentMethod==="cash"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#1a1200",border:"1px solid #c9a84c44",color:"#c9a84c",fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>💵 Cash</span>}
                       {s.count>1&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.silver}10`,color:C.silver,fontFamily:D.body}}>👥 {s.count}</span>}
                     </div>
@@ -238,6 +241,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
                     {s.coachNote&&<div style={{fontSize:9,color:C.silver,fontFamily:D.body,marginTop:3,fontStyle:"italic"}}>📝 {s.coachNote}</div>}
                   </div>
                   <div style={{display:"flex",gap:6,flexShrink:0}}>
+                    {s.status==="awaiting_payment"&&<button onClick={()=>confirmBooking(s.id,s._coll||"bookings")} style={{background:"#1a1200",border:"1px solid #c9a84c55",borderRadius:7,padding:"5px 12px",color:"#c9a84c",fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>💵 Mark Paid</button>}
                     {s.status==="pending"&&s.paymentMethod!=="cash"&&<button onClick={()=>confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings")} style={{background:`${C.green}18`,border:`1px solid ${C.green}33`,borderRadius:7,padding:"5px 12px",color:C.green,fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓ Confirm</button>}
                     <button onClick={()=>setReminderModal(s)} style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:7,padding:"5px 10px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📧</button>
                     <button onClick={()=>openAction(s)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"5px 10px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>⋯</button>
@@ -285,7 +289,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
               <div>
                 <div style={{fontSize:16,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:2}}>{actionItem.name}</div>
                 <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{actionItem.dateLabel} · {actionItem._time}</div>
-                <div style={{fontSize:9,color:actionItem.status==="confirmed"?C.green:C.silver,fontFamily:D.body,marginTop:2,letterSpacing:1,textTransform:"uppercase"}}>{actionItem.status} {actionItem.paymentMethod==="cash"?"· 💵 Cash":""}</div>
+                <div style={{fontSize:9,color:actionItem.status==="confirmed"?C.green:actionItem.status==="awaiting_payment"?"#c9a84c":C.silver,fontFamily:D.body,marginTop:2,letterSpacing:1,textTransform:"uppercase"}}>{actionItem.status==="awaiting_payment"?"⏳ Awaiting Payment":actionItem.status} {actionItem.paymentMethod==="cash"?"· 💵 Cash":""}</div>
                 <div style={{marginTop:6,display:"flex",flexDirection:"column",gap:2}}>
                   {actionItem.email&&<a href={`mailto:${actionItem.email}`} style={{fontSize:10,color:C.silver,fontFamily:D.body,textDecoration:"none"}}>✉ {actionItem.email}</a>}
                   {actionItem.phone&&<a href={`tel:${actionItem.phone}`} style={{fontSize:10,color:C.silver,fontFamily:D.body,textDecoration:"none"}}>📞 {actionItem.phone}</a>}
@@ -323,6 +327,12 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
               <button onClick={()=>confirmBooking(actionItem.id,actionItem._coll||"bookings")}
                 style={{display:"block",width:"100%",background:`${C.green}18`,border:`1px solid ${C.green}33`,borderRadius:9,padding:"10px",color:C.green,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,marginBottom:8,textAlign:"center",fontWeight:600}}>
                 ✓ Confirm
+              </button>
+            )}
+            {actionItem.status==="awaiting_payment"&&(
+              <button onClick={()=>confirmBooking(actionItem.id,actionItem._coll||"bookings")}
+                style={{display:"block",width:"100%",background:"#1a1200",border:"1px solid #c9a84c55",borderRadius:9,padding:"10px",color:"#c9a84c",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,marginBottom:8,textAlign:"center",fontWeight:600}}>
+                💵 Mark Paid (Manual Override)
               </button>
             )}
             {!cancelConfirm?(
@@ -431,13 +441,15 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
 // ── PLAYER CARD (Today's Roster) ──────────────────────────
 function PlayerCard({s,onAction,onConfirm,onReminder}){
   return(
-    <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:`3px solid ${s.status==="confirmed"?C.green:s.status==="pending"?C.silver:C.silverDark}`,borderRadius:12,padding:"14px 16px"}}>
+    <div style={{background:C.card,border:`1px solid ${s.status==="awaiting_payment"?"#c9a84c33":C.cardBorder}`,borderLeft:`3px solid ${s.status==="confirmed"?C.green:s.status==="awaiting_payment"?"#c9a84c":s.status==="pending"?C.silver:C.silverDark}`,borderRadius:12,padding:"14px 16px"}}>
       {/* Row 1: Name + status */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,flexWrap:"wrap"}}>
             <span style={{fontSize:15,fontWeight:600,color:C.white,fontFamily:D.display}}>{s.name}</span>
-            <span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:s.status==="confirmed"?`${C.green}18`:`${C.silver}12`,color:s.status==="confirmed"?C.green:C.silver,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>{s.status==="confirmed"?"✓ Confirmed":"Pending"}</span>
+            {s.status==="confirmed"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.green}18`,color:C.green,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>✓ Confirmed</span>}
+            {s.status==="awaiting_payment"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#1a1200",border:"1px solid #c9a84c55",color:"#c9a84c",fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>⏳ Awaiting Payment</span>}
+            {s.status==="pending"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.silver}12`,color:C.silver,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>Pending</span>}
             {s.paymentMethod==="cash"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#1a1200",border:"1px solid #c9a84c44",color:"#c9a84c",fontFamily:D.body}}>💵 Cash</span>}
             {s._type==="1on1"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.silver}10`,color:C.silver,fontFamily:D.body}}>1-on-1</span>}
           </div>
