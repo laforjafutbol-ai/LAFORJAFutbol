@@ -113,7 +113,7 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
   const [players,setPlayers]         = useState([]);
   const [playersLoaded,setPlayersLoaded] = useState(false);
   const [showPast,setShowPast]       = useState(false);
-  const [showPlayers,setShowPlayers] = useState(false);
+  const [activeTab,setActiveTab]     = useState("sessions"); // "sessions" | "players"
   const [rescheduleSession,setRescheduleSession] = useState(null);
   const [reschedDate,setReschedDate] = useState(null);
   const [reschedSess,setReschedSess] = useState(null);
@@ -179,124 +179,161 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
 
   const availDates = getDates(8);
 
-  return(
-    <div style={{maxWidth:600,margin:"0 auto",padding:"clamp(60px,8vw,80px) clamp(14px,4vw,20px) 80px"}}>
+  // Status badge helper
+  function statusBadge(status){
+    if(status==="confirmed") return {label:"Confirmed",color:C.green,bg:`${C.green}18`,border:`${C.green}33`};
+    if(status==="awaiting_payment") return {label:"Awaiting Payment",color:"#c9a84c",bg:"#1e1a0c",border:"#c9a84c44"};
+    return {label:"Pending",color:C.silver,bg:`${C.silver}18`,border:`${C.silver}33`};
+  }
 
-      {/* Header */}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
+  return(
+    <div style={{maxWidth:600,margin:"0 auto",padding:"clamp(70px,8vw,90px) clamp(14px,4vw,20px) 100px"}}>
+
+      {/* ── HEADER ── */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:24}}>
         <div>
-          <div style={{fontSize:8,letterSpacing:5,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:5}}>La Forja</div>
-          <div style={{fontSize:26,fontWeight:600,color:C.white,fontFamily:D.display,letterSpacing:1,marginBottom:3}}>{user.displayName?.split(" ")[0]||"Welcome back"}</div>
+          <div style={{fontSize:8,letterSpacing:5,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>My Account</div>
+          <div style={{fontSize:28,fontWeight:700,color:C.white,fontFamily:D.display,letterSpacing:1,marginBottom:4}}>{user.displayName||"Welcome back"}</div>
           <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>{email}</div>
         </div>
-        <button onClick={handleSignOut} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:8,padding:"8px 16px",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,marginTop:4}}>Sign Out</button>
+        <button onClick={handleSignOut} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:8,padding:"8px 16px",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,marginTop:6,flexShrink:0}}>Sign Out</button>
       </div>
 
-      {/* Stats */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6,marginBottom:20}}>
+      {/* ── STAT CARDS ── */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:24}}>
         {[
-          {label:"Upcoming",value:upcoming.length,color:C.red},
-          {label:"Completed",value:completedCount,color:C.green},
-          {label:"Players",value:players.length,color:C.silverBright},
+          {label:"Upcoming",value:upcoming.length,color:C.red,icon:"📅"},
+          {label:"Completed",value:completedCount,color:C.green,icon:"✅"},
+          {label:"Players",value:players.length,color:C.silverBright,icon:"⚽"},
         ].map((s,i)=>(
-          <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"16px 12px",textAlign:"center"}}>
-            <div style={{fontSize:"clamp(22px,5vw,30px)",fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:5}}>{s.value}</div>
+          <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"18px 12px",textAlign:"center"}}>
+            <div style={{fontSize:18,marginBottom:4}}>{s.icon}</div>
+            <div style={{fontSize:"clamp(24px,5vw,32px)",fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:5}}>{s.value}</div>
             <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Next Session */}
+      {/* ── NEXT SESSION CARD ── */}
       {nextSession?(
-        <div style={{background:"linear-gradient(135deg,#1a1618,#141416)",border:`1px solid ${C.silver}33`,borderRadius:14,padding:"20px 22px",marginBottom:16}}>
-          <div style={{fontSize:8,letterSpacing:4,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:14,fontWeight:600}}>Next Session</div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:14}}>
+        <div style={{background:"linear-gradient(135deg,#161214,#111116)",border:`1px solid ${C.silver}22`,borderLeft:`3px solid ${C.red}`,borderRadius:14,padding:"22px",marginBottom:24}}>
+          <div style={{fontSize:8,letterSpacing:4,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Next Session</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:16,flexWrap:"wrap"}}>
             <div>
               <div style={{fontSize:22,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:6}}>{nextSession.dateLabel}</div>
-              <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"center"}}>
+              <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
                 <span style={{fontSize:12,color:C.silver,fontFamily:D.body}}>🕐 {nextSession._time||nextSession.sessTime||"TBD"}</span>
-                <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>{nextSession.type==="1on1"?"⚒️ Tempering":"🔥 Furnace"}</span>
+                <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>{nextSession.type==="1on1"?"⚒️ The Tempering":"🔥 The Furnace"}</span>
               </div>
-              {nextSession.status==="tentative"&&<div style={{marginTop:8,fontSize:10,color:C.silver,fontFamily:D.body}}>⏰ Time TBD — Coach Carlos will confirm</div>}
+              {nextSession.name&&<div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginTop:6}}>👤 {nextSession.name}</div>}
             </div>
-            <span style={{fontSize:8,padding:"4px 10px",borderRadius:8,background:nextSession.status==="confirmed"?`${C.green}18`:`${C.silver}18`,color:nextSession.status==="confirmed"?C.green:C.silver,border:`1px solid ${nextSession.status==="confirmed"?C.green+"33":C.silver+"33"}`,fontFamily:D.body,flexShrink:0,letterSpacing:1}}>
-              {nextSession.status==="confirmed"?"Confirmed":"Pending"}
-            </span>
+            <div>
+              {(()=>{const b=statusBadge(nextSession.status);return(
+                <span style={{fontSize:9,padding:"5px 12px",borderRadius:8,background:b.bg,color:b.color,border:`1px solid ${b.border}`,fontFamily:D.body,letterSpacing:1,whiteSpace:"nowrap"}}>{b.label}</span>
+              );})()}
+            </div>
           </div>
-          <button onClick={()=>setRescheduleSession(nextSession)} style={{background:"transparent",border:`1px solid ${C.silver}33`,color:C.silver,borderRadius:8,padding:"8px 20px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
-            Reschedule
+          <button onClick={()=>setRescheduleSession(nextSession)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.silver,borderRadius:8,padding:"8px 22px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
+            Reschedule →
           </button>
         </div>
       ):(
-        <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"28px 22px",marginBottom:16,textAlign:"center"}}>
-          <div style={{fontSize:14,color:C.textDim,fontFamily:D.body,marginBottom:4}}>No upcoming sessions</div>
-          <button onClick={()=>setPage("book")} style={{marginTop:12,background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:C.white,borderRadius:9,padding:"10px 24px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>Book a Session →</button>
+        <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"32px 22px",marginBottom:24,textAlign:"center"}}>
+          <div style={{fontSize:32,marginBottom:10}}>📅</div>
+          <div style={{fontSize:15,color:C.textDim,fontFamily:D.display,marginBottom:6}}>No upcoming sessions</div>
+          <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,marginBottom:18}}>Friday sessions · 5:30–6:45 PM · James Island</div>
+          <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:C.white,borderRadius:9,padding:"12px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>Book a Session →</button>
         </div>
       )}
 
-      {/* All Upcoming */}
-      {upcoming.length>1&&(
-        <div style={{marginBottom:16}}>
-          <div style={{fontSize:8,letterSpacing:4,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:10,fontWeight:600}}>All Upcoming</div>
-          <div style={{display:"grid",gap:6}}>
-            {upcoming.slice(1).map((s,i)=>(
-              <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:`3px solid ${s.status==="confirmed"?C.green:C.silver}`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                <div>
-                  <div style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:4}}>{s.dateLabel}</div>
-                  <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                    <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>🕐 {s._time||s.sessTime||"TBD"}</span>
-                    <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>{s.type==="1on1"?"⚒️ Tempering":"🔥 Furnace"}</span>
-                  </div>
-                </div>
-                <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
-                  <span style={{fontSize:8,padding:"2px 8px",borderRadius:6,background:s.status==="confirmed"?`${C.green}18`:`${C.silver}18`,color:s.status==="confirmed"?C.green:C.silver,fontFamily:D.body}}>{s.status==="confirmed"?"Confirmed":"Pending"}</span>
-                  <button onClick={()=>setRescheduleSession(s)} style={{background:"transparent",border:`1px solid ${C.silver}33`,color:C.silver,borderRadius:7,padding:"5px 12px",fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Reschedule</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Past Sessions */}
-      {past.length>0&&(
-        <div style={{marginBottom:16}}>
-          <button onClick={()=>setShowPast(v=>!v)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"transparent",border:"none",cursor:"pointer",padding:"10px 0",borderBottom:`1px solid ${C.cardBorder}`}}>
-            <div style={{fontSize:8,letterSpacing:4,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Past Sessions ({past.length})</div>
-            <span style={{fontSize:11,color:C.textDim}}>{showPast?"▲":"▼"}</span>
+      {/* ── TABS ── */}
+      <div style={{display:"flex",gap:4,background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:4,marginBottom:20}}>
+        {[
+          {id:"sessions",label:`Sessions${upcoming.length>0?` (${upcoming.length})`:""}` },
+          {id:"players", label:`My Players${players.length>0?` (${players.length})`:""}` },
+        ].map(t=>(
+          <button key={t.id} onClick={()=>setActiveTab(t.id)}
+            style={{flex:1,background:activeTab===t.id?`linear-gradient(135deg,${C.red},${C.redDim})`:"transparent",
+              border:"none",color:activeTab===t.id?C.white:C.textDim,borderRadius:7,padding:"10px",
+              fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:activeTab===t.id?600:400,
+              transition:"all 0.15s"}}>
+            {t.label}
           </button>
-          {showPast&&(
-            <div style={{display:"grid",gap:5,marginTop:10}}>
-              {past.map((s,i)=>(
-                <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:"3px solid #2a2520",borderRadius:10,padding:"10px 14px",opacity:0.7,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
-                  <div>
-                    <div style={{fontSize:13,fontWeight:600,color:C.textMid,fontFamily:D.display,marginBottom:2}}>{s.dateLabel}</div>
-                    <div style={{display:"flex",gap:10}}>
-                      <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>🕐 {s._time||s.sessTime||"—"}</span>
-                      <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{s.type==="1on1"?"⚒️ Tempering":"🔥 Furnace"}</span>
+        ))}
+      </div>
+
+      {/* ── SESSIONS TAB ── */}
+      {activeTab==="sessions"&&(
+        <div>
+          {/* Upcoming sessions (beyond next) */}
+          {upcoming.length>1&&(
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:8,letterSpacing:4,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:12,fontWeight:600}}>All Upcoming ({upcoming.length})</div>
+              <div style={{display:"grid",gap:8}}>
+                {upcoming.map((s,i)=>{
+                  const b=statusBadge(s.status);
+                  return(
+                    <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:`3px solid ${b.color}`,borderRadius:12,padding:"14px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                      <div>
+                        <div style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:5}}>{s.dateLabel}</div>
+                        <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+                          <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>🕐 {s._time||s.sessTime||"TBD"}</span>
+                          <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>{s.type==="1on1"?"⚒️ Tempering":"🔥 Furnace"}</span>
+                          {s.name&&<span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>· {s.name}</span>}
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+                        <span style={{fontSize:8,padding:"3px 10px",borderRadius:6,background:b.bg,color:b.color,border:`1px solid ${b.border}`,fontFamily:D.body,letterSpacing:1}}>{b.label}</span>
+                        {i>0&&<button onClick={()=>setRescheduleSession(s)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:7,padding:"5px 12px",fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Move</button>}
+                      </div>
                     </div>
-                  </div>
-                  <span style={{fontSize:8,padding:"2px 8px",borderRadius:6,background:`${C.green}10`,color:C.green,fontFamily:D.body,flexShrink:0}}>Done</span>
-                </div>
-              ))}
+                  );
+                })}
+              </div>
             </div>
+          )}
+
+          {/* Past sessions */}
+          {past.length>0&&(
+            <div style={{marginBottom:16}}>
+              <button onClick={()=>setShowPast(v=>!v)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"transparent",border:"none",cursor:"pointer",padding:"12px 0",borderBottom:`1px solid ${C.cardBorder}`,marginBottom:showPast?12:0}}>
+                <div style={{fontSize:8,letterSpacing:4,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Past Sessions ({past.length})</div>
+                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{showPast?"Hide ▲":"Show ▼"}</span>
+              </button>
+              {showPast&&(
+                <div style={{display:"grid",gap:6}}>
+                  {past.map((s,i)=>(
+                    <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:"3px solid #2a2520",borderRadius:10,padding:"12px 16px",opacity:0.65,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:600,color:C.textMid,fontFamily:D.display,marginBottom:3}}>{s.dateLabel}</div>
+                        <div style={{display:"flex",gap:12}}>
+                          <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>🕐 {s._time||s.sessTime||"—"}</span>
+                          <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{s.type==="1on1"?"⚒️ Tempering":"🔥 Furnace"}</span>
+                        </div>
+                      </div>
+                      <span style={{fontSize:8,padding:"3px 10px",borderRadius:6,background:`${C.green}12`,color:C.green,fontFamily:D.body,flexShrink:0}}>Done</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {upcoming.length===0&&past.length===0&&(
+            <div style={{textAlign:"center",padding:"40px 20px",color:C.textDim,fontFamily:D.body,fontSize:12}}>No sessions yet.</div>
           )}
         </div>
       )}
 
-      {/* Player Profiles */}
-      <div style={{marginBottom:24}}>
-        <button onClick={()=>setShowPlayers(v=>!v)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"transparent",border:"none",cursor:"pointer",padding:"10px 0",borderBottom:`1px solid ${C.cardBorder}`}}>
-          <div style={{fontSize:8,letterSpacing:4,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Player Profiles ({players.length})</div>
-          <span style={{fontSize:11,color:C.textDim}}>{showPlayers?"▲":"▼"}</span>
-        </button>
-        {showPlayers&&<PlayersTab user={user} players={players} playersLoaded={playersLoaded}/>}
-      </div>
+      {/* ── PLAYERS TAB ── */}
+      {activeTab==="players"&&(
+        <PlayersTab user={user} players={players} playersLoaded={playersLoaded}/>
+      )}
 
-      {/* Quick Actions */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-        <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"13px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>🔥 Book Session</button>
-        <button onClick={()=>setPage("contact")} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:10,padding:"13px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>📧 Contact Coach</button>
+      {/* ── QUICK ACTIONS ── */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:28}}>
+        <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>🔥 Book Session</button>
+        <button onClick={()=>setPage("contact")} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:10,padding:"14px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>📧 Contact Coach</button>
       </div>
 
       {/* Reschedule Modal */}
@@ -350,78 +387,159 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
 
 // ── PLAYERS TAB ───────────────────────────────────────────
 export function PlayersTab({user,players,playersLoaded}){
-  const [showForm,setShowForm] = useState(false);
-  const [editId,setEditId]     = useState(null);
+  const [showForm,setShowForm]       = useState(false);
+  const [editId,setEditId]           = useState(null);
   const [confirmDeleteId,setConfirmDeleteId] = useState(null);
-  const [form,setForm] = useState({name:"",age:"",position:"",notes:""});
+  const [saving,setSaving]           = useState(false);
+  const [form,setForm]               = useState({name:"",age:"",position:"",notes:""});
 
-  async function handleSave(e){
-    if(e&&e.preventDefault) e.preventDefault();
+  function openAdd(){ setEditId(null); setForm({name:"",age:"",position:"",notes:""}); setShowForm(true); }
+  function openEdit(p){ setEditId(p.id); setForm({name:p.name,age:p.age||"",position:p.position||"",notes:p.notes||""}); setShowForm(true); }
+  function cancel(){ setShowForm(false); setEditId(null); setForm({name:"",age:"",position:"",notes:""}); }
+
+  async function handleSave(){
     if(!form.name.trim()) return;
-    if(editId){
-      await updateDoc(doc(db,"users",user.uid,"players",editId),{...form,updatedAt:new Date().toISOString()});
-      setEditId(null);
-    } else {
-      await addDoc(collection(db,"users",user.uid,"players"),{...form,createdAt:new Date().toISOString()});
-    }
-    setForm({name:"",age:"",position:"",notes:""}); setShowForm(false);
+    setSaving(true);
+    try{
+      if(editId){
+        await updateDoc(doc(db,"users",user.uid,"players",editId),{...form,updatedAt:new Date().toISOString()});
+      } else {
+        await addDoc(collection(db,"users",user.uid,"players"),{...form,createdAt:new Date().toISOString()});
+      }
+      cancel();
+    } finally { setSaving(false); }
   }
 
   async function handleDelete(id){
     await deleteDoc(doc(db,"users",user.uid,"players",id));
+    setConfirmDeleteId(null);
   }
 
+  const posMap = Object.fromEntries(POSITIONS.map(p=>[p.id,p]));
+
   return(
-    <div style={{marginTop:12}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-        <div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{players.length} player{players.length!==1?"s":""} saved</div>
-        <button onClick={()=>{setShowForm(v=>!v);setEditId(null);setForm({name:"",age:"",position:"",notes:""}); }}
-          style={{background:`${C.red}12`,border:`1px solid ${C.red}33`,borderRadius:7,padding:"5px 14px",color:C.red,fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
-          {showForm?"Cancel":"+ Add Player"}
-        </button>
+    <div>
+      {/* Header row */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>
+          {players.length===0?"No players yet":`${players.length} player${players.length!==1?"s":""} on file`}
+        </div>
+        {!showForm&&(
+          <button onClick={openAdd}
+            style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",borderRadius:8,padding:"9px 20px",color:C.white,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>
+            + Add Player
+          </button>
+        )}
       </div>
+
+      {/* Add / Edit Form */}
       {showForm&&(
-        <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"16px",marginBottom:12}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-            <div><div style={{fontSize:8,color:C.textDim,letterSpacing:1,marginBottom:4,textTransform:"uppercase",fontFamily:D.body}}>Name *</div><input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} style={{...IS,fontSize:12}}/></div>
-            <div><div style={{fontSize:8,color:C.textDim,letterSpacing:1,marginBottom:4,textTransform:"uppercase",fontFamily:D.body}}>Age</div><input type="number" value={form.age} onChange={e=>setForm(p=>({...p,age:e.target.value}))} style={{...IS,fontSize:12}}/></div>
+        <div style={{background:"#161214",border:`1px solid ${C.silver}22`,borderRadius:14,padding:"20px",marginBottom:16}}>
+          <div style={{fontSize:11,fontWeight:600,color:C.white,fontFamily:D.display,letterSpacing:1,marginBottom:16}}>
+            {editId?"Edit Player":"New Player"}
           </div>
-          <div style={{marginBottom:8}}><div style={{fontSize:8,color:C.textDim,letterSpacing:1,marginBottom:4,textTransform:"uppercase",fontFamily:D.body}}>Position</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 80px",gap:10,marginBottom:10}}>
+            <div>
+              <div style={{fontSize:8,color:C.textDim,letterSpacing:2,marginBottom:5,textTransform:"uppercase",fontFamily:D.body}}>Player Name *</div>
+              <input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))}
+                placeholder="Full name" style={{...IS,fontSize:13}}/>
+            </div>
+            <div>
+              <div style={{fontSize:8,color:C.textDim,letterSpacing:2,marginBottom:5,textTransform:"uppercase",fontFamily:D.body}}>Age</div>
+              <input type="number" min="4" max="25" value={form.age} onChange={e=>setForm(p=>({...p,age:e.target.value}))}
+                placeholder="—" style={{...IS,fontSize:13,textAlign:"center"}}/>
+            </div>
+          </div>
+          <div style={{marginBottom:10}}>
+            <div style={{fontSize:8,color:C.textDim,letterSpacing:2,marginBottom:5,textTransform:"uppercase",fontFamily:D.body}}>Position</div>
             <select value={form.position} onChange={e=>setForm(p=>({...p,position:e.target.value}))} style={{...IS,fontSize:12}}>
-              <option value="">Select...</option>
-              {POSITIONS.map(p=><option key={p.id} value={p.id}>{p.full}</option>)}
+              <option value="">Any / Not sure</option>
+              {POSITIONS.map(p=><option key={p.id} value={p.id}>{p.full} ({p.id})</option>)}
             </select>
           </div>
-          <div style={{marginBottom:12}}><div style={{fontSize:8,color:C.textDim,letterSpacing:1,marginBottom:4,textTransform:"uppercase",fontFamily:D.body}}>Notes</div><input value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} placeholder="Anything Coach should know" style={{...IS,fontSize:12}}/></div>
-          <button onClick={handleSave} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",borderRadius:8,padding:"10px 20px",color:C.white,fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>
-            {editId?"Update":"Save Player"}
+          <div style={{marginBottom:16}}>
+            <div style={{fontSize:8,color:C.textDim,letterSpacing:2,marginBottom:5,textTransform:"uppercase",fontFamily:D.body}}>Notes for Coach</div>
+            <input value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))}
+              placeholder="Goals, skill level, injuries, anything relevant…" style={{...IS,fontSize:12}}/>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={cancel} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:8,padding:"10px 18px",fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+            <button onClick={handleSave} disabled={saving||!form.name.trim()}
+              style={{flex:1,background:form.name.trim()?`linear-gradient(135deg,${C.red},${C.redDim})`:"#1a1a1a",border:"none",color:form.name.trim()?C.white:C.textDim,borderRadius:8,padding:"10px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:form.name.trim()?"pointer":"not-allowed",fontFamily:D.body,fontWeight:600}}>
+              {saving?"Saving…":editId?"Update Player →":"Save Player →"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Player Cards */}
+      {!playersLoaded&&(
+        <div style={{textAlign:"center",padding:"30px",color:C.textDim,fontFamily:D.body,fontSize:11}}>Loading players…</div>
+      )}
+
+      {playersLoaded&&players.length===0&&!showForm&&(
+        <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"36px 24px",textAlign:"center"}}>
+          <div style={{fontSize:36,marginBottom:12}}>⚽</div>
+          <div style={{fontSize:14,color:C.textMid,fontFamily:D.display,marginBottom:8}}>No players added yet</div>
+          <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.7,marginBottom:20}}>
+            Add your player's name, age, and position to make booking faster and help Coach prepare.
+          </div>
+          <button onClick={openAdd}
+            style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:C.white,borderRadius:9,padding:"12px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>
+            Add First Player →
           </button>
         </div>
       )}
-      <div style={{display:"grid",gap:8}}>
-        {!playersLoaded&&<div style={{fontSize:11,color:C.textDim,fontFamily:D.body,fontStyle:"italic",padding:"12px 0"}}>Loading...</div>}
-        {playersLoaded&&players.length===0&&<div style={{fontSize:11,color:C.textDim,fontFamily:D.body,fontStyle:"italic",padding:"12px 0"}}>No players added yet. Add your player's info to speed up booking.</div>}
-        {players.map(p=>(
-          <div key={p.id} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
-            <div>
-              <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:3}}>{p.name}</div>
-              <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{p.age?"Age "+p.age:""}{p.age&&p.position?" · ":""}{p.position||""}</div>
-              {p.notes&&<div style={{fontSize:9,color:C.textDim,fontFamily:D.body,marginTop:2,fontStyle:"italic"}}>{p.notes}</div>}
-            </div>
-            <div style={{display:"flex",gap:6,flexShrink:0}}>
-              <button onClick={()=>{setEditId(p.id);setForm({name:p.name,age:p.age||"",position:p.position||"",notes:p.notes||""});setShowForm(true);}} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:6,padding:"4px 10px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Edit</button>
-              {confirmDeleteId===p.id?(
-                <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                  <span style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>Remove?</span>
-                  <button onClick={()=>{handleDelete(p.id);setConfirmDeleteId(null);}} style={{background:`${C.red}15`,border:`1px solid ${C.red}44`,color:C.red,borderRadius:5,padding:"3px 8px",fontSize:9,cursor:"pointer",fontFamily:D.body}}>Yes</button>
-                  <button onClick={()=>setConfirmDeleteId(null)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:5,padding:"3px 6px",fontSize:9,cursor:"pointer",fontFamily:D.body}}>No</button>
+
+      <div style={{display:"grid",gap:10}}>
+        {players.map(p=>{
+          const pos = posMap[p.position];
+          return(
+            <div key={p.id} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:13,padding:"16px 18px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:pos||p.notes?10:0}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:16,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:4}}>{p.name}</div>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+                    {p.age&&<span style={{fontSize:10,color:C.textMid,fontFamily:D.body}}>Age {p.age}</span>}
+                    {pos&&(
+                      <span style={{fontSize:9,padding:"2px 9px",borderRadius:5,background:`${C.silver}15`,color:C.silver,fontFamily:D.body,letterSpacing:1,border:`1px solid ${C.silver}25`}}>
+                        {pos.full}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              ):(
-                <button onClick={()=>setConfirmDeleteId(p.id)} style={{background:"transparent",border:`1px solid ${C.redDim}33`,borderRadius:6,padding:"4px 10px",color:C.redDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>Remove</button>
+                <div style={{display:"flex",gap:6,flexShrink:0}}>
+                  <button onClick={()=>openEdit(p)}
+                    style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"6px 14px",color:C.textMid,fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
+                    Edit
+                  </button>
+                  {confirmDeleteId===p.id?(
+                    <div style={{display:"flex",gap:5,alignItems:"center"}}>
+                      <button onClick={()=>handleDelete(p.id)}
+                        style={{background:`${C.red}18`,border:`1px solid ${C.red}44`,color:C.red,borderRadius:6,padding:"6px 12px",fontSize:9,cursor:"pointer",fontFamily:D.body}}>
+                        Remove
+                      </button>
+                      <button onClick={()=>setConfirmDeleteId(null)}
+                        style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:6,padding:"6px 10px",fontSize:9,cursor:"pointer",fontFamily:D.body}}>
+                        Keep
+                      </button>
+                    </div>
+                  ):(
+                    <button onClick={()=>setConfirmDeleteId(p.id)}
+                      style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"6px 12px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+              {p.notes&&(
+                <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,lineHeight:1.5,padding:"8px 10px",background:"#0d0b0933",borderRadius:6,borderLeft:`2px solid ${C.silver}22`}}>
+                  "{p.notes}"
+                </div>
               )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
