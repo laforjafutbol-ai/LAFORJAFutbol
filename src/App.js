@@ -142,6 +142,59 @@ export default function App(){
   );
 }
 
+// ── EMBER CANVAS ──────────────────────────────────────────
+function EmberCanvas(){
+  const ref = useEffect(()=>{},[]);
+  return(
+    <canvas
+      ref={el=>{
+        if(!el) return;
+        const ctx = el.getContext("2d");
+        let W = el.width = el.offsetWidth;
+        let H = el.height = el.offsetHeight;
+        const resize=()=>{ W=el.width=el.offsetWidth; H=el.height=el.offsetHeight; };
+        window.addEventListener("resize",resize);
+        const embers=[];
+        const N=55;
+        function rand(a,b){return a+Math.random()*(b-a);}
+        for(let i=0;i<N;i++) embers.push({
+          x:rand(0,W), y:rand(0,H),
+          r:rand(0.8,2.6),
+          vx:rand(-0.3,0.3), vy:rand(-0.5,-1.4),
+          life:rand(0,1), speed:rand(0.003,0.007),
+          hue:rand(10,38), // red→orange
+        });
+        let raf;
+        function draw(){
+          ctx.clearRect(0,0,W,H);
+          for(const e of embers){
+            e.life+=e.speed;
+            if(e.life>1){ e.life=0; e.x=rand(0,W); e.y=H+10; }
+            const t=e.life;
+            // fade in then out
+            const alpha = t<0.15 ? t/0.15 : t>0.75 ? (1-t)/0.25 : 1;
+            e.x+=e.vx; e.y+=e.vy*(0.5+t*0.7);
+            ctx.save();
+            ctx.globalAlpha = alpha*0.75;
+            const grd=ctx.createRadialGradient(e.x,e.y,0,e.x,e.y,e.r*3.5);
+            grd.addColorStop(0,`hsla(${e.hue},100%,70%,1)`);
+            grd.addColorStop(1,`hsla(${e.hue},100%,50%,0)`);
+            ctx.beginPath();
+            ctx.arc(e.x,e.y,e.r*3.5,0,Math.PI*2);
+            ctx.fillStyle=grd;
+            ctx.fill();
+            ctx.restore();
+          }
+          raf=requestAnimationFrame(draw);
+        }
+        draw();
+        return()=>{ cancelAnimationFrame(raf); window.removeEventListener("resize",resize); };
+      }}
+      style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",zIndex:3,pointerEvents:"none"}}
+    />
+  );
+}
+
 // ── HOME PAGE ─────────────────────────────────────────────
 function HomePage({setPage,user}){
   return(
@@ -161,8 +214,10 @@ function HomePage({setPage,user}){
         <div style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",zIndex:1,background:`linear-gradient(to bottom,rgba(9,9,11,0.45) 0%,rgba(9,9,11,0.30) 40%,rgba(9,9,11,0.80) 100%)`}}/>
         {/* Red ember glow at bottom */}
         <div style={{position:"absolute",bottom:0,left:0,width:"100%",height:"40%",zIndex:2,background:`linear-gradient(to top,${C.redDark}99,transparent)`}}/>
+        {/* Floating ember particles */}
+        <EmberCanvas/>
         {/* Content */}
-        <div style={{position:"relative",zIndex:3}}>
+        <div style={{position:"relative",zIndex:4}}>
           <Crest size={80}/>
           <div style={{fontSize:9,letterSpacing:6,color:C.silverDim,textTransform:"uppercase",marginTop:20,marginBottom:8,fontFamily:D.body}}>James Island · Charleston SC</div>
           <h1 style={{margin:"0 0 10px",fontFamily:D.display,fontWeight:700,fontSize:"clamp(48px,9vw,80px)",letterSpacing:6,textTransform:"uppercase",color:C.white,lineHeight:1}}>La Forja</h1>
