@@ -432,7 +432,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
     else if(selDates.length < needed){ setSelDates([...selDates, {dk, date, sess, dateLabel:fmtDate(date)}]); }
   }
 
-  async function redirectToCheckout(savedBookingRef){
+  async function redirectToCheckout(savedBookingRef, pkgGroupId){
     setBookingLoading(true);
     try{
       const pricePerSession = isPackage ? selPkg.price / selPkg.sessions : PRICE_GROUP;
@@ -446,6 +446,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
           pricePerSession,
           total,
           bookingRef: savedBookingRef || "",
+          packageGroupId: pkgGroupId || "",
           email: form.email || user?.email || "",
         }),
       });
@@ -463,6 +464,8 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
     const bookingName = selectedPlayers.length>0 ? selectedPlayers.map(p=>p.name).join(", ") : form.name;
     const bookingEmail = form.email || (user?.email||"");
     const isCash = paymentMethod==="cash";
+    // Shared group ID ties all package bookings together so the webhook can confirm all of them
+    const packageGroupId = isPackage ? `pkg_${Date.now()}_${Math.random().toString(36).slice(2,7)}` : "";
     const base = {
       skill:"The Furnace", skillIcon:"🔥",
       count:effectiveCount,
@@ -471,6 +474,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
       status: isCash ? "confirmed" : "awaiting_payment",
       paymentMethod: isCash ? "cash" : "card",
       packageName:selPkg?.name||"Single Session",
+      packageGroupId,
       packageTotal:total,
       waiverAgreed:true, waiverSignedAt:new Date().toISOString(),
       createdAt:new Date().toISOString(),
@@ -486,7 +490,6 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
       }
       if(refs.length>0&&bookingEmail&&isCash) await callEmailAPI({...refs[0], packageBooking:true, packageDates:selDates.map(s=>s.dateLabel).join(", "), packageName:selPkg.name, total},"group");
     } else {
-      const daySchedule = DAY_SCHEDULE[selDate.getDay()];
       const booking = {...base, dateKey:dKey(selDate), dateLabel:fmtDate(selDate), sessId:selSess.id, sessTime:selSess.time, total};
       const ref = await addBooking(booking);
       if(ref?.id){ refs.push({...booking,id:ref.id}); if(bookingEmail&&isCash) await callEmailAPI(booking,"group"); }
@@ -494,13 +497,11 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
     setMyBookings(refs);
 
     if(paymentMethod==="cash"){
-      // Cash — go straight to confirmation
       setBookingLoading(false);
       setStep(3);
     } else {
-      // Card — redirect to Stripe Checkout
-      const firstRef = refs[0]?.id || "";
-      await redirectToCheckout(firstRef);
+      // Card — redirect to Stripe; pass both the first booking ID and the packageGroupId
+      await redirectToCheckout(refs[0]?.id || "", packageGroupId);
     }
   }
 
