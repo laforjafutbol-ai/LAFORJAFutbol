@@ -102,25 +102,31 @@ function sendConfirmationEmail(booking) {
 }
 
 // ── Handler ───────────────────────────────────────────────
-module.exports = async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
+
+  // Collect raw body buffer (Vercel streams it when bodyParser is off)
+  const rawBody = await new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on("data", chunk => chunks.push(chunk));
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
 
   let event;
 
-  // Verify Stripe signature when webhook secret is configured
   if (WEBHOOK_SECRET) {
     const sig = req.headers["stripe-signature"];
     try {
-      const rawBody = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
       event = stripe.webhooks.constructEvent(rawBody, sig, WEBHOOK_SECRET);
     } catch (err) {
       console.error("Webhook signature verification failed:", err.message);
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
   } else {
-    // Dev/staging: no signature check
+    // No webhook secret set — skip signature check (dev/staging only)
     try {
-      event = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      event = JSON.parse(rawBody.toString());
     } catch (err) {
       return res.status(400).send("Invalid payload");
     }
@@ -188,4 +194,9 @@ module.exports = async function handler(req, res) {
   }
 
   return res.status(200).json({ received: true });
-};
+}
+
+// Vercel: disable body parsing so Stripe gets raw bytes for signature verification
+handler.config = { api: { bodyParser: false } };
+
+module.exports = handler;
