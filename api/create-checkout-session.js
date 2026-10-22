@@ -6,7 +6,7 @@ module.exports = async function handler(req, res) {
   const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
   try {
-    const { packageName, sessions, players, pricePerSession, total, bookingRef, email } = req.body;
+    const { packageName, sessions, players, pricePerSession, total, bookingRef, packageGroupId, email } = req.body;
 
     if (!total || total < 1) return res.status(400).json({ error: "Invalid amount" });
     if (total > 2000) return res.status(400).json({ error: "Amount exceeds maximum" });
@@ -35,6 +35,7 @@ module.exports = async function handler(req, res) {
       customer_email: email || undefined,
       metadata: {
         bookingRef: bookingRef || "",
+        packageGroupId: packageGroupId || "",
         packageName: packageName || "",
         sessions: String(sessions || 1),
         players: String(players || 1),
