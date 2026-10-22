@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { db } from "./firebase";
 import { doc, updateDoc, collection, addDoc } from "firebase/firestore";
-import { C, D, BRAND, MAX_PLAYERS, DAY_SCHEDULE, PRIVATE_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, dKey, fmtDate, callEmailAPI, IS, FL, AB, GB, NB, GStyles } from "./constants";
+import { C, D, BRAND, MAX_PLAYERS, DAY_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, dKey, fmtDate, callEmailAPI, IS, FL, GB, NB, GStyles } from "./constants";
 
 // ── HELPERS ──────────────────────────────────────────────
 function parseTime(timeStr){
@@ -192,7 +192,7 @@ export function CalendarDashboard({bookings, inquiries, confirmBooking, removeBo
             const isPast = dk<todayStr;
             const isExpanded = expandedDay===dk;
             const isDragOver = dragOver===dk;
-            const hasCoachDay = DAY_SCHEDULE[d.getDay()]||PRIVATE_SCHEDULE[d.getDay()];
+            const hasCoachDay = DAY_SCHEDULE[d.getDay()]||null; // private days not active
 
             return(
               <div
@@ -393,7 +393,7 @@ export function CalendarDashboard({bookings, inquiries, confirmBooking, removeBo
     if(!dropModal) return null;
     const {booking:b, targetDate} = dropModal;
     const is1on1 = b._type==="1on1";
-    const sched = is1on1 ? PRIVATE_SCHEDULE[targetDate.getDay()] : DAY_SCHEDULE[targetDate.getDay()];
+    const sched = is1on1 ? null : DAY_SCHEDULE[targetDate.getDay()]; // private days not active
     if(!sched) return(
       <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>setDropModal(null)}>
         <div style={{background:"#111",border:`1px solid ${C.red}44`,borderRadius:16,padding:"24px",maxWidth:420,width:"100%"}} onClick={e=>e.stopPropagation()}>
