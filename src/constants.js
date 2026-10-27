@@ -41,7 +41,8 @@ export const DAY_SCHEDULE = {
     skill:"The Furnace", skillDesc:"Ball mastery · 1v1 dominance · Decision making under pressure", skillIcon:"🔥",
     dayLabel:"Friday",
     sessions:[
-      {id:"s1",label:"Session 1",time:"5:30 PM – 6:45 PM",ageGroup:"U9+",ageTag:"u9+",maxPlayers:5},
+      {id:"s1",label:"Little Forja",   time:"4:00 PM – 5:15 PM", ageGroup:"U9–U11", ageTag:"u9-u11", minAge:6,  maxAge:11, maxPlayers:6, ageDesc:"Ages 6–11"},
+      {id:"s2",label:"The Furnace",    time:"5:30 PM – 6:45 PM", ageGroup:"U12+",   ageTag:"u12+",   minAge:12, maxAge:99, maxPlayers:6, ageDesc:"Ages 12 & up"},
     ],
   },
 };
