@@ -223,8 +223,8 @@ module.exports = async function handler(req, res) {
       '<div style="border-top:1px solid #222;padding-top:14px;"><div style="font-size:9px;letter-spacing:3px;color:#c9a84c;text-transform:uppercase;margin-bottom:12px;">Updated Session Details</div>' +
       row("New Date", booking.dateLabel) +
       row("New Time", booking.sessTime) +
+      row("Session", booking.sessLabel || ((booking.sessId==="s1") ? "🌱 Little Forja · U9–U11 · 4:00 PM" : "🔥 The Furnace · U12+ · 5:30 PM")) +
       row("Location", booking.locationDetail || "Bayview Park · James Island Youth Soccer Club Fields") +
-      row("Session", (booking.skillIcon||"🔥") + " " + (booking.skill||"The Furnace")) +
       '</div></div>' +
       '<p style="font-size:12px;color:#555;text-align:center;">Questions? Reply to this email or reach out directly.</p>'
     );
