@@ -21,6 +21,13 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
   const [reschedLoading,setReschedLoading] = useState(false);
   const [filterStatus,setFilterStatus]   = useState("all");
   const [searchQ,setSearchQ]             = useState("");
+  const [dashTab,setDashTab]             = useState("upcoming"); // "upcoming" | "packages"
+  const [pkgReschedItem,setPkgReschedItem]   = useState(null); // single booking from a package
+  const [pkgReschedAll,setPkgReschedAll]     = useState(null); // array of all bookings in pkg
+  const [pkgReschedDate,setPkgReschedDate]   = useState(null);
+  const [pkgReschedSess,setPkgReschedSess]   = useState(null);
+  const [pkgReschedLoading,setPkgReschedLoading] = useState(false);
+  const [pkgReschedMode,setPkgReschedMode]   = useState("one"); // "one" | "all"
 
   if(!auth) return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.black}}>
@@ -93,6 +100,49 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
     }
     setRescheduleItem(null); setReschedDate(null); setReschedSess(null);
     setReschedLoading(false); setActionItem(null);
+  }
+
+  // Group bookings by packageGroupId
+  const packageGroups = (() => {
+    const groups = {};
+    const bookingsArr = (bookings||[]).filter(b=>b.status!=="cancelled"&&b.status!=="removed");
+    for(const b of bookingsArr){
+      const gid = b.packageGroupId || b.id; // single sessions use their own id
+      if(!groups[gid]) groups[gid] = {groupId:gid, name:b.name, email:b.email, phone:b.phone, sessions:[], packageName:b.packageName||"Single Session", total:0};
+      groups[gid].sessions.push({...b,_coll:"bookings",_time:b.sessTime});
+      groups[gid].total += (b.total||b.price||0);
+    }
+    // Sort sessions within each group by date
+    for(const g of Object.values(groups)) g.sessions.sort((a,b)=>a.dateKey.localeCompare(b.dateKey));
+    // Return only multi-session packages (packageGroupId exists and >1 session)
+    return Object.values(groups).filter(g=>g.sessions.length>1||g.sessions[0]?.packageGroupId).sort((a,b)=>a.sessions[0]?.dateKey.localeCompare(b.sessions[0]?.dateKey));
+  })();
+
+  async function doPkgReschedule(){
+    if(!pkgReschedDate||!pkgReschedSess) return;
+    setPkgReschedLoading(true);
+    const targets = pkgReschedMode==="all" ? pkgReschedAll : [pkgReschedItem];
+    for(const s of targets){
+      await updateDoc(doc(db,"bookings",s.id),{
+        dateKey:dKey(pkgReschedDate), dateLabel:fmtDate(pkgReschedDate),
+        sessId:pkgReschedSess.id, sessTime:pkgReschedSess.time,
+        rescheduledAt:new Date().toISOString(), rescheduledBy:"coach",
+      });
+      if(s.email){
+        const sessLabel = pkgReschedSess.id==="s1"
+          ? "🌱 Little Forja · U9–U11 · 4:00 PM"
+          : "🔥 The Furnace · U12+ · 5:30 PM";
+        await callEmailAPI({
+          ...s,
+          dateLabel:fmtDate(pkgReschedDate),
+          sessTime:pkgReschedSess.time,
+          sessId:pkgReschedSess.id,
+          sessLabel,
+        },"reschedule");
+      }
+    }
+    setPkgReschedItem(null); setPkgReschedAll(null); setPkgReschedDate(null); setPkgReschedSess(null);
+    setPkgReschedLoading(false);
   }
 
   async function saveNote(){
@@ -199,7 +249,23 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
           )}
         </div>
 
-        {/* Upcoming Sessions */}
+        {/* ── TAB BAR ── */}
+        <div style={{display:"flex",gap:4,background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:4,marginBottom:20}}>
+          {[
+            {id:"upcoming",label:`Upcoming (${upcomingSessions.length})`},
+            {id:"packages",label:`Packages (${packageGroups.length})`},
+          ].map(t=>(
+            <button key={t.id} onClick={()=>setDashTab(t.id)}
+              style={{flex:1,background:dashTab===t.id?`linear-gradient(135deg,${C.red},${C.redDim})`:"transparent",
+                border:"none",color:dashTab===t.id?C.white:C.textDim,borderRadius:7,padding:"9px",
+                fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:dashTab===t.id?600:400}}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── UPCOMING SESSIONS TAB ── */}
+        {dashTab==="upcoming"&&(
         <div style={{marginBottom:24}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
             <span style={{fontSize:11,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Upcoming Sessions</span>
@@ -226,13 +292,14 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
                       {s.status==="pending"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.silver}12`,color:C.silver,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>Pending</span>}
                       {s.paymentMethod==="cash"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#1a1200",border:"1px solid #c9a84c44",color:"#c9a84c",fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>💵 Cash</span>}
                       {s.count>1&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.silver}10`,color:C.silver,fontFamily:D.body}}>👥 {s.count}</span>}
+                      {s.sessId==="s1"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#0d1520",border:"1px solid #4a9eff44",color:"#4a9eff",fontFamily:D.body,letterSpacing:1}}>U9–U11 · 4 PM</span>}
+                      {s.sessId==="s2"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.red}12`,border:`1px solid ${C.red}33`,color:C.red,fontFamily:D.body,letterSpacing:1}}>U12+ · 5:30 PM</span>}
                     </div>
                     <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:4}}>
                       <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>📅 {s.dateLabel}</span>
                       <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>🕐 {s._time}</span>
                       <span style={{fontSize:10,color:C.silver,fontFamily:D.body,fontWeight:600}}>${s.total||s.price||0}</span>
                     </div>
-                    {/* Contact quick-view */}
                     <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
                       {s.email&&<a href={`mailto:${s.email}`} style={{fontSize:9,color:C.textDim,fontFamily:D.body,textDecoration:"none"}}>✉ {s.email}</a>}
                       {s.phone&&<a href={`tel:${s.phone}`} style={{fontSize:9,color:C.textDim,fontFamily:D.body,textDecoration:"none"}}>📞 {s.phone}</a>}
@@ -251,6 +318,94 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
             </div>
           )}
         </div>
+        )}
+
+        {/* ── PACKAGES TAB ── */}
+        {dashTab==="packages"&&(
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:14,fontWeight:600}}>
+            Active Packages — {packageGroups.length} client{packageGroups.length!==1?"s":""}
+          </div>
+          {packageGroups.length===0?(
+            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"28px",textAlign:"center",color:C.textDim,fontSize:12,fontFamily:D.body,fontStyle:"italic"}}>No packages yet</div>
+          ):(
+            <div style={{display:"grid",gap:12}}>
+              {packageGroups.map((pkg,i)=>{
+                const done  = pkg.sessions.filter(s=>s.dateKey<dKey(new Date())).length;
+                const left  = pkg.sessions.filter(s=>s.dateKey>=dKey(new Date())).length;
+                const upcoming = pkg.sessions.filter(s=>s.dateKey>=dKey(new Date()));
+                return(
+                  <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,overflow:"hidden"}}>
+                    {/* Package header */}
+                    <div style={{background:"#161214",padding:"14px 18px",borderBottom:`1px solid ${C.cardBorder}`,display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
+                      <div>
+                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap"}}>
+                          <span style={{fontSize:16,fontWeight:700,color:C.white,fontFamily:D.display}}>{pkg.name}</span>
+                          <span style={{fontSize:8,padding:"3px 10px",borderRadius:8,background:`${C.silver}15`,color:C.silver,fontFamily:D.body,letterSpacing:1,border:`1px solid ${C.silver}25`}}>{pkg.packageName}</span>
+                        </div>
+                        <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                          {pkg.email&&<a href={`mailto:${pkg.email}`} style={{fontSize:10,color:C.textDim,fontFamily:D.body,textDecoration:"none"}}>✉ {pkg.email}</a>}
+                          {pkg.phone&&<a href={`tel:${pkg.phone}`} style={{fontSize:10,color:C.textDim,fontFamily:D.body,textDecoration:"none"}}>📞 {pkg.phone}</a>}
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0,flexWrap:"wrap"}}>
+                        <div style={{textAlign:"center",background:"#0d0b08",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"8px 14px"}}>
+                          <div style={{fontSize:18,fontWeight:700,color:C.green,fontFamily:D.display,lineHeight:1}}>{done}</div>
+                          <div style={{fontSize:8,color:C.textDim,fontFamily:D.body,letterSpacing:1}}>Done</div>
+                        </div>
+                        <div style={{textAlign:"center",background:"#0d0b08",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"8px 14px"}}>
+                          <div style={{fontSize:18,fontWeight:700,color:C.red,fontFamily:D.display,lineHeight:1}}>{left}</div>
+                          <div style={{fontSize:8,color:C.textDim,fontFamily:D.body,letterSpacing:1}}>Left</div>
+                        </div>
+                        <div style={{textAlign:"center",background:"#0d0b08",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"8px 14px"}}>
+                          <div style={{fontSize:18,fontWeight:700,color:C.silverBright,fontFamily:D.display,lineHeight:1}}>${pkg.total}</div>
+                          <div style={{fontSize:8,color:C.textDim,fontFamily:D.body,letterSpacing:1}}>Total</div>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Session rows */}
+                    <div style={{padding:"12px 18px"}}>
+                      <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>All Sessions</div>
+                      <div style={{display:"grid",gap:6,marginBottom:12}}>
+                        {pkg.sessions.map((s,j)=>{
+                          const isPast = s.dateKey<dKey(new Date());
+                          const isU9 = s.sessId==="s1";
+                          return(
+                            <div key={j} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,padding:"8px 12px",background:isPast?"#0a0908":"#0d0b0e",borderRadius:8,border:`1px solid ${isPast?"#1a1612":C.cardBorder}`,opacity:isPast?0.5:1,flexWrap:"wrap"}}>
+                              <div style={{display:"flex",gap:10,alignItems:"center",flex:1,flexWrap:"wrap"}}>
+                                <span style={{fontSize:12,fontWeight:600,color:isPast?C.textDim:C.white,fontFamily:D.display}}>{s.dateLabel}</span>
+                                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>🕐 {s._time||s.sessTime}</span>
+                                {isU9
+                                  ? <span style={{fontSize:8,padding:"2px 7px",borderRadius:5,background:"#0d1520",border:"1px solid #4a9eff33",color:"#4a9eff",fontFamily:D.body}}>U9–U11</span>
+                                  : <span style={{fontSize:8,padding:"2px 7px",borderRadius:5,background:`${C.red}12`,border:`1px solid ${C.red}22`,color:C.red,fontFamily:D.body}}>U12+</span>
+                                }
+                                <span style={{fontSize:8,padding:"2px 7px",borderRadius:5,background:s.status==="confirmed"?`${C.green}15`:s.status==="pending"?`${C.silver}10`:"#1a1200",color:s.status==="confirmed"?C.green:s.status==="pending"?C.silver:"#c9a84c",fontFamily:D.body,letterSpacing:1}}>{s.status}</span>
+                              </div>
+                              {!isPast&&(
+                                <button onClick={()=>{setPkgReschedItem(s);setPkgReschedAll(upcoming);setPkgReschedDate(null);setPkgReschedSess(null);setPkgReschedMode("one");}}
+                                  style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:7,padding:"5px 12px",color:C.silver,fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,flexShrink:0}}>
+                                  Move
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {/* Quick action: move all remaining to 4 PM */}
+                      {upcoming.length>0&&(
+                        <button onClick={()=>{setPkgReschedItem(upcoming[0]);setPkgReschedAll(upcoming);setPkgReschedDate(null);setPkgReschedSess(null);setPkgReschedMode("all");}}
+                          style={{background:`${C.silver}08`,border:`1px solid ${C.silver}25`,borderRadius:9,padding:"9px 18px",color:C.silver,fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,width:"100%",textAlign:"center"}}>
+                          📅 Reschedule All Remaining ({upcoming.length}) →
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        )}
 
         {/* Past Sessions */}
         {pastSessions.length>0&&(
@@ -353,6 +508,79 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
               style={{display:"block",width:"100%",background:"transparent",border:"none",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body,padding:"6px",textAlign:"center",textDecoration:"underline"}}>
               Remove from records
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── PACKAGE RESCHEDULE MODAL ── */}
+      {pkgReschedItem&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.94)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>{setPkgReschedItem(null);setPkgReschedAll(null);setPkgReschedDate(null);setPkgReschedSess(null);}}>
+          <div style={{background:"#111",border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"22px",maxWidth:500,width:"100%",maxHeight:"85vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <div style={{fontSize:15,fontWeight:600,color:C.white,fontFamily:D.display}}>Reschedule Session</div>
+              <button onClick={()=>setPkgReschedItem(null)} style={{background:"transparent",border:"none",color:C.textDim,fontSize:18,cursor:"pointer"}}>✕</button>
+            </div>
+
+            {/* Move one vs all toggle */}
+            {pkgReschedAll&&pkgReschedAll.length>1&&(
+              <div style={{display:"flex",gap:4,background:"#0d0b08",border:`1px solid ${C.cardBorder}`,borderRadius:9,padding:4,marginBottom:16}}>
+                {[{id:"one",label:`Move This Session Only`},{id:"all",label:`Move All ${pkgReschedAll.length} Remaining`}].map(opt=>(
+                  <button key={opt.id} onClick={()=>setPkgReschedMode(opt.id)}
+                    style={{flex:1,background:pkgReschedMode===opt.id?`linear-gradient(135deg,${C.red},${C.redDim})`:"transparent",border:"none",color:pkgReschedMode===opt.id?C.white:C.textDim,borderRadius:6,padding:"8px 10px",fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:pkgReschedMode===opt.id?600:400}}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div style={{background:"#0d0b0e",border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:11,color:C.textDim,fontFamily:D.body}}>
+              {pkgReschedMode==="all"
+                ? <span>Moving <strong style={{color:C.white}}>{pkgReschedAll.length} sessions</strong> for <strong style={{color:C.white}}>{pkgReschedItem.name}</strong> to a new time slot</span>
+                : <span>Moving <strong style={{color:C.white}}>{pkgReschedItem.name}</strong> — {pkgReschedItem.dateLabel} · {pkgReschedItem._time||pkgReschedItem.sessTime}</span>
+              }
+            </div>
+
+            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Pick New Date & Time Slot</div>
+            <div style={{display:"grid",gap:8,marginBottom:16}}>
+              {getDates(8).map((d,i)=>{
+                if(pkgReschedMode==="one"&&dKey(d)===pkgReschedItem.dateKey) return null;
+                const sched=DAY_SCHEDULE[d.getDay()];
+                const isSelDate=pkgReschedDate&&dKey(pkgReschedDate)===dKey(d);
+                return(
+                  <div key={i} style={{background:isSelDate?`${C.red}06`:C.card,border:`1px solid ${isSelDate?C.red:C.cardBorder}`,borderRadius:10,padding:"12px 14px"}}>
+                    <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:8}}>{fmtDate(d)}</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                      {sched.sessions.map(sess=>{
+                        const isSel=isSelDate&&pkgReschedSess?.id===sess.id;
+                        const isU9=sess.id==="s1";
+                        return(
+                          <button key={sess.id} onClick={()=>{setPkgReschedDate(d);setPkgReschedSess(sess);}}
+                            style={{background:isSel?`${C.red}18`:"#0d0b08",border:`1px solid ${isSel?C.red:C.cardBorder}`,borderRadius:8,padding:"10px 12px",cursor:"pointer",textAlign:"left"}}>
+                            <div style={{fontSize:12,fontWeight:600,color:isSel?C.red:C.white,fontFamily:D.display,marginBottom:3}}>{sess.time}</div>
+                            <div style={{fontSize:9,color:isU9?"#4a9eff":C.red,fontFamily:D.body,marginBottom:2}}>{sess.ageGroup}</div>
+                            <div style={{fontSize:8,color:C.textDim,fontFamily:D.body}}>{sess.label}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {pkgReschedDate&&pkgReschedSess&&(
+              <div style={{background:`${C.green}08`,border:`1px solid ${C.green}22`,borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:11,color:C.silver,fontFamily:D.body}}>
+                ✓ New slot: <strong style={{color:C.white}}>{fmtDate(pkgReschedDate)} · {pkgReschedSess.time}</strong>
+                <br/><span style={{fontSize:10,color:C.textDim}}>A reschedule confirmation email will be sent to {pkgReschedItem.email||"the client"}.</span>
+              </div>
+            )}
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>{setPkgReschedItem(null);setPkgReschedAll(null);setPkgReschedDate(null);setPkgReschedSess(null);}} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:9,padding:"11px 18px",fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+              <button disabled={!pkgReschedDate||!pkgReschedSess||pkgReschedLoading} onClick={doPkgReschedule}
+                style={{flex:1,background:pkgReschedDate&&pkgReschedSess?`linear-gradient(135deg,${C.red},${C.redDim})`:"#1a1a1a",border:"none",color:pkgReschedDate&&pkgReschedSess?C.white:C.textDim,borderRadius:9,padding:"11px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:pkgReschedDate&&pkgReschedSess?"pointer":"not-allowed",fontFamily:D.body,fontWeight:600}}>
+                {pkgReschedLoading?"Rescheduling…":pkgReschedMode==="all"?`Move All ${pkgReschedAll?.length} Sessions →`:"Confirm Reschedule →"}
+              </button>
+            </div>
           </div>
         </div>
       )}
