@@ -455,7 +455,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
     return unsub;
   },[user]);
 
-  const allDates   = getDates(10);
+  const allDates   = getDates(16); // 16 weeks so 8-session packages always have enough Fridays to pick from
   const isPackage  = selPkg && selPkg.sessions > 1;
   const needed     = selPkg?.sessions || 1;
   const effectiveCount = user&&selPlayerIds.length>0 ? selPlayerIds.length : count;
@@ -665,7 +665,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
             </div>
           )}
 
-          <FL>{isPackage?`Pick Your ${needed} Fridays`:"Available Fridays"}</FL>
+          <FL>{isPackage?`Pick Your ${needed} Fridays — tap a time slot on each date`:"Available Fridays — tap a time slot"}</FL>
           <div style={{display:"grid",gap:8}}>
             {allDates.map((d,i)=>{
               const dk=dKey(d);
@@ -687,7 +687,8 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
                         <button key={sess.id} onClick={()=>{ if(disabled) return; if(isPackage){ togglePackDate(d,sess); } else{ setSelDate(d);setSelSess(sess); } }}
                           style={{background:isSel?`${C.green}15`:disabled||pkgFull?"#0a0908":"#0d0b08",border:`1px solid ${isSel?C.green:disabled||pkgFull?"#1a1a1a":C.cardBorder}`,borderRadius:9,padding:"10px 14px",cursor:disabled||pkgFull?"not-allowed":"pointer",textAlign:"left",opacity:disabled||pkgFull?0.4:1,position:"relative"}}>
                           {isSel&&<div style={{position:"absolute",top:8,right:10,width:18,height:18,borderRadius:"50%",background:C.green,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#0a0a0a",fontWeight:700}}>✓</div>}
-                          <div style={{fontSize:12,fontWeight:600,color:isSel?C.green:C.white,fontFamily:D.display,marginBottom:4}}>{sess.time}</div>
+                          <div style={{fontSize:12,fontWeight:600,color:isSel?C.green:C.white,fontFamily:D.display,marginBottom:2}}>{sess.time}</div>
+                          <div style={{fontSize:10,color:C.silverDim,fontFamily:D.body,marginBottom:4}}>{sess.label} · {sess.ageGroup}</div>
                           <div style={{fontSize:10,color:blk?"#666":spots===0?"#666":spots<=2?C.red:C.green,fontFamily:D.body}}>{blk?"Unavailable":spots===0?"Full":`${spots} spot${spots!==1?"s":""} left`}</div>
                         </button>
                       );
