@@ -58,11 +58,12 @@ export default function App(){
   },[]);
 
   useEffect(()=>{
+    if(!user) return;
     const u1=onSnapshot(collection(db,"bookings"),s=>setBookings(s.docs.map(d=>({id:d.id,...d.data()}))));
     const u2=onSnapshot(collection(db,"inquiries"),s=>setInquiries(s.docs.map(d=>({id:d.id,...d.data()}))));
     const u3=onSnapshot(collection(db,"blocked"),s=>setBlocked(s.docs.map(d=>({id:d.id,...d.data()}))));
     return ()=>{u1();u2();u3();};
-  },[]);
+  },[user]);
 
   function spotsLeft(dateKey,sessId){
     // Find which day this sessId belongs to to get correct max
