@@ -534,7 +534,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
       packageTotal:total,
       waiverAgreed:true, waiverSignedAt:new Date().toISOString(),
       createdAt:new Date().toISOString(),
-      ...(user?{userId:user.uid}:{}),
+      ...(user?{uid:user.uid,userId:user.uid}:{}),
       ...(selPlayerIds.length>0?{playerIds:selPlayerIds}:{}),
     };
     let refs = [];
