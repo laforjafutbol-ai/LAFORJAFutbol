@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { db, auth, googleProvider } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where } from "firebase/firestore";
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy } from "firebase/firestore";
 import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, PRICE_1ON1, PACKAGES, POSITIONS, DAY_SCHEDULE, AGE_COLORS, SKILL_COLORS, DAY_ABBR, COACH_DAYS, PRIVATE_DAYS, STRIPE_ENABLED, SITE_READY, dKey, fmtDate, getDates, getPrivateDates, callEmailAPI, sendReminderEmail, Crest, SH, SC, FL, AB, GB, NB, IS, GStyles, sessMax } from "./constants";
 import { Dashboard } from "./Pages1";
 import { AuthPage, AccountPage, SessionsPage, AboutPage, ContactPage, PackagesPage } from "./Pages2";
@@ -304,6 +304,9 @@ function HomePage({setPage,user}){
           </div>
         </div>
 
+        {/* ── TESTIMONIALS ── */}
+        <TestimonialsSection/>
+
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10,marginBottom:60}}>
           {[
             {val:5,label:"Max Players",sub:"small group, real reps"},
@@ -432,6 +435,125 @@ function HomePage({setPage,user}){
         </div>
 
       </div>
+    </div>
+  );
+}
+
+// ── TESTIMONIALS SECTION ──────────────────────────────────
+function TestimonialsSection(){
+  const [testimonials, setTestimonials] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({name:"", role:"", quote:"", rating:5});
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(()=>{
+    const q = query(collection(db,"testimonials"), where("status","==","approved"));
+    const unsub = onSnapshot(q, s=>setTestimonials(s.docs.map(d=>({id:d.id,...d.data()}))));
+    return unsub;
+  },[]);
+
+  async function submitTestimonial(){
+    if(!form.name.trim()||!form.quote.trim()) return;
+    setSubmitting(true);
+    await addDoc(collection(db,"testimonials"),{
+      ...form,
+      status:"pending",
+      submittedAt: new Date().toISOString(),
+    });
+    setSubmitting(false);
+    setSubmitted(true);
+    setShowForm(false);
+    setForm({name:"", role:"", quote:"", rating:5});
+  }
+
+  return(
+    <div style={{marginBottom:60}}>
+      <div style={{textAlign:"center",marginBottom:32}}>
+        <div style={{fontSize:8,letterSpacing:6,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>From the Field</div>
+        <h2 style={{fontSize:"clamp(24px,4vw,36px)",color:C.white,fontFamily:D.display,fontWeight:600,margin:0}}>What Families Are Saying</h2>
+      </div>
+
+      {testimonials.length===0&&!submitted&&(
+        <div style={{textAlign:"center",padding:"20px 0 28px",color:C.textDim,fontFamily:D.body,fontSize:12,fontStyle:"italic"}}>
+          Been through the forge? Be the first to share your experience.
+        </div>
+      )}
+
+      {testimonials.length>0&&(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:14,marginBottom:28}}>
+          {testimonials.map((t,i)=>(
+            <div key={i} style={{background:"#100c08",border:"1px solid #241a10",borderRadius:14,padding:"22px 20px",position:"relative"}}>
+              <div style={{fontSize:18,color:C.red,marginBottom:10,letterSpacing:2}}>
+                {"★".repeat(t.rating||5)}
+              </div>
+              <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.9,margin:"0 0 16px",fontStyle:"italic"}}>"{t.quote}"</p>
+              <div>
+                <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display}}>{t.name}</div>
+                {t.role&&<div style={{fontSize:10,color:C.silver,fontFamily:D.body,marginTop:2}}>{t.role}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {submitted&&(
+        <div style={{background:`${C.green}10`,border:`1px solid ${C.green}33`,borderRadius:12,padding:"16px 20px",textAlign:"center",marginBottom:20}}>
+          <div style={{fontSize:18,marginBottom:6}}>🔥</div>
+          <div style={{fontSize:13,color:C.green,fontFamily:D.display,fontWeight:600,marginBottom:4}}>Thanks for sharing!</div>
+          <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Your review will show up once it's approved.</div>
+        </div>
+      )}
+
+      {!submitted&&!showForm&&(
+        <div style={{textAlign:"center"}}>
+          <button onClick={()=>setShowForm(true)}
+            style={{background:"transparent",border:`1px solid ${C.silver}44`,color:C.silver,borderRadius:10,padding:"12px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>
+            Share Your Experience →
+          </button>
+        </div>
+      )}
+
+      {showForm&&(
+        <div style={{background:"#100c08",border:"1px solid #241a10",borderRadius:14,padding:"24px 22px",maxWidth:520,margin:"0 auto"}}>
+          <div style={{fontSize:9,letterSpacing:4,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:18}}>Leave a Review</div>
+
+          <div style={{marginBottom:12}}>
+            <div style={{fontSize:9,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>Your Name *</div>
+            <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="e.g. Maria G." style={{...IS}}/>
+          </div>
+
+          <div style={{marginBottom:12}}>
+            <div style={{fontSize:9,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>Role (optional)</div>
+            <input value={form.role} onChange={e=>setForm(f=>({...f,role:e.target.value}))} placeholder="e.g. Parent of U12 player" style={{...IS}}/>
+          </div>
+
+          <div style={{marginBottom:12}}>
+            <div style={{fontSize:9,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>Rating</div>
+            <div style={{display:"flex",gap:6}}>
+              {[1,2,3,4,5].map(n=>(
+                <button key={n} onClick={()=>setForm(f=>({...f,rating:n}))}
+                  style={{background:"transparent",border:"none",fontSize:22,cursor:"pointer",color:n<=form.rating?C.red:"#333",padding:"2px 4px"}}>★</button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{marginBottom:18}}>
+            <div style={{fontSize:9,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>Your Experience *</div>
+            <textarea value={form.quote} onChange={e=>setForm(f=>({...f,quote:e.target.value}))} placeholder="What was your experience like? What did your player improve on?" rows={4} style={{...IS,resize:"vertical"}}/>
+          </div>
+
+          <div style={{display:"flex",gap:10}}>
+            <button onClick={()=>setShowForm(false)}
+              style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:9,padding:"11px 18px",fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+            <button disabled={!form.name.trim()||!form.quote.trim()||submitting} onClick={submitTestimonial}
+              style={{flex:1,background:form.name&&form.quote?`linear-gradient(135deg,${C.red},${C.redDim})`:"#1a1a1a",border:"none",color:form.name&&form.quote?C.white:C.textDim,borderRadius:9,padding:"11px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:form.name&&form.quote?"pointer":"not-allowed",fontFamily:D.body,fontWeight:600}}>
+              {submitting?"Submitting…":"Submit Review →"}
+            </button>
+          </div>
+          <div style={{fontSize:10,color:C.textDim,fontFamily:D.body,textAlign:"center",marginTop:10}}>Reviews are approved before going live.</div>
+        </div>
+      )}
     </div>
   );
 }
