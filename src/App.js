@@ -283,7 +283,7 @@ function HomePage({setPage,user}){
               <div style={{width:46,height:46,borderRadius:12,background:C.redDark,border:`1px solid ${C.red}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🔥</div>
               <div>
                 <div style={{fontSize:18,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:2}}>The Furnace</div>
-                <div style={{fontSize:8,letterSpacing:2,color:C.red,textTransform:"uppercase",fontFamily:D.body}}>Fridays (U9+) · 5:30–6:45 PM · Group</div>
+                <div style={{fontSize:8,letterSpacing:2,color:C.red,textTransform:"uppercase",fontFamily:D.body}}>Fridays · 4:00–5:15 PM or 5:30–6:45 PM · Group</div>
               </div>
             </div>
             <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:20}}>No fitness drills. No running laps. The Furnace is 100% focused on the technical details that make you dangerous on game day. Small group, full attention, every rep with a purpose.</p>
@@ -396,7 +396,7 @@ function HomePage({setPage,user}){
           </div>
           <div style={{display:"grid",gap:8,maxWidth:680,margin:"0 auto",padding:"0 4px"}}>
             {[
-              {q:"What age can my player train?",a:"U9 and up. All ages train together on Fridays from 5:30–6:45 PM at Bayview Park. Groups are capped at 5 players so every player gets individual attention."},
+              {q:"What age can my player train?",a:"U9 and up. Sessions run Fridays at two times — 4:00–5:15 PM and 5:30–6:45 PM at Bayview Park. Groups are capped at 5 players so every player gets individual attention."},
               {q:"What if it rains?",a:"Light rain we train. Lightning or severe weather we reschedule at no charge."},
               {q:"Is this a fitness or conditioning program?",a:"No. La Forja is purely technical training — ball work, decision making, and game situations. If your player needs fitness training this is not the right program. If they need to be better on the ball, this is exactly where they should be."},
               {q:"Can I reschedule?",a:"Yes — log into your account and reschedule directly to any open slot that matches your age group. No approval needed."},
@@ -416,7 +416,7 @@ function HomePage({setPage,user}){
           <div style={{flex:1}}>
             <div style={{fontSize:8,letterSpacing:4,color:C.textDim,textTransform:"uppercase",marginBottom:4,fontFamily:D.body}}>Location</div>
             <div style={{fontSize:17,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:4}}>Bayview Park · James Island, SC</div>
-            <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Fridays · 5:30–6:45 PM · U9 and up · Bayview Park, James Island.</div>
+            <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>Fridays · 4:00–5:15 PM & 5:30–6:45 PM · U9 and up · Bayview Park, James Island.</div>
           </div>
           <a href="https://maps.google.com/?q=Bayview+Park+James+Island+SC" target="_blank" rel="noopener noreferrer" style={{background:"transparent",border:`1px solid ${C.silver}33`,color:C.silver,borderRadius:8,padding:"10px 18px",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,textDecoration:"none"}}>Directions →</a>
         </div>
@@ -1045,7 +1045,7 @@ function Footer({setPage}){
               <Crest size={28}/>
               <div style={{fontSize:13,letterSpacing:2,color:C.white,fontFamily:D.display,fontWeight:600}}>La Forja Futbol</div>
             </div>
-            <div style={{fontSize:9,color:C.textDim,fontFamily:D.body,lineHeight:1.7}}>James Island · Charleston SC<br/>Fridays · U9+ · 5:30–6:45 PM</div>
+            <div style={{fontSize:9,color:C.textDim,fontFamily:D.body,lineHeight:1.7}}>James Island · Charleston SC<br/>Fridays · U9+ · 4:00–5:15 PM & 5:30–6:45 PM</div>
           </div>
           <div style={{display:"flex",gap:24,flexWrap:"wrap"}}>
             <div>
