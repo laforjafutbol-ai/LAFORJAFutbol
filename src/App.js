@@ -283,7 +283,10 @@ function HomePage({setPage,user}){
               <div style={{width:46,height:46,borderRadius:12,background:C.redDark,border:`1px solid ${C.red}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🔥</div>
               <div>
                 <div style={{fontSize:18,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:2}}>The Furnace</div>
-                <div style={{fontSize:8,letterSpacing:2,color:C.red,textTransform:"uppercase",fontFamily:D.body}}>Fridays · 4:00–5:15 PM or 5:30–6:45 PM · Group</div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:2}}>
+                  <span style={{fontSize:8,letterSpacing:1,color:"#4a9eff",textTransform:"uppercase",fontFamily:D.body,background:"#0d1520",border:"1px solid #4a9eff33",borderRadius:4,padding:"2px 7px"}}>U9–U11 · 4:00–5:15 PM</span>
+                  <span style={{fontSize:8,letterSpacing:1,color:C.red,textTransform:"uppercase",fontFamily:D.body,background:C.redDark,border:`1px solid ${C.red}33`,borderRadius:4,padding:"2px 7px"}}>U12+ · 5:30–6:45 PM</span>
+                </div>
               </div>
             </div>
             <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.9,marginBottom:20}}>No fitness drills. No running laps. The Furnace is 100% focused on the technical details that make you dangerous on game day. Small group, full attention, every rep with a purpose.</p>
@@ -849,8 +852,11 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
                         <button key={sess.id} onClick={()=>{ if(disabled) return; if(isPackage){ togglePackDate(d,sess); } else{ setSelDate(d);setSelSess(sess); } }}
                           style={{background:isSel?`${C.green}15`:disabled||pkgFull?"#0a0908":"#0d0b08",border:`1px solid ${isSel?C.green:disabled||pkgFull?"#1a1a1a":C.cardBorder}`,borderRadius:9,padding:"10px 14px",cursor:disabled||pkgFull?"not-allowed":"pointer",textAlign:"left",opacity:disabled||pkgFull?0.4:1,position:"relative"}}>
                           {isSel&&<div style={{position:"absolute",top:8,right:10,width:18,height:18,borderRadius:"50%",background:C.green,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#0a0a0a",fontWeight:700}}>✓</div>}
-                          <div style={{fontSize:12,fontWeight:600,color:isSel?C.green:C.white,fontFamily:D.display,marginBottom:2}}>{sess.time}</div>
-                          <div style={{fontSize:10,color:C.silverDim,fontFamily:D.body,marginBottom:4}}>{sess.label} · {sess.ageGroup}</div>
+                          <div style={{fontSize:12,fontWeight:600,color:isSel?C.green:C.white,fontFamily:D.display,marginBottom:4}}>{sess.time}</div>
+                          <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:4,flexWrap:"wrap"}}>
+                            <span style={{fontSize:8,letterSpacing:1,color:sess.ageTag==="u9-u11"?"#4a9eff":C.red,textTransform:"uppercase",fontFamily:D.body,background:sess.ageTag==="u9-u11"?"#0d1520":C.redDark,border:`1px solid ${sess.ageTag==="u9-u11"?"#4a9eff33":`${C.red}33`}`,borderRadius:4,padding:"2px 7px"}}>{sess.ageDesc}</span>
+                            <span style={{fontSize:9,color:C.silverDim,fontFamily:D.body}}>{sess.label}</span>
+                          </div>
                           <div style={{fontSize:10,color:blk?"#666":spots===0?"#666":spots<=2?C.red:C.green,fontFamily:D.body}}>{blk?"Unavailable":spots===0?"Full":`${spots} spot${spots!==1?"s":""} left`}</div>
                         </button>
                       );
