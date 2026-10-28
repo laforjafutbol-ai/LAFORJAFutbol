@@ -228,6 +228,7 @@ function HomePage({setPage,user}){
             <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 8px 32px ${C.red}44`,fontFamily:D.body,fontWeight:600}}>Book a Session</button>
             <button onClick={()=>setPage("about")} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.silver,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>About the Program</button>
           </div>
+          <p style={{margin:"16px 0 0",fontSize:12,color:C.silver,opacity:0.6,letterSpacing:"0.03em",fontFamily:D.body}}>🔒 Secure payment · Cancel anytime · Reschedule from your account</p>
         </div>
       </div>
 
