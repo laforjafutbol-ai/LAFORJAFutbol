@@ -336,7 +336,7 @@ function HomePage({setPage,user}){
             {[
               {icon:"👟",title:"Gear Up",desc:"Cleats or turf shoes. Water bottle. Elastic band. Arrive 15 minutes early. No extra gear needed — this is technical work, not a workout."},
               {icon:"🎯",title:"Technical Focus",desc:"Every minute is spent on the ball. Touches, decisions, movement patterns — the details that separate good players from great ones."},
-              {icon:"🎯",title:"Real Feedback",desc:"Coach Carlos is on you every rep. Direct, specific, actionable feedback."},
+              {icon:"🗣️",title:"Real Feedback",desc:"Coach Carlos is on you every rep. Direct, specific, actionable feedback."},
               {icon:"📋",title:"Debrief",desc:"Sessions end with one win and one focus area. You leave knowing what to work on."},
             ].map((item,i)=>(
               <div key={i} style={{background:"#0e0b08",border:"1px solid #1e1810",borderRadius:12,padding:"20px 18px"}}>
