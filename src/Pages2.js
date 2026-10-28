@@ -6,12 +6,13 @@ import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, POSITIONS, DAY_SCHEDULE, COACH_D
 
 // ── AUTH PAGE ─────────────────────────────────────────────
 export function AuthPage({setPage,authChecked,user}){
-  const [mode,setMode]   = useState("login");
-  const [name,setName]   = useState("");
-  const [email,setEmail] = useState("");
-  const [pw,setPw]       = useState("");
-  const [err,setErr]     = useState("");
-  const [busy,setBusy]   = useState(false);
+  const [mode,setMode]     = useState("login");
+  const [name,setName]     = useState("");
+  const [email,setEmail]   = useState("");
+  const [pw,setPw]         = useState("");
+  const [showPw,setShowPw] = useState(false);
+  const [err,setErr]       = useState("");
+  const [busy,setBusy]     = useState(false);
   const [resetSent,setResetSent] = useState(false);
 
   useEffect(()=>{ if(authChecked&&user) setPage("account"); },[authChecked,user]);
@@ -33,32 +34,55 @@ export function AuthPage({setPage,authChecked,user}){
   async function handleGoogle(){
     setBusy(true); setErr("");
     try{ await signInWithPopup(auth,googleProvider); setPage("account"); }
-    catch(e){ setErr("Google sign in failed"); }
+    catch(e){ setErr("Google sign-in failed. Try again."); }
     setBusy(false);
   }
 
   async function handleReset(e){
     e.preventDefault(); setErr(""); setBusy(true);
     try{ await sendPasswordResetEmail(auth,email); setResetSent(true); }
-    catch(e){ setErr("Could not send reset email"); }
+    catch(e){ setErr("Could not send reset email. Check your address."); }
     setBusy(false);
   }
 
+  // Shared card wrapper
+  const cardStyle={
+    background:"linear-gradient(160deg,#140e08 0%,#0e0a06 100%)",
+    border:`1px solid #2e1e0e`,
+    borderTop:`3px solid ${C.red}`,
+    borderRadius:16,
+    padding:"36px 28px",
+    boxShadow:`0 -2px 20px rgba(255,77,46,0.08)`,
+  };
+
+  const labelStyle={fontSize:9,letterSpacing:2,color:"#a07055",marginBottom:6,fontFamily:D.body,textTransform:"uppercase",display:"block"};
+  const inputStyle={...IS,background:"#0a0806",border:"1px solid #2a1a0c",color:C.white};
+
   if(mode==="reset") return(
-    <div style={{maxWidth:420,margin:"clamp(20px,5vw,60px) auto",padding:"0 clamp(14px,4vw,24px)"}}>
-      <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"32px 28px"}}>
-        <div style={{textAlign:"center",marginBottom:24}}><div style={{fontSize:24,marginBottom:8}}>🔑</div><div style={{fontSize:18,fontWeight:600,color:C.white,fontFamily:D.display}}>Reset Password</div></div>
+    <div style={{maxWidth:400,margin:"clamp(60px,8vw,90px) auto",padding:"0 clamp(14px,4vw,24px)"}}>
+      <div style={cardStyle}>
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{fontSize:11,letterSpacing:5,color:"#a07055",textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>La Forja</div>
+          <div style={{fontSize:22,fontWeight:700,color:C.white,fontFamily:D.display,letterSpacing:1}}>Reset Password</div>
+        </div>
         {resetSent?(
           <div style={{textAlign:"center"}}>
-            <div style={{fontSize:13,color:C.green,fontFamily:D.body,marginBottom:16}}>Reset link sent to {email}</div>
-            <button onClick={()=>setMode("login")} style={{color:C.silver,background:"none",border:"none",cursor:"pointer",fontFamily:D.body,fontSize:12,textDecoration:"underline"}}>Back to Sign In</button>
+            <div style={{fontSize:32,marginBottom:12}}>✓</div>
+            <div style={{fontSize:13,color:C.white,fontFamily:D.body,marginBottom:6}}>Check your inbox</div>
+            <div style={{fontSize:11,color:"#a07055",fontFamily:D.body,marginBottom:20}}>Reset link sent to {email}</div>
+            <button onClick={()=>setMode("login")} style={{color:C.silver,background:"none",border:"none",cursor:"pointer",fontFamily:D.body,fontSize:11,letterSpacing:2,textDecoration:"underline"}}>← Back to Sign In</button>
           </div>
         ):(
           <form onSubmit={handleReset}>
-            <div style={{marginBottom:14}}><div style={{fontSize:9,letterSpacing:2,color:C.textDim,marginBottom:6,fontFamily:D.body,textTransform:"uppercase"}}>Email</div><input type="email" value={email} onChange={e=>setEmail(e.target.value)} required style={{...IS}}/></div>
-            {err&&<div style={{color:C.red,fontSize:11,fontFamily:D.body,marginBottom:12}}>{err}</div>}
-            <button type="submit" disabled={busy} style={{width:"100%",background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"13px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:500,opacity:busy?0.6:1}}>{busy?"Sending…":"Send Reset Link"}</button>
-            <button type="button" onClick={()=>setMode("login")} style={{width:"100%",marginTop:10,background:"none",border:"none",color:C.textDim,cursor:"pointer",fontFamily:D.body,fontSize:11}}>← Back to Sign In</button>
+            <div style={{marginBottom:18}}>
+              <label style={labelStyle}>Email</label>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com" required style={inputStyle}/>
+            </div>
+            {err&&<div style={{color:C.red,fontSize:11,fontFamily:D.body,marginBottom:14,padding:"8px 12px",background:`${C.red}10`,borderRadius:7,border:`1px solid ${C.red}22`}}>{err}</div>}
+            <button type="submit" disabled={busy} style={{width:"100%",background:`linear-gradient(135deg,#e83820,#c02810)`,border:`1px solid rgba(255,100,60,0.4)`,color:C.white,borderRadius:10,padding:"14px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:600,opacity:busy?0.6:1,boxShadow:`0 4px 20px rgba(255,77,46,0.3)`}}>
+              {busy?"Sending…":"Send Reset Link →"}
+            </button>
+            <button type="button" onClick={()=>setMode("login")} style={{width:"100%",marginTop:12,background:"none",border:"none",color:"#a07055",cursor:"pointer",fontFamily:D.body,fontSize:11,letterSpacing:1}}>← Back to Sign In</button>
           </form>
         )}
       </div>
@@ -66,41 +90,66 @@ export function AuthPage({setPage,authChecked,user}){
   );
 
   return(
-    <div style={{maxWidth:420,margin:"clamp(20px,5vw,60px) auto",padding:"0 clamp(14px,4vw,24px)"}}>
-      <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"32px 28px"}}>
-        <div style={{textAlign:"center",marginBottom:24}}>
-          <div style={{fontSize:24,marginBottom:8}}>{mode==="signup"?"⚒️":"🔥"}</div>
-          <div style={{fontSize:18,fontWeight:600,color:C.white,fontFamily:D.display}}>{mode==="signup"?"Create Account":"Welcome Back"}</div>
-          <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,marginTop:4}}>La Forja Futbol</div>
+    <div style={{maxWidth:400,margin:"clamp(60px,8vw,90px) auto",padding:"0 clamp(14px,4vw,24px)"}}>
+      <div style={cardStyle}>
+        {/* Header */}
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{fontSize:11,letterSpacing:5,color:"#a07055",textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>La Forja</div>
+          <div style={{fontSize:22,fontWeight:700,color:C.white,fontFamily:D.display,letterSpacing:1}}>
+            {mode==="signup"?"Join the Program":"Welcome Back"}
+          </div>
+          <div style={{fontSize:11,color:"#a07055",fontFamily:D.body,marginTop:6}}>
+            {mode==="signup"?"Create your account to manage bookings":"Sign in to view your sessions"}
+          </div>
         </div>
+
+        {/* Google button — prominent at top */}
+        <button onClick={handleGoogle} disabled={busy} style={{width:"100%",background:"#0a0806",border:`1px solid #2e1e0e`,color:C.white,borderRadius:10,padding:"13px",fontSize:11,cursor:busy?"not-allowed":"pointer",fontFamily:D.body,marginBottom:16,display:"flex",alignItems:"center",justifyContent:"center",gap:10,letterSpacing:1}}>
+          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Continue with Google
+        </button>
+
+        {/* Divider */}
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
+          <div style={{flex:1,height:1,background:"#2a1a0c"}}/>
+          <span style={{fontSize:9,letterSpacing:2,color:"#4a3020",textTransform:"uppercase",fontFamily:D.body}}>or email</span>
+          <div style={{flex:1,height:1,background:"#2a1a0c"}}/>
+        </div>
+
         <form onSubmit={handleEmailAuth}>
           {mode==="signup"&&(
             <div style={{marginBottom:14}}>
-              <div style={{fontSize:9,letterSpacing:2,color:C.textDim,marginBottom:6,fontFamily:D.body,textTransform:"uppercase"}}>Name</div>
-              <input type="text" value={name} onChange={e=>setName(e.target.value)} required style={{...IS}}/>
+              <label style={labelStyle}>Your Name</label>
+              <input type="text" value={name} onChange={e=>setName(e.target.value)} placeholder="First & last name" required style={inputStyle}/>
             </div>
           )}
           <div style={{marginBottom:14}}>
-            <div style={{fontSize:9,letterSpacing:2,color:C.textDim,marginBottom:6,fontFamily:D.body,textTransform:"uppercase"}}>Email</div>
-            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required style={{...IS}}/>
+            <label style={labelStyle}>Email</label>
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com" required style={inputStyle}/>
           </div>
           <div style={{marginBottom:20}}>
-            <div style={{fontSize:9,letterSpacing:2,color:C.textDim,marginBottom:6,fontFamily:D.body,textTransform:"uppercase"}}>Password</div>
-            <input type="password" value={pw} onChange={e=>setPw(e.target.value)} required minLength={6} style={{...IS}}/>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+              <label style={{...labelStyle,marginBottom:0}}>Password</label>
+              {mode==="login"&&<button type="button" onClick={()=>setMode("reset")} style={{background:"none",border:"none",color:"#a07055",cursor:"pointer",fontFamily:D.body,fontSize:9,letterSpacing:1}}>Forgot?</button>}
+            </div>
+            <div style={{position:"relative"}}>
+              <input type={showPw?"text":"password"} value={pw} onChange={e=>setPw(e.target.value)} placeholder={mode==="signup"?"Min 6 characters":""} required minLength={6} style={{...inputStyle,paddingRight:42}}/>
+              <button type="button" onClick={()=>setShowPw(v=>!v)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"#a07055",fontSize:13,lineHeight:1}}>
+                {showPw?"🙈":"👁"}
+              </button>
+            </div>
           </div>
-          {err&&<div style={{color:C.red,fontSize:11,fontFamily:D.body,marginBottom:12,lineHeight:1.5}}>{err}</div>}
-          <button type="submit" disabled={busy} style={{width:"100%",background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"13px",fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:500,opacity:busy?0.6:1,marginBottom:12}}>
-            {busy?"Please wait…":mode==="signup"?"Create Account":"Sign In"}
+          {err&&<div style={{color:C.red,fontSize:11,fontFamily:D.body,marginBottom:14,padding:"8px 12px",background:`${C.red}10`,borderRadius:7,border:`1px solid ${C.red}22`}}>{err}</div>}
+          <button type="submit" disabled={busy} style={{width:"100%",background:`linear-gradient(135deg,#e83820,#c02810)`,border:`1px solid rgba(255,100,60,0.4)`,color:C.white,borderRadius:10,padding:"14px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:busy?"not-allowed":"pointer",fontFamily:D.body,fontWeight:600,opacity:busy?0.6:1,boxShadow:`0 4px 20px rgba(255,77,46,0.3)`,marginBottom:16}}>
+            {busy?"Please wait…":mode==="signup"?"Create Account →":"Sign In →"}
           </button>
         </form>
-        <button onClick={handleGoogle} disabled={busy} style={{width:"100%",background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.silver,borderRadius:10,padding:"12px",fontSize:11,cursor:"pointer",fontFamily:D.body,marginBottom:16}}>
-          Continue with Google
-        </button>
-        <div style={{textAlign:"center",fontSize:11,color:C.textDim,fontFamily:D.body}}>
+
+        <div style={{textAlign:"center",fontSize:11,color:"#a07055",fontFamily:D.body}}>
           {mode==="login"?(
-            <span>No account? <button onClick={()=>setMode("signup")} style={{color:C.silver,background:"none",border:"none",cursor:"pointer",fontFamily:D.body,fontSize:11,textDecoration:"underline"}}>Sign Up</button> · <button onClick={()=>setMode("reset")} style={{color:C.silver,background:"none",border:"none",cursor:"pointer",fontFamily:D.body,fontSize:11,textDecoration:"underline"}}>Forgot Password</button></span>
+            <span>No account yet?{" "}<button onClick={()=>{setMode("signup");setErr("");}} style={{color:C.silver,background:"none",border:"none",cursor:"pointer",fontFamily:D.body,fontSize:11,textDecoration:"underline"}}>Sign Up Free</button></span>
           ):(
-            <span>Have an account? <button onClick={()=>setMode("login")} style={{color:C.silver,background:"none",border:"none",cursor:"pointer",fontFamily:D.body,fontSize:11,textDecoration:"underline"}}>Sign In</button></span>
+            <span>Already have one?{" "}<button onClick={()=>{setMode("login");setErr("");}} style={{color:C.silver,background:"none",border:"none",cursor:"pointer",fontFamily:D.body,fontSize:11,textDecoration:"underline"}}>Sign In</button></span>
           )}
         </div>
       </div>
@@ -190,42 +239,41 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
     <div style={{maxWidth:600,margin:"0 auto",padding:"clamp(70px,8vw,90px) clamp(14px,4vw,20px) 100px"}}>
 
       {/* ── HEADER ── */}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:24}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
         <div>
-          <div style={{fontSize:8,letterSpacing:5,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:6}}>My Account</div>
+          <div style={{fontSize:8,letterSpacing:5,color:"#a07055",textTransform:"uppercase",fontFamily:D.body,marginBottom:8}}>My Account</div>
           <div style={{fontSize:28,fontWeight:700,color:C.white,fontFamily:D.display,letterSpacing:1,marginBottom:4}}>{user.displayName||"Welcome back"}</div>
-          <div style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>{email}</div>
+          <div style={{fontSize:11,color:"#a07055",fontFamily:D.body}}>{email}</div>
         </div>
-        <button onClick={handleSignOut} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:8,padding:"8px 16px",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,marginTop:6,flexShrink:0}}>Sign Out</button>
+        <button onClick={handleSignOut} style={{background:"transparent",border:"1px solid #2e1e0e",color:"#a07055",borderRadius:8,padding:"8px 16px",fontSize:9,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,marginTop:6,flexShrink:0}}>Sign Out</button>
       </div>
 
       {/* ── STAT CARDS ── */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:24}}>
         {[
-          {label:"Upcoming",value:upcoming.length,color:C.red,icon:"📅"},
-          {label:"Completed",value:completedCount,color:C.green,icon:"✅"},
-          {label:"Players",value:players.length,color:C.silverBright,icon:"⚽"},
+          {label:"Upcoming",value:upcoming.length,color:C.red},
+          {label:"Sessions Done",value:completedCount,color:"#4a9e6a"},
+          {label:"Players",value:players.length,color:C.silver},
         ].map((s,i)=>(
-          <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"18px 12px",textAlign:"center"}}>
-            <div style={{fontSize:18,marginBottom:4}}>{s.icon}</div>
-            <div style={{fontSize:"clamp(24px,5vw,32px)",fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:5}}>{s.value}</div>
-            <div style={{fontSize:8,letterSpacing:2,color:C.textDim,textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
+          <div key={i} style={{background:"linear-gradient(160deg,#130e09,#0d0a06)",border:"1px solid #2e1e0e",borderRadius:12,padding:"18px 12px",textAlign:"center"}}>
+            <div style={{fontSize:"clamp(26px,5vw,34px)",fontWeight:700,color:s.color,fontFamily:D.display,lineHeight:1,marginBottom:6}}>{s.value}</div>
+            <div style={{fontSize:8,letterSpacing:2,color:"#a07055",textTransform:"uppercase",fontFamily:D.body}}>{s.label}</div>
           </div>
         ))}
       </div>
 
       {/* ── NEXT SESSION CARD ── */}
       {nextSession?(
-        <div style={{background:"linear-gradient(135deg,#161214,#111116)",border:`1px solid ${C.silver}22`,borderLeft:`3px solid ${C.red}`,borderRadius:14,padding:"22px",marginBottom:24}}>
-          <div style={{fontSize:8,letterSpacing:4,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Next Session</div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:16,flexWrap:"wrap"}}>
+        <div style={{background:"linear-gradient(160deg,#140e08,#0e0a06)",border:"1px solid #2e1e0e",borderTop:`3px solid ${C.red}`,borderRadius:14,padding:"22px",marginBottom:24,boxShadow:"0 -2px 20px rgba(255,77,46,0.08)"}}>
+          <div style={{fontSize:8,letterSpacing:5,color:"#a07055",textTransform:"uppercase",fontFamily:D.body,marginBottom:14}}>Next Session</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:18,flexWrap:"wrap"}}>
             <div>
-              <div style={{fontSize:22,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:6}}>{nextSession.dateLabel}</div>
-              <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center"}}>
+              <div style={{fontSize:24,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:8}}>{nextSession.dateLabel}</div>
+              <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"center"}}>
                 <span style={{fontSize:12,color:C.silver,fontFamily:D.body}}>🕐 {nextSession._time||nextSession.sessTime||"TBD"}</span>
-                <span style={{fontSize:12,color:C.textMid,fontFamily:D.body}}>{nextSession.type==="1on1"?"⚒️ The Tempering":"🔥 The Furnace"}</span>
+                <span style={{fontSize:12,color:"#a07055",fontFamily:D.body}}>{nextSession.type==="1on1"?"⚒️ The Tempering":"🔥 The Furnace"}</span>
               </div>
-              {nextSession.name&&<div style={{fontSize:10,color:C.textDim,fontFamily:D.body,marginTop:6}}>👤 {nextSession.name}</div>}
+              {nextSession.name&&<div style={{fontSize:10,color:"#a07055",fontFamily:D.body,marginTop:8}}>👤 {nextSession.name}</div>}
             </div>
             <div>
               {(()=>{const b=statusBadge(nextSession.status);return(
@@ -233,28 +281,35 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
               );})()}
             </div>
           </div>
-          <button onClick={()=>setRescheduleSession(nextSession)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.silver,borderRadius:8,padding:"8px 22px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
-            Reschedule →
-          </button>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <button onClick={()=>setRescheduleSession(nextSession)} style={{background:"transparent",border:"1px solid #2e1e0e",color:C.silver,borderRadius:8,padding:"9px 22px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>
+              Reschedule →
+            </button>
+            {nextSession.status==="awaiting_payment"&&(
+              <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,#c9a84c,#a07830)`,border:"none",color:"#0a0806",borderRadius:8,padding:"9px 22px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:700}}>
+                Complete Payment →
+              </button>
+            )}
+          </div>
         </div>
       ):(
-        <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"32px 22px",marginBottom:24,textAlign:"center"}}>
-          <div style={{fontSize:32,marginBottom:10}}>📅</div>
-          <div style={{fontSize:15,color:C.textDim,fontFamily:D.display,marginBottom:6}}>No upcoming sessions</div>
-          <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,marginBottom:18}}>Friday sessions · 5:30–6:45 PM · James Island</div>
-          <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:C.white,borderRadius:9,padding:"12px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>Book a Session →</button>
+        <div style={{background:"linear-gradient(160deg,#140e08,#0e0a06)",border:"1px solid #2e1e0e",borderRadius:14,padding:"32px 22px",marginBottom:24,textAlign:"center"}}>
+          <div style={{fontSize:11,letterSpacing:4,color:"#a07055",textTransform:"uppercase",fontFamily:D.body,marginBottom:16}}>No upcoming sessions</div>
+          <div style={{fontSize:26,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:8}}>Ready to train?</div>
+          <div style={{fontSize:11,color:"#a07055",fontFamily:D.body,marginBottom:24}}>Fridays · James Island · Small groups, max 5</div>
+          <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,#e83820,#c02810)`,border:`1px solid rgba(255,100,60,0.4)`,color:C.white,borderRadius:9,padding:"13px 32px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,boxShadow:"0 4px 20px rgba(255,77,46,0.3)"}}>Book a Session →</button>
         </div>
       )}
 
       {/* ── TABS ── */}
-      <div style={{display:"flex",gap:4,background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:4,marginBottom:20}}>
+      <div style={{display:"flex",gap:4,background:"#0d0a06",border:"1px solid #2e1e0e",borderRadius:10,padding:4,marginBottom:20}}>
         {[
           {id:"sessions",label:`Sessions${upcoming.length>0?` (${upcoming.length})`:""}` },
-          {id:"players", label:`My Players${players.length>0?` (${players.length})`:""}` },
+          {id:"players", label:`Players${players.length>0?` (${players.length})`:""}` },
         ].map(t=>(
           <button key={t.id} onClick={()=>setActiveTab(t.id)}
-            style={{flex:1,background:activeTab===t.id?`linear-gradient(135deg,${C.red},${C.redDim})`:"transparent",
-              border:"none",color:activeTab===t.id?C.white:C.textDim,borderRadius:7,padding:"10px",
+            style={{flex:1,background:activeTab===t.id?`linear-gradient(135deg,#e83820,#c02810)`:"transparent",
+              border:"none",color:activeTab===t.id?C.white:"#a07055",borderRadius:7,padding:"10px",
               fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:activeTab===t.id?600:400,
               transition:"all 0.15s"}}>
             {t.label}
@@ -265,26 +320,26 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
       {/* ── SESSIONS TAB ── */}
       {activeTab==="sessions"&&(
         <div>
-          {/* Upcoming sessions (beyond next) */}
-          {upcoming.length>1&&(
+          {/* Upcoming sessions */}
+          {upcoming.length>0&&(
             <div style={{marginBottom:20}}>
-              <div style={{fontSize:8,letterSpacing:4,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:12,fontWeight:600}}>All Upcoming ({upcoming.length})</div>
+              {upcoming.length>1&&<div style={{fontSize:8,letterSpacing:4,color:"#a07055",textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>All Upcoming ({upcoming.length})</div>}
               <div style={{display:"grid",gap:8}}>
                 {upcoming.map((s,i)=>{
                   const b=statusBadge(s.status);
                   return(
-                    <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:`3px solid ${b.color}`,borderRadius:12,padding:"14px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                    <div key={i} style={{background:"linear-gradient(160deg,#130e09,#0d0a06)",border:"1px solid #2e1e0e",borderLeft:`3px solid ${b.color}`,borderRadius:12,padding:"14px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
                       <div>
-                        <div style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:5}}>{s.dateLabel}</div>
+                        <div style={{fontSize:15,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:5}}>{s.dateLabel}</div>
                         <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
-                          <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>🕐 {s._time||s.sessTime||"TBD"}</span>
-                          <span style={{fontSize:11,color:C.textMid,fontFamily:D.body}}>{s.type==="1on1"?"⚒️ Tempering":"🔥 Furnace"}</span>
-                          {s.name&&<span style={{fontSize:11,color:C.textDim,fontFamily:D.body}}>· {s.name}</span>}
+                          <span style={{fontSize:11,color:C.silver,fontFamily:D.body}}>🕐 {s._time||s.sessTime||"TBD"}</span>
+                          <span style={{fontSize:11,color:"#a07055",fontFamily:D.body}}>{s.type==="1on1"?"⚒️ Tempering":"🔥 Furnace"}</span>
+                          {s.name&&<span style={{fontSize:11,color:"#a07055",fontFamily:D.body}}>· {s.name}</span>}
                         </div>
                       </div>
-                      <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+                      <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0,flexWrap:"wrap"}}>
                         <span style={{fontSize:8,padding:"3px 10px",borderRadius:6,background:b.bg,color:b.color,border:`1px solid ${b.border}`,fontFamily:D.body,letterSpacing:1}}>{b.label}</span>
-                        {i>0&&<button onClick={()=>setRescheduleSession(s)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:7,padding:"5px 12px",fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Move</button>}
+                        <button onClick={()=>setRescheduleSession(s)} style={{background:"transparent",border:"1px solid #2e1e0e",color:"#a07055",borderRadius:7,padding:"5px 12px",fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Move</button>
                       </div>
                     </div>
                   );
@@ -296,22 +351,22 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
           {/* Past sessions */}
           {past.length>0&&(
             <div style={{marginBottom:16}}>
-              <button onClick={()=>setShowPast(v=>!v)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"transparent",border:"none",cursor:"pointer",padding:"12px 0",borderBottom:`1px solid ${C.cardBorder}`,marginBottom:showPast?12:0}}>
-                <div style={{fontSize:8,letterSpacing:4,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,fontWeight:600}}>Past Sessions ({past.length})</div>
-                <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{showPast?"Hide ▲":"Show ▼"}</span>
+              <button onClick={()=>setShowPast(v=>!v)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"transparent",border:"none",cursor:"pointer",padding:"12px 0",borderBottom:"1px solid #2e1e0e",marginBottom:showPast?12:0}}>
+                <div style={{fontSize:8,letterSpacing:4,color:"#a07055",textTransform:"uppercase",fontFamily:D.body}}>Past Sessions ({past.length})</div>
+                <span style={{fontSize:10,color:"#a07055",fontFamily:D.body}}>{showPast?"▲ Hide":"▼ Show"}</span>
               </button>
               {showPast&&(
                 <div style={{display:"grid",gap:6}}>
                   {past.map((s,i)=>(
-                    <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:"3px solid #2a2520",borderRadius:10,padding:"12px 16px",opacity:0.65,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+                    <div key={i} style={{background:"#0a0806",border:"1px solid #1e1208",borderLeft:"3px solid #2a1a0c",borderRadius:10,padding:"12px 16px",opacity:0.7,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
                       <div>
-                        <div style={{fontSize:13,fontWeight:600,color:C.textMid,fontFamily:D.display,marginBottom:3}}>{s.dateLabel}</div>
+                        <div style={{fontSize:13,fontWeight:600,color:"#a07055",fontFamily:D.display,marginBottom:3}}>{s.dateLabel}</div>
                         <div style={{display:"flex",gap:12}}>
-                          <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>🕐 {s._time||s.sessTime||"—"}</span>
-                          <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{s.type==="1on1"?"⚒️ Tempering":"🔥 Furnace"}</span>
+                          <span style={{fontSize:10,color:"#6a4a30",fontFamily:D.body}}>🕐 {s._time||s.sessTime||"—"}</span>
+                          <span style={{fontSize:10,color:"#6a4a30",fontFamily:D.body}}>{s.type==="1on1"?"⚒️ Tempering":"🔥 Furnace"}</span>
                         </div>
                       </div>
-                      <span style={{fontSize:8,padding:"3px 10px",borderRadius:6,background:`${C.green}12`,color:C.green,fontFamily:D.body,flexShrink:0}}>Done</span>
+                      <span style={{fontSize:8,padding:"3px 10px",borderRadius:6,background:"rgba(74,158,106,0.12)",color:"#4a9e6a",fontFamily:D.body,flexShrink:0,letterSpacing:1}}>Done</span>
                     </div>
                   ))}
                 </div>
@@ -320,7 +375,7 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
           )}
 
           {upcoming.length===0&&past.length===0&&(
-            <div style={{textAlign:"center",padding:"40px 20px",color:C.textDim,fontFamily:D.body,fontSize:12}}>No sessions yet.</div>
+            <div style={{textAlign:"center",padding:"40px 20px",color:"#a07055",fontFamily:D.body,fontSize:12,lineHeight:1.8}}>No sessions yet.<br/><span style={{fontSize:11,color:"#6a4a30"}}>Book your first session to get started.</span></div>
           )}
         </div>
       )}
@@ -332,37 +387,38 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
 
       {/* ── QUICK ACTIONS ── */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:28}}>
-        <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>🔥 Book Session</button>
-        <button onClick={()=>setPage("contact")} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:10,padding:"14px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>📧 Contact Coach</button>
+        <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,#e83820,#c02810)`,border:`1px solid rgba(255,100,60,0.4)`,color:C.white,borderRadius:10,padding:"14px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,boxShadow:"0 4px 16px rgba(255,77,46,0.25)"}}>🔥 Book Session</button>
+        <button onClick={()=>setPage("contact")} style={{background:"transparent",border:"1px solid #2e1e0e",color:"#a07055",borderRadius:10,padding:"14px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>✉ Contact Coach</button>
       </div>
 
       {/* Reschedule Modal */}
       {rescheduleSession&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>{setRescheduleSession(null);setReschedDate(null);setReschedSess(null);}}>
-          <div style={{background:"#111",border:`1px solid ${C.cardBorder}`,borderRadius:16,padding:"22px",maxWidth:480,width:"100%",maxHeight:"80vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-              <div style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display}}>Reschedule Session</div>
-              <button onClick={()=>setRescheduleSession(null)} style={{background:"transparent",border:"none",color:C.textDim,fontSize:18,cursor:"pointer"}}>✕</button>
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.95)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:24}} onClick={()=>{setRescheduleSession(null);setReschedDate(null);setReschedSess(null);}}>
+          <div style={{background:"linear-gradient(160deg,#140e08,#0e0a06)",border:"1px solid #2e1e0e",borderTop:`3px solid ${C.red}`,borderRadius:16,padding:"24px",maxWidth:480,width:"100%",maxHeight:"80vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+              <div style={{fontSize:16,fontWeight:700,color:C.white,fontFamily:D.display,letterSpacing:1}}>Reschedule Session</div>
+              <button onClick={()=>setRescheduleSession(null)} style={{background:"transparent",border:"none",color:"#a07055",fontSize:18,cursor:"pointer",lineHeight:1}}>✕</button>
             </div>
-            <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,marginBottom:16}}>Moving: <strong style={{color:C.white}}>{rescheduleSession.dateLabel} · {rescheduleSession._time}</strong></div>
-            <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Pick a New Friday</div>
-            <div style={{display:"grid",gap:8,marginBottom:16}}>
+            <div style={{fontSize:11,color:"#a07055",fontFamily:D.body,marginBottom:18,padding:"10px 14px",background:"#0a0806",borderRadius:8,border:"1px solid #2e1e0e"}}>
+              Moving: <strong style={{color:C.white}}>{rescheduleSession.dateLabel} · {rescheduleSession._time}</strong>
+            </div>
+            <div style={{fontSize:9,letterSpacing:3,color:"#a07055",textTransform:"uppercase",fontFamily:D.body,marginBottom:12}}>Pick a New Friday</div>
+            <div style={{display:"grid",gap:8,marginBottom:18}}>
               {availDates.map((d,i)=>{
                 if(dKey(d)===rescheduleSession.dateKey) return null;
                 const sched=DAY_SCHEDULE[d.getDay()];
                 const isSelDate=reschedDate&&dKey(reschedDate)===dKey(d);
                 return(
-                  <div key={i} style={{background:isSelDate?`${C.red}08`:C.card,border:`1px solid ${isSelDate?C.red:C.cardBorder}`,borderRadius:10,padding:"12px 14px"}}>
-                    <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:8}}>{fmtDate(d)}</div>
+                  <div key={i} style={{background:isSelDate?"rgba(232,56,32,0.06)":"#0a0806",border:`1px solid ${isSelDate?C.red:"#2e1e0e"}`,borderRadius:10,padding:"12px 14px"}}>
+                    <div style={{fontSize:14,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:10}}>{fmtDate(d)}</div>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                       {sched.sessions.map(sess=>{
                         const isSel=isSelDate&&reschedSess?.id===sess.id;
-                        const spots=MAX_PLAYERS-(rescheduleSession?1:0);
                         return(
                           <button key={sess.id} onClick={()=>{setReschedDate(d);setReschedSess(sess);}}
-                            style={{background:isSel?`${C.red}18`:"#0d0b08",border:`1px solid ${isSel?C.red:C.cardBorder}`,borderRadius:8,padding:"8px 10px",cursor:"pointer",textAlign:"left"}}>
-                            <div style={{fontSize:11,fontWeight:600,color:isSel?C.red:C.white,fontFamily:D.display,marginBottom:2}}>{sess.time}</div>
-                            <div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>Available</div>
+                            style={{background:isSel?"rgba(232,56,32,0.14)":"#0d0a06",border:`1px solid ${isSel?C.red:"#2e1e0e"}`,borderRadius:8,padding:"10px 12px",cursor:"pointer",textAlign:"left",transition:"all 0.1s"}}>
+                            <div style={{fontSize:12,fontWeight:700,color:isSel?C.red:C.white,fontFamily:D.display,marginBottom:2}}>{sess.time}</div>
+                            <div style={{fontSize:9,color:"#a07055",fontFamily:D.body}}>Available</div>
                           </button>
                         );
                       })}
@@ -372,9 +428,9 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
               })}
             </div>
             <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>{setRescheduleSession(null);setReschedDate(null);setReschedSess(null);}} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.textDim,borderRadius:9,padding:"11px 18px",fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
+              <button onClick={()=>{setRescheduleSession(null);setReschedDate(null);setReschedSess(null);}} style={{background:"transparent",border:"1px solid #2e1e0e",color:"#a07055",borderRadius:9,padding:"12px 20px",fontSize:10,cursor:"pointer",fontFamily:D.body}}>Cancel</button>
               <button disabled={!reschedDate||!reschedSess||reschedLoading} onClick={doReschedule}
-                style={{flex:1,background:reschedDate&&reschedSess?`linear-gradient(135deg,${C.red},${C.redDim})`:"#1a1a1a",border:"none",color:reschedDate&&reschedSess?C.white:C.textDim,borderRadius:9,padding:"11px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:reschedDate&&reschedSess?"pointer":"not-allowed",fontFamily:D.body,fontWeight:600}}>
+                style={{flex:1,background:reschedDate&&reschedSess?`linear-gradient(135deg,#e83820,#c02810)`:"#1a0e08",border:"none",color:reschedDate&&reschedSess?C.white:"#6a4a30",borderRadius:9,padding:"12px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:reschedDate&&reschedSess?"pointer":"not-allowed",fontFamily:D.body,fontWeight:600}}>
                 {reschedLoading?"Rescheduling…":"Confirm Reschedule →"}
               </button>
             </div>
@@ -434,7 +490,7 @@ export function PlayersTab({user,players,playersLoaded}){
 
       {/* Add / Edit Form */}
       {showForm&&(
-        <div style={{background:"#161214",border:`1px solid ${C.silver}22`,borderRadius:14,padding:"20px",marginBottom:16}}>
+        <div style={{background:"linear-gradient(160deg,#140e08,#0e0a06)",border:"1px solid #2e1e0e",borderTop:`3px solid ${C.red}`,borderRadius:14,padding:"20px",marginBottom:16}}>
           <div style={{fontSize:11,fontWeight:600,color:C.white,fontFamily:D.display,letterSpacing:1,marginBottom:16}}>
             {editId?"Edit Player":"New Player"}
           </div>
@@ -478,15 +534,15 @@ export function PlayersTab({user,players,playersLoaded}){
       )}
 
       {playersLoaded&&players.length===0&&!showForm&&(
-        <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:14,padding:"36px 24px",textAlign:"center"}}>
-          <div style={{fontSize:36,marginBottom:12}}>⚽</div>
-          <div style={{fontSize:14,color:C.textMid,fontFamily:D.display,marginBottom:8}}>No players added yet</div>
-          <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,lineHeight:1.7,marginBottom:20}}>
-            Add your player's name, age, and position to make booking faster and help Coach prepare.
+        <div style={{background:"linear-gradient(160deg,#130e09,#0d0a06)",border:"1px solid #2e1e0e",borderRadius:14,padding:"36px 24px",textAlign:"center"}}>
+          <div style={{fontSize:11,letterSpacing:4,color:"#a07055",textTransform:"uppercase",fontFamily:D.body,marginBottom:14}}>No players yet</div>
+          <div style={{fontSize:20,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:10}}>Add your first player</div>
+          <div style={{fontSize:11,color:"#a07055",fontFamily:D.body,lineHeight:1.8,marginBottom:22}}>
+            Name, age, and position — makes booking faster and helps Coach prepare for each session.
           </div>
           <button onClick={openAdd}
-            style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:C.white,borderRadius:9,padding:"12px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>
-            Add First Player →
+            style={{background:`linear-gradient(135deg,#e83820,#c02810)`,border:`1px solid rgba(255,100,60,0.4)`,color:C.white,borderRadius:9,padding:"12px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,boxShadow:"0 4px 16px rgba(255,77,46,0.25)"}}>
+            Add Player →
           </button>
         </div>
       )}
@@ -495,7 +551,7 @@ export function PlayersTab({user,players,playersLoaded}){
         {players.map(p=>{
           const pos = posMap[p.position];
           return(
-            <div key={p.id} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:13,padding:"16px 18px"}}>
+            <div key={p.id} style={{background:"linear-gradient(160deg,#130e09,#0d0a06)",border:"1px solid #2e1e0e",borderRadius:13,padding:"16px 18px"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:pos||p.notes?10:0}}>
                 <div style={{flex:1}}>
                   <div style={{fontSize:16,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:4}}>{p.name}</div>
@@ -550,13 +606,17 @@ export function SessionsPage({setPage,user}){
   useEffect(()=>{ if(user) setPage("account"); },[user]);
   if(user) return null;
   return(
-    <div style={{maxWidth:480,margin:"80px auto",padding:"0 24px",textAlign:"center"}}>
-      <div style={{fontSize:40,marginBottom:20}}>🔥</div>
-      <h2 style={{fontSize:24,color:C.white,fontFamily:D.display,fontWeight:600,marginBottom:12}}>Track Your Sessions</h2>
-      <p style={{fontSize:13,color:C.textDim,fontFamily:D.body,lineHeight:1.8,marginBottom:28}}>Create a free account to view your upcoming sessions, reschedule directly, manage player profiles, and track your history.</p>
-      <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-        <button onClick={()=>setPage("login")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"13px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>Sign Up Free</button>
-        <button onClick={()=>setPage("login")} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.silver,borderRadius:10,padding:"13px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Sign In</button>
+    <div style={{maxWidth:460,margin:"clamp(60px,8vw,100px) auto",padding:"0 clamp(14px,4vw,24px)"}}>
+      <div style={{background:"linear-gradient(160deg,#140e08,#0e0a06)",border:"1px solid #2e1e0e",borderTop:`3px solid ${C.red}`,borderRadius:16,padding:"40px 28px",textAlign:"center",boxShadow:"0 -2px 20px rgba(255,77,46,0.08)"}}>
+        <div style={{fontSize:10,letterSpacing:5,color:"#a07055",textTransform:"uppercase",fontFamily:D.body,marginBottom:14}}>La Forja</div>
+        <div style={{fontSize:28,fontWeight:700,color:C.white,fontFamily:D.display,letterSpacing:1,marginBottom:12}}>Your Sessions</div>
+        <p style={{fontSize:13,color:"#a07055",fontFamily:D.body,lineHeight:1.9,marginBottom:10}}>Sign in to view upcoming sessions, reschedule, manage player profiles, and see your full history.</p>
+        <div style={{height:1,background:"linear-gradient(to right,transparent,#2e1e0e,transparent)",margin:"20px 0"}}/>
+        <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+          <button onClick={()=>setPage("login")} style={{background:`linear-gradient(135deg,#e83820,#c02810)`,border:`1px solid rgba(255,100,60,0.4)`,color:C.white,borderRadius:10,padding:"13px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,boxShadow:"0 4px 20px rgba(255,77,46,0.3)"}}>Sign In →</button>
+          <button onClick={()=>setPage("login")} style={{background:"transparent",border:"1px solid #2e1e0e",color:"#a07055",borderRadius:10,padding:"13px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>Create Account</button>
+        </div>
+        <div style={{fontSize:10,color:"#6a4a30",fontFamily:D.body,marginTop:16}}>Free — takes 30 seconds</div>
       </div>
     </div>
   );
