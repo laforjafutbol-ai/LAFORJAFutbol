@@ -135,7 +135,7 @@ export function AccountPage({setPage,user,authChecked,bookings,inquiries,getDate
     async function link(){
       try{
         const bs=await import("firebase/firestore").then(m=>m.getDocs(m.query(collection(db,"bookings"),m.where("email","==",user.email))));
-        for(const d of bs.docs){ if(!d.data().userId) await updateDoc(doc(db,"bookings",d.id),{userId:user.uid}); }
+        for(const d of bs.docs){ if(!d.data().userId) await updateDoc(doc(db,"bookings",d.id),{userId:user.uid, uid:user.uid}); }
       }catch(e){}
     }
     link();
