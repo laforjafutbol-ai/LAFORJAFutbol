@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where } from "firebase/firestore";
 import { C, D, BRAND, MAX_PLAYERS, PRICE_GROUP, DAY_SCHEDULE, DAY_ABBR, COACH_DAYS, dKey, fmtDate, getDates, callEmailAPI, sendReminderEmail, IS, GStyles, SH, FL, sessMax } from "./constants";
 
@@ -38,9 +39,9 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
           <div style={{fontSize:11,color:C.textDim,fontFamily:D.body,marginTop:4}}>La Forja · Restricted Access</div>
         </div>
         <input type="password" placeholder="Password" value={pw} onChange={e=>setPw(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&pw===BRAND.coachPw&&setAuth(true)}
+          onKeyDown={e=>{ if(e.key==="Enter"&&pw===BRAND.coachPw){ signInWithEmailAndPassword(getAuth(),"ccepeda737@gmail.com",pw).catch(()=>{}); setAuth(true); } }}
           style={{...IS,marginBottom:12,textAlign:"center",fontSize:16,letterSpacing:4}}/>
-        <button onClick={()=>pw===BRAND.coachPw?setAuth(true):alert("Wrong password")}
+        <button onClick={()=>{ if(pw===BRAND.coachPw){ signInWithEmailAndPassword(getAuth(),"ccepeda737@gmail.com",pw).catch(()=>{}); setAuth(true); } else alert("Wrong password"); }}
           style={{width:"100%",background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",borderRadius:10,padding:"13px",color:C.white,fontSize:11,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>
           Enter
         </button>
