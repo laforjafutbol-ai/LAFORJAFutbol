@@ -22,7 +22,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
   const [reschedLoading,setReschedLoading] = useState(false);
   const [filterStatus,setFilterStatus]   = useState("all");
   const [searchQ,setSearchQ]             = useState("");
-  const [dashTab,setDashTab]             = useState("upcoming"); // "upcoming" | "packages" | "testimonials"
+  const [dashTab,setDashTab]             = useState("upcoming"); // "upcoming" | "packages" | "testimonials" | "past"
   const [testimonials,setTestimonials]   = useState([]);
   const [pkgReschedItem,setPkgReschedItem]   = useState(null); // single booking from a package
   const [pkgReschedAll,setPkgReschedAll]     = useState(null); // array of all bookings in pkg
@@ -263,6 +263,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
             {id:"upcoming",label:`Upcoming (${upcomingSessions.length})`},
             {id:"packages",label:`Packages (${packageGroups.length})`},
             {id:"testimonials",label:`Reviews (${testimonials.filter(t=>t.status==="pending").length} pending)`},
+            {id:"past",label:`Past (${pastSessions.length})`},
           ].map(t=>(
             <button key={t.id} onClick={()=>setDashTab(t.id)}
               style={{flex:1,background:dashTab===t.id?`linear-gradient(135deg,${C.red},${C.redDim})`:"transparent",
@@ -289,43 +290,63 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
           </div>
           {filteredUpcoming.length===0?(
             <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"28px",textAlign:"center",color:C.textDim,fontSize:12,fontFamily:D.body,fontStyle:"italic"}}>No upcoming sessions</div>
-          ):(
-            <div style={{display:"grid",gap:8}}>
-              {filteredUpcoming.map((s,i)=>(
-                <div key={i} style={{background:C.card,border:`1px solid ${s.status==="awaiting_payment"?"#c9a84c33":C.cardBorder}`,borderLeft:`3px solid ${s.status==="confirmed"?C.green:s.status==="awaiting_payment"?"#c9a84c":s.status==="pending"?C.silver:C.silverDark}`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                  <div style={{flex:1,minWidth:180}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3,flexWrap:"wrap"}}>
-                      <span style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display}}>{s.name}</span>
-                      {s.status==="confirmed"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.green}18`,color:C.green,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>✓ Confirmed</span>}
-                      {s.status==="awaiting_payment"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#1a1200",border:"1px solid #c9a84c55",color:"#c9a84c",fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>⏳ Awaiting Payment</span>}
-                      {s.status==="pending"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.silver}12`,color:C.silver,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>Pending</span>}
-                      {s.paymentMethod==="cash"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#1a1200",border:"1px solid #c9a84c44",color:"#c9a84c",fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>💵 Cash</span>}
-                      {s.count>1&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.silver}10`,color:C.silver,fontFamily:D.body}}>👥 {s.count}</span>}
-                      {s.sessId==="s1"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#0d1520",border:"1px solid #4a9eff44",color:"#4a9eff",fontFamily:D.body,letterSpacing:1}}>U9–U11 · 4 PM</span>}
-                      {s.sessId==="s2"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.red}12`,border:`1px solid ${C.red}33`,color:C.red,fontFamily:D.body,letterSpacing:1}}>U12+ · 5:30 PM</span>}
+          ):(()=>{
+            // Group by dateKey
+            const grouped = filteredUpcoming.reduce((acc,s)=>{
+              if(!acc[s.dateKey]) acc[s.dateKey]={dateLabel:s.dateLabel,dateKey:s.dateKey,items:[]};
+              acc[s.dateKey].items.push(s);
+              return acc;
+            },{});
+            return(
+              <div style={{display:"grid",gap:16}}>
+                {Object.values(grouped).map((group)=>(
+                  <div key={group.dateKey}>
+                    {/* Date header */}
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                      <div style={{width:3,height:14,background:C.red,borderRadius:2,flexShrink:0}}/>
+                      <span style={{fontSize:11,fontWeight:600,color:C.white,fontFamily:D.display,letterSpacing:.5}}>{group.dateLabel}</span>
+                      <span style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>· {group.items.length} session{group.items.length!==1?"s":""}</span>
                     </div>
-                    <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:4}}>
-                      <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>📅 {s.dateLabel}</span>
-                      <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>🕐 {s._time}</span>
-                      <span style={{fontSize:10,color:C.silver,fontFamily:D.body,fontWeight:600}}>${s.total||s.price||0}</span>
+                    <div style={{display:"grid",gap:6,paddingLeft:13,borderLeft:`1px solid ${C.cardBorder}`}}>
+                      {group.items.map((s,i)=>(
+                        <div key={i} style={{background:C.card,border:`1px solid ${s.status==="awaiting_payment"?"#c9a84c33":C.cardBorder}`,borderLeft:`3px solid ${s.status==="confirmed"?C.green:s.status==="awaiting_payment"?"#c9a84c":s.status==="pending"?C.silver:C.silverDark}`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                          <div style={{flex:1,minWidth:180}}>
+                            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3,flexWrap:"wrap"}}>
+                              <span style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display}}>{s.name}</span>
+                              {s.status==="confirmed"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.green}18`,color:C.green,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>✓ Confirmed</span>}
+                              {s.status==="awaiting_payment"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#1a1200",border:"1px solid #c9a84c55",color:"#c9a84c",fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>⏳ Awaiting Payment</span>}
+                              {s.status==="pending"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.silver}12`,color:C.silver,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>Pending</span>}
+                              {s.paymentMethod==="cash"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#1a1200",border:"1px solid #c9a84c44",color:"#c9a84c",fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>💵 Cash</span>}
+                              {s.count>1&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.silver}10`,color:C.silver,fontFamily:D.body}}>👥 {s.count}</span>}
+                              {s.sessId==="s1"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#0d1520",border:"1px solid #4a9eff44",color:"#4a9eff",fontFamily:D.body,letterSpacing:1}}>U9–U11 · 4 PM</span>}
+                              {s.sessId==="s2"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.red}12`,border:`1px solid ${C.red}33`,color:C.red,fontFamily:D.body,letterSpacing:1}}>U12+ · 5:30 PM</span>}
+                            </div>
+                            <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:4}}>
+                              <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>🕐 {s._time}</span>
+                              <span style={{fontSize:10,color:C.silver,fontFamily:D.body,fontWeight:600}}>${s.total||s.price||0}</span>
+                            </div>
+                            <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                              {s.email&&<a href={`mailto:${s.email}`} style={{fontSize:9,color:C.textDim,fontFamily:D.body,textDecoration:"none"}}>✉ {s.email}</a>}
+                              {s.phone&&<a href={`tel:${s.phone}`} style={{fontSize:9,color:C.textDim,fontFamily:D.body,textDecoration:"none"}}>📞 {s.phone}</a>}
+                            </div>
+                            {s.notes&&<div style={{fontSize:9,color:C.textMid,fontFamily:D.body,marginTop:3,fontStyle:"italic"}}>📋 {s.notes}</div>}
+                            {s.coachNote&&<div style={{fontSize:9,color:C.silver,fontFamily:D.body,marginTop:3,fontStyle:"italic"}}>📝 {s.coachNote}</div>}
+                          </div>
+                          <div style={{display:"flex",gap:6,flexShrink:0}}>
+                            {s.status==="awaiting_payment"&&<button onClick={()=>confirmBooking(s.id,s._coll||"bookings")} style={{background:"#1a1200",border:"1px solid #c9a84c55",borderRadius:7,padding:"5px 12px",color:"#c9a84c",fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>💵 Mark Paid</button>}
+                            {s.status==="pending"&&s.paymentMethod!=="cash"&&<button onClick={()=>confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings")} style={{background:`${C.green}18`,border:`1px solid ${C.green}33`,borderRadius:7,padding:"5px 12px",color:C.green,fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓ Confirm</button>}
+                            <button onClick={()=>setReminderModal(s)} title="Send reminder" style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:7,padding:"5px 10px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📧</button>
+                            <button onClick={()=>{setRescheduleItem(s);setReschedDate(null);setReschedSess(null);}} title="Reschedule" style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:7,padding:"5px 10px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📅</button>
+                            <button onClick={()=>openAction(s)} title="More actions" style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"5px 10px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>⋯</button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-                      {s.email&&<a href={`mailto:${s.email}`} style={{fontSize:9,color:C.textDim,fontFamily:D.body,textDecoration:"none"}}>✉ {s.email}</a>}
-                      {s.phone&&<a href={`tel:${s.phone}`} style={{fontSize:9,color:C.textDim,fontFamily:D.body,textDecoration:"none"}}>📞 {s.phone}</a>}
-                    </div>
-                    {s.notes&&<div style={{fontSize:9,color:C.textMid,fontFamily:D.body,marginTop:3,fontStyle:"italic"}}>📋 {s.notes}</div>}
-                    {s.coachNote&&<div style={{fontSize:9,color:C.silver,fontFamily:D.body,marginTop:3,fontStyle:"italic"}}>📝 {s.coachNote}</div>}
                   </div>
-                  <div style={{display:"flex",gap:6,flexShrink:0}}>
-                    {s.status==="awaiting_payment"&&<button onClick={()=>confirmBooking(s.id,s._coll||"bookings")} style={{background:"#1a1200",border:"1px solid #c9a84c55",borderRadius:7,padding:"5px 12px",color:"#c9a84c",fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>💵 Mark Paid</button>}
-                    {s.status==="pending"&&s.paymentMethod!=="cash"&&<button onClick={()=>confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings")} style={{background:`${C.green}18`,border:`1px solid ${C.green}33`,borderRadius:7,padding:"5px 12px",color:C.green,fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓ Confirm</button>}
-                    <button onClick={()=>setReminderModal(s)} style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:7,padding:"5px 10px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📧</button>
-                    <button onClick={()=>openAction(s)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"5px 10px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>⋯</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            );
+          })()}
         </div>
         )}
 
@@ -481,32 +502,59 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
         </div>
         )}
 
-        {/* Past Sessions */}
-        {pastSessions.length>0&&(
-          <div>
-            <details>
-              <summary style={{fontSize:11,letterSpacing:3,color:C.textDim,textTransform:"uppercase",fontFamily:D.body,cursor:"pointer",marginBottom:14,userSelect:"none"}}>
-                Past Sessions ({pastSessions.length})
-              </summary>
-              <div style={{display:"grid",gap:6,marginTop:10}}>
-                {pastSessions.slice(0,30).map((s,i)=>(
-                  <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"10px 14px",opacity:0.7,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
-                    <div>
-                      <div style={{fontSize:12,fontWeight:600,color:C.textMid,fontFamily:D.display,marginBottom:2}}>{s.name}</div>
-                      <div style={{display:"flex",gap:10}}>
-                        <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{s.dateLabel}</span>
-                        <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{s._time}</span>
-                      </div>
+        {/* ── PAST TAB ── */}
+        {dashTab==="past"&&(
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:14,fontWeight:600}}>
+            Past Sessions — {pastSessions.length} total
+          </div>
+          {pastSessions.length===0?(
+            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"28px",textAlign:"center",color:C.textDim,fontSize:12,fontFamily:D.body,fontStyle:"italic"}}>No past sessions yet</div>
+          ):(()=>{
+            const grouped = pastSessions.reduce((acc,s)=>{
+              if(!acc[s.dateKey]) acc[s.dateKey]={dateLabel:s.dateLabel,dateKey:s.dateKey,items:[]};
+              acc[s.dateKey].items.push(s);
+              return acc;
+            },{});
+            return(
+              <div style={{display:"grid",gap:14}}>
+                {Object.values(grouped).map((group)=>(
+                  <div key={group.dateKey}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                      <div style={{width:3,height:14,background:C.silverDark,borderRadius:2,flexShrink:0}}/>
+                      <span style={{fontSize:11,fontWeight:600,color:C.textMid,fontFamily:D.display,letterSpacing:.5}}>{group.dateLabel}</span>
+                      <span style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>· {group.items.length} session{group.items.length!==1?"s":""}</span>
+                      <span style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>· ${group.items.reduce((t,s)=>t+(s.total||s.price||0),0)}</span>
                     </div>
-                    <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                      <span style={{fontSize:10,color:C.silver,fontFamily:D.body}}>${s.total||s.price||0}</span>
-                      <button onClick={()=>openAction(s)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:6,padding:"3px 8px",color:C.textDim,fontSize:8,cursor:"pointer",fontFamily:D.body}}>⋯</button>
+                    <div style={{display:"grid",gap:5,paddingLeft:13,borderLeft:`1px solid ${C.cardBorder}`}}>
+                      {group.items.map((s,i)=>(
+                        <div key={i} style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:10,padding:"10px 14px",opacity:0.65,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+                          <div style={{flex:1}}>
+                            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2,flexWrap:"wrap"}}>
+                              <span style={{fontSize:13,fontWeight:600,color:C.textMid,fontFamily:D.display}}>{s.name}</span>
+                              {s.sessId==="s1"&&<span style={{fontSize:7,padding:"1px 6px",borderRadius:5,background:"#0d1520",border:"1px solid #4a9eff33",color:"#4a9eff",fontFamily:D.body}}>U9–U11</span>}
+                              {s.sessId==="s2"&&<span style={{fontSize:7,padding:"1px 6px",borderRadius:5,background:`${C.red}10`,border:`1px solid ${C.red}22`,color:C.red,fontFamily:D.body}}>U12+</span>}
+                              <span style={{fontSize:7,padding:"1px 6px",borderRadius:5,background:s.status==="confirmed"?`${C.green}12`:`${C.silver}08`,color:s.status==="confirmed"?C.green:C.textDim,fontFamily:D.body}}>{s.status}</span>
+                            </div>
+                            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                              <span style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>🕐 {s._time}</span>
+                              {s.email&&<span style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>✉ {s.email}</span>}
+                            </div>
+                            {s.coachNote&&<div style={{fontSize:9,color:C.silverDim,fontFamily:D.body,marginTop:2,fontStyle:"italic"}}>📝 {s.coachNote}</div>}
+                          </div>
+                          <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
+                            <span style={{fontSize:11,color:C.silver,fontFamily:D.body,fontWeight:600}}>${s.total||s.price||0}</span>
+                            <button onClick={()=>openAction(s)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:6,padding:"4px 9px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>⋯</button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
               </div>
-            </details>
-          </div>
+            );
+          })()}
+        </div>
         )}
       </div>
 
