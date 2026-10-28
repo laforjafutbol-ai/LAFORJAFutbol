@@ -51,6 +51,7 @@ export default function App(){
   const [bookings,setBookings] = useState([]);
   const [inquiries,setInquiries] = useState([]);
   const [blocked,setBlocked]   = useState([]);
+  const [menuOpen,setMenuOpen] = useState(false);
 
   useEffect(()=>{
     const unsub = onAuthStateChanged(auth, u=>{ setUser(u); setAuthChecked(true); });
@@ -108,13 +109,20 @@ export default function App(){
   return(
     <div style={{background:C.black,minHeight:"100vh",color:C.white}}>
       <GStyles/>
+      <style>{`
+        @media (max-width: 640px) {
+          .lf-desktop-nav { display: none !important; }
+          .lf-mobile-nav  { display: flex !important; }
+        }
+      `}</style>
       <CookiesBanner setPage={setPage}/>
       <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,background:"rgba(9,9,11,0.95)",backdropFilter:"blur(12px)",borderBottom:`1px solid ${C.cardBorder}`,padding:"0 16px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <button onClick={()=>setPage("home")} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={()=>{ setPage("home"); setMenuOpen(false); }} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:10}}>
           <Crest size={32}/>
           <span style={{fontSize:14,letterSpacing:3,color:C.white,fontFamily:D.display,fontWeight:600}}>La Forja</span>
         </button>
-        <div style={{display:"flex",gap:4,alignItems:"center"}}>
+        {/* Desktop nav — hidden on mobile */}
+        <div className="lf-desktop-nav" style={{display:"flex",gap:4,alignItems:"center"}}>
           {navItems.map(([key,lbl])=>(
             <button key={key} onClick={()=>setPage(key)} style={{background:page===key?"rgba(255,77,46,0.12)":"transparent",border:page===key?`1px solid ${C.red}33`:"1px solid transparent",color:page===key?C.red:C.textMid,borderRadius:8,padding:"5px 10px",fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500}}>
               {lbl}
@@ -123,7 +131,37 @@ export default function App(){
           {!user&&<button onClick={()=>setPage("login")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:C.white,borderRadius:8,padding:"6px 14px",fontSize:10,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,marginLeft:4}}>Sign In</button>}
           <button onClick={()=>setPage("dashboard")} style={{background:"transparent",border:"none",color:C.silverDim,fontSize:16,cursor:"pointer",marginLeft:4,padding:"4px 8px"}}>⚙</button>
         </div>
+        {/* Mobile hamburger — shown only on small screens */}
+        <div className="lf-mobile-nav" style={{display:"none",alignItems:"center",gap:8}}>
+          <button onClick={()=>setPage("dashboard")} style={{background:"transparent",border:"none",color:C.silverDim,fontSize:16,cursor:"pointer",padding:"4px 8px"}}>⚙</button>
+          <button onClick={()=>setMenuOpen(o=>!o)} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.white,borderRadius:8,padding:"6px 12px",fontSize:18,cursor:"pointer",lineHeight:1}}>
+            {menuOpen?"✕":"☰"}
+          </button>
+        </div>
       </nav>
+      {/* Mobile menu overlay */}
+      {menuOpen&&(
+        <div style={{position:"fixed",top:56,left:0,right:0,bottom:0,zIndex:99,background:"rgba(9,9,11,0.98)",backdropFilter:"blur(16px)",display:"flex",flexDirection:"column",padding:"32px 24px",gap:8}}>
+          {navItems.map(([key,lbl])=>(
+            <button key={key} onClick={()=>{ setPage(key); setMenuOpen(false); }}
+              style={{background:page===key?`${C.red}12`:"transparent",border:`1px solid ${page===key?C.red:C.cardBorder}`,color:page===key?C.red:C.white,borderRadius:10,padding:"16px 20px",fontSize:14,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:500,textAlign:"left"}}>
+              {lbl}
+            </button>
+          ))}
+          <div style={{height:1,background:C.cardBorder,margin:"8px 0"}}/>
+          {!user?(
+            <button onClick={()=>{ setPage("login"); setMenuOpen(false); }}
+              style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:"none",color:C.white,borderRadius:10,padding:"16px 20px",fontSize:14,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,textAlign:"left"}}>
+              Sign In
+            </button>
+          ):(
+            <button onClick={()=>{ setPage("account"); setMenuOpen(false); }}
+              style={{background:`${C.silver}10`,border:`1px solid ${C.silver}22`,color:C.silver,borderRadius:10,padding:"16px 20px",fontSize:14,letterSpacing:2,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,textAlign:"left"}}>
+              My Account
+            </button>
+          )}
+        </div>
+      )}
 
       <div style={{paddingTop:60}}>
         {page==="home"      && <HomePage setPage={setPage} user={user}/>}
