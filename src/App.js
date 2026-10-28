@@ -194,32 +194,40 @@ function EmberCanvas(){
         const resize=()=>{ W=el.width=el.offsetWidth; H=el.height=el.offsetHeight; };
         window.addEventListener("resize",resize);
         const embers=[];
-        const N=55;
+        const N=90; // more particles for denser forge atmosphere
         function rand(a,b){return a+Math.random()*(b-a);}
-        for(let i=0;i<N;i++) embers.push({
-          x:rand(0,W), y:rand(0,H),
-          r:rand(0.8,2.6),
-          vx:rand(-0.3,0.3), vy:rand(-0.5,-1.4),
-          life:rand(0,1), speed:rand(0.003,0.007),
-          hue:rand(10,38), // red→orange
-        });
+        for(let i=0;i<N;i++){
+          const isCoal = i < 8; // first 8 are large slow "coal" embers
+          embers.push({
+            x:rand(0,W), y:rand(0,H),
+            r: isCoal ? rand(3,7) : rand(0.6,2.8),
+            vx:rand(-0.25,0.25), vy: isCoal ? rand(-0.2,-0.6) : rand(-0.5,-1.8),
+            life:rand(0,1), speed: isCoal ? rand(0.0015,0.004) : rand(0.003,0.009),
+            hue: isCoal ? rand(8,22) : rand(8,42), // red→orange, coals stay redder
+            coal: isCoal,
+          });
+        }
         let raf;
         function draw(){
           ctx.clearRect(0,0,W,H);
           for(const e of embers){
             e.life+=e.speed;
-            if(e.life>1){ e.life=0; e.x=rand(0,W); e.y=H+10; }
+            if(e.life>1){ e.life=0; e.x=rand(0,W); e.y=H+rand(5,20); }
             const t=e.life;
-            // fade in then out
-            const alpha = t<0.15 ? t/0.15 : t>0.75 ? (1-t)/0.25 : 1;
+            // fade in then out — coals stay lit longer
+            const alpha = e.coal
+              ? (t<0.1 ? t/0.1 : t>0.85 ? (1-t)/0.15 : 1) * 0.6
+              : (t<0.12 ? t/0.12 : t>0.72 ? (1-t)/0.28 : 1) * 0.9;
             e.x+=e.vx; e.y+=e.vy*(0.5+t*0.7);
             ctx.save();
-            ctx.globalAlpha = alpha*0.75;
-            const grd=ctx.createRadialGradient(e.x,e.y,0,e.x,e.y,e.r*3.5);
-            grd.addColorStop(0,`hsla(${e.hue},100%,70%,1)`);
-            grd.addColorStop(1,`hsla(${e.hue},100%,50%,0)`);
+            ctx.globalAlpha = alpha;
+            const spread = e.coal ? e.r*5 : e.r*3.8;
+            const grd=ctx.createRadialGradient(e.x,e.y,0,e.x,e.y,spread);
+            grd.addColorStop(0,`hsla(${e.hue},100%,${e.coal?80:72}%,1)`);
+            grd.addColorStop(0.4,`hsla(${e.hue},100%,60%,0.6)`);
+            grd.addColorStop(1,`hsla(${e.hue},100%,40%,0)`);
             ctx.beginPath();
-            ctx.arc(e.x,e.y,e.r*3.5,0,Math.PI*2);
+            ctx.arc(e.x,e.y,spread,0,Math.PI*2);
             ctx.fillStyle=grd;
             ctx.fill();
             ctx.restore();
@@ -250,35 +258,44 @@ function HomePage({setPage,user}){
           <source src="/field-action.webm" type="video/webm"/>
         </video>
         {/* Dark gradient overlay */}
-        <div style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",zIndex:1,background:`linear-gradient(to bottom,rgba(9,9,11,0.45) 0%,rgba(9,9,11,0.30) 40%,rgba(9,9,11,0.80) 100%)`}}/>
-        {/* Red ember glow at bottom */}
-        <div style={{position:"absolute",bottom:0,left:0,width:"100%",height:"40%",zIndex:2,background:`linear-gradient(to top,${C.redDark}99,transparent)`}}/>
+        <div style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",zIndex:1,background:`linear-gradient(to bottom,rgba(9,9,11,0.55) 0%,rgba(9,9,11,0.25) 40%,rgba(9,9,11,0.85) 100%)`}}/>
+        {/* Red ember glow at bottom — deeper and wider */}
+        <div style={{position:"absolute",bottom:0,left:0,width:"100%",height:"55%",zIndex:2,background:`linear-gradient(to top,rgba(31,10,5,0.98) 0%,rgba(80,15,5,0.55) 40%,transparent 100%)`}}/>
+        {/* Heat bloom behind hero content */}
+        <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-55%)",width:"60%",height:"60%",zIndex:2,background:`radial-gradient(ellipse at center,rgba(255,77,46,0.08) 0%,transparent 70%)`,pointerEvents:"none"}}/>
         {/* Floating ember particles */}
         <EmberCanvas/>
         {/* Content */}
         <div style={{position:"relative",zIndex:4}}>
           <Crest size={80}/>
-          <div style={{fontSize:9,letterSpacing:6,color:C.silverDim,textTransform:"uppercase",marginTop:20,marginBottom:8,fontFamily:D.body}}>James Island · Charleston SC</div>
-          <h1 style={{margin:"0 0 10px",fontFamily:D.display,fontWeight:700,fontSize:"clamp(48px,9vw,80px)",letterSpacing:6,textTransform:"uppercase",color:C.white,lineHeight:1}}>La Forja</h1>
-          <p style={{fontSize:11,letterSpacing:5,color:C.silver,marginBottom:14,textTransform:"uppercase",fontFamily:D.body}}>{BRAND.tagline}</p>
+          <div style={{fontSize:9,letterSpacing:8,color:"#8a7060",textTransform:"uppercase",marginTop:20,marginBottom:8,fontFamily:D.body}}>James Island · Charleston SC</div>
+          <h1 style={{margin:"0 0 10px",fontFamily:D.display,fontWeight:700,fontSize:"clamp(48px,9vw,80px)",letterSpacing:8,textTransform:"uppercase",color:C.white,lineHeight:1,textShadow:`0 0 60px rgba(255,77,46,0.35),0 2px 4px rgba(0,0,0,0.8)`}}>La Forja</h1>
+          <p style={{fontSize:11,letterSpacing:6,color:"#a08878",marginBottom:14,textTransform:"uppercase",fontFamily:D.body}}>{BRAND.tagline}</p>
           <p style={{fontSize:15,color:C.textMid,marginBottom:48,maxWidth:480,lineHeight:2,fontFamily:D.display,fontStyle:"italic"}}>Pure technique. Zero filler. Every session is built around perfecting the details that make the difference on game day — first touch, decision making, 1v1 dominance, and composure under pressure.</p>
           <div style={{display:"flex",gap:12,flexWrap:"wrap",justifyContent:"center"}}>
-            <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,${C.red},${C.redDim})`,border:`1px solid ${C.red}`,color:C.white,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 8px 32px ${C.red}44`,fontFamily:D.body,fontWeight:600}}>Book a Session</button>
-            <button onClick={()=>setPage("about")} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,color:C.silver,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>About the Program</button>
+            <button onClick={()=>setPage("book")} style={{background:`linear-gradient(135deg,#e83820,#c02810)`,border:`1px solid rgba(255,100,60,0.5)`,color:C.white,borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",boxShadow:`0 8px 40px rgba(255,77,46,0.6),0 0 0 1px rgba(255,77,46,0.15)`,fontFamily:D.body,fontWeight:600}}>Book a Session</button>
+            <button onClick={()=>setPage("about")} style={{background:"rgba(255,255,255,0.03)",border:`1px solid rgba(160,130,100,0.25)`,color:"#a08878",borderRadius:10,padding:"14px 40px",fontSize:11,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body}}>About the Program</button>
           </div>
           <p style={{margin:"16px 0 0",fontSize:12,color:C.silver,opacity:0.6,letterSpacing:"0.03em",fontFamily:D.body}}>🔒 Secure payment · Cancel anytime · Reschedule from your account</p>
         </div>
       </div>
 
+      {/* Section spark divider */}
+      <div style={{display:"flex",alignItems:"center",gap:0,overflow:"hidden",height:1,background:`linear-gradient(to right,transparent,rgba(255,77,46,0.6) 40%,rgba(255,120,60,0.8) 50%,rgba(255,77,46,0.6) 60%,transparent)`}}/>
+
       <div style={{maxWidth:960,margin:"0 auto",padding:"clamp(40px,6vw,80px) clamp(16px,4vw,24px) 60px"}}>
         <div style={{textAlign:"center",marginBottom:48}}>
-          <div style={{fontSize:8,letterSpacing:6,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>The Programs</div>
-          <h2 style={{fontSize:"clamp(26px,4vw,40px)",color:C.white,fontFamily:D.display,fontWeight:600,margin:0}}>Built Around One Thing</h2>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:10}}>
+            <div style={{width:28,height:1,background:`linear-gradient(to right,transparent,rgba(255,77,46,0.5))`}}/>
+            <div style={{fontSize:8,letterSpacing:6,color:"#a07055",textTransform:"uppercase",fontFamily:D.body}}>The Programs</div>
+            <div style={{width:28,height:1,background:`linear-gradient(to left,transparent,rgba(255,77,46,0.5))`}}/>
+          </div>
+          <h2 style={{fontSize:"clamp(26px,4vw,40px)",color:C.white,fontFamily:D.display,fontWeight:600,margin:0,letterSpacing:2}}>Built Around One Thing</h2>
           <p style={{fontSize:13,color:C.textMid,fontFamily:D.body,marginTop:12,maxWidth:480,margin:"12px auto 0",lineHeight:1.8}}>Pure technical development. Game-ready players. No fitness work — just ball mastery, decision making, and the details that show up on game day.</p>
         </div>
 
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:16,marginBottom:60}}>
-          <div style={{background:"#100c08",border:"1px solid #241a10",borderTop:`3px solid ${C.red}`,borderRadius:16,padding:"28px 24px"}}>
+          <div style={{background:"linear-gradient(160deg,#140e08 0%,#0e0a06 100%)",border:"1px solid #2e1e0e",borderTop:`4px solid ${C.red}`,borderRadius:16,padding:"28px 24px",boxShadow:`0 -4px 20px rgba(255,77,46,0.12),inset 0 1px 0 rgba(255,77,46,0.06)`}}>
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
               <div style={{width:46,height:46,borderRadius:12,background:C.redDark,border:`1px solid ${C.red}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>🔥</div>
               <div>
@@ -310,7 +327,7 @@ function HomePage({setPage,user}){
             </div>
           </div>
 
-          <div style={{background:"#0d0c08",border:"1px solid #201c10",borderTop:`3px solid ${C.silver}`,borderRadius:16,padding:"28px 24px",position:"relative"}}>
+          <div style={{background:"linear-gradient(160deg,#110f08 0%,#0c0b06 100%)",border:"1px solid #2a2410",borderTop:`4px solid ${C.silver}`,borderRadius:16,padding:"28px 24px",position:"relative",boxShadow:`0 -4px 20px rgba(200,164,74,0.08),inset 0 1px 0 rgba(200,164,74,0.04)`}}>
             <div style={{position:"absolute",top:16,right:16,background:`${C.silver}18`,border:`1px solid ${C.silver}33`,borderRadius:20,padding:"3px 12px",fontSize:8,letterSpacing:2,color:C.silver,textTransform:"uppercase",fontFamily:D.body}}>Coming Soon</div>
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
               <div style={{width:46,height:46,borderRadius:12,background:C.goldDark,border:`1px solid ${C.silver}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>⚒️</div>
@@ -354,7 +371,7 @@ function HomePage({setPage,user}){
             {val:`$${PRICE_GROUP}`,label:"Per Session",sub:"no contracts"},
             {val:"U9+",label:"Age Requirement",sub:"All ages · Fridays only"},
           ].map(s=>(
-            <div key={s.label} style={{background:`#0e0b08`,border:`1px solid #1e1810`,borderRadius:14,padding:"24px 18px",textAlign:"center"}}>
+            <div key={s.label} style={{background:`linear-gradient(160deg,#130f0a,#0d0a06)`,border:`1px solid #271a0c`,borderRadius:14,padding:"24px 18px",textAlign:"center",boxShadow:`inset 0 1px 0 rgba(255,160,80,0.04)`}}>
               <div style={{fontSize:"clamp(24px,6vw,36px)",fontWeight:700,color:C.white,marginBottom:4,fontFamily:D.display}}>{s.val}</div>
               <div style={{fontSize:10,color:C.silver,letterSpacing:2,textTransform:"uppercase",fontFamily:D.body,fontWeight:500,marginBottom:4}}>{s.label}</div>
               <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{s.sub}</div>
@@ -373,8 +390,12 @@ function HomePage({setPage,user}){
 
         <div style={{marginBottom:60}}>
           <div style={{textAlign:"center",marginBottom:32}}>
-            <div style={{fontSize:8,letterSpacing:6,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>First Session</div>
-            <h2 style={{fontSize:"clamp(24px,4vw,36px)",color:C.white,fontFamily:D.display,fontWeight:600,margin:0}}>What to Expect</h2>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:10}}>
+              <div style={{width:20,height:1,background:`linear-gradient(to right,transparent,rgba(255,77,46,0.4))`}}/>
+              <div style={{fontSize:8,letterSpacing:6,color:"#a07055",textTransform:"uppercase",fontFamily:D.body}}>First Session</div>
+              <div style={{width:20,height:1,background:`linear-gradient(to left,transparent,rgba(255,77,46,0.4))`}}/>
+            </div>
+            <h2 style={{fontSize:"clamp(24px,4vw,36px)",color:C.white,fontFamily:D.display,fontWeight:600,margin:0,letterSpacing:1}}>What to Expect</h2>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:12}}>
             {[
@@ -383,7 +404,7 @@ function HomePage({setPage,user}){
               {icon:"🗣️",title:"Real Feedback",desc:"Coach Carlos is on you every rep. Direct, specific, actionable feedback."},
               {icon:"📋",title:"Debrief",desc:"Sessions end with one win and one focus area. You leave knowing what to work on."},
             ].map((item,i)=>(
-              <div key={i} style={{background:"#0e0b08",border:"1px solid #1e1810",borderRadius:12,padding:"20px 18px"}}>
+              <div key={i} style={{background:"linear-gradient(160deg,#130f0a,#0d0a06)",border:"1px solid #231508",borderRadius:12,padding:"20px 18px"}}>
                 <div style={{fontSize:24,marginBottom:10}}>{item.icon}</div>
                 <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:6}}>{item.title}</div>
                 <div style={{fontSize:11,color:C.textMid,fontFamily:D.body,lineHeight:1.8}}>{item.desc}</div>
@@ -394,8 +415,12 @@ function HomePage({setPage,user}){
 
         <div style={{marginBottom:60}}>
           <div style={{textAlign:"center",marginBottom:32}}>
-            <div style={{fontSize:8,letterSpacing:6,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>Questions</div>
-            <h2 style={{fontSize:"clamp(24px,4vw,36px)",color:C.white,fontFamily:D.display,fontWeight:600,margin:0}}>Quick Answers</h2>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:10}}>
+              <div style={{width:20,height:1,background:`linear-gradient(to right,transparent,rgba(255,77,46,0.4))`}}/>
+              <div style={{fontSize:8,letterSpacing:6,color:"#a07055",textTransform:"uppercase",fontFamily:D.body}}>Questions</div>
+              <div style={{width:20,height:1,background:`linear-gradient(to left,transparent,rgba(255,77,46,0.4))`}}/>
+            </div>
+            <h2 style={{fontSize:"clamp(24px,4vw,36px)",color:C.white,fontFamily:D.display,fontWeight:600,margin:0,letterSpacing:1}}>Quick Answers</h2>
           </div>
           <div style={{display:"grid",gap:8,maxWidth:680,margin:"0 auto",padding:"0 4px"}}>
             {[
@@ -406,7 +431,7 @@ function HomePage({setPage,user}){
               {q:"How many players per session?",a:"Maximum 5 players per session. Small on purpose — every player gets real reps and real feedback."},
               {q:"What should my player bring?",a:"Cleats or turf shoes, water bottle, and an elastic band. Arrive 15 minutes early."},
             ].map((item,i)=>(
-              <div key={i} style={{background:"#0e0b08",border:"1px solid #1e1810",borderRadius:10,padding:"16px 20px"}}>
+              <div key={i} style={{background:"linear-gradient(160deg,#130f0a,#0d0a06)",border:"1px solid #231508",borderRadius:10,padding:"16px 20px"}}>
                 <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display,marginBottom:6}}>{item.q}</div>
                 <div style={{fontSize:11,color:C.textMid,fontFamily:D.body,lineHeight:1.8}}>{item.a}</div>
               </div>
@@ -414,7 +439,7 @@ function HomePage({setPage,user}){
           </div>
         </div>
 
-        <div style={{background:"#0e0b08",border:"1px solid #1e1810",borderRadius:14,padding:"22px 26px",marginBottom:50,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
+        <div style={{background:"linear-gradient(135deg,#130f0a,#0d0a06)",border:"1px solid #271a0c",borderRadius:14,padding:"22px 26px",marginBottom:50,display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
           <div style={{fontSize:28}}>📍</div>
           <div style={{flex:1}}>
             <div style={{fontSize:8,letterSpacing:4,color:C.textDim,textTransform:"uppercase",marginBottom:4,fontFamily:D.body}}>Location</div>
@@ -511,8 +536,12 @@ function TestimonialsSection(){
   return(
     <div style={{marginBottom:60}}>
       <div style={{textAlign:"center",marginBottom:32}}>
-        <div style={{fontSize:8,letterSpacing:6,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:10}}>From the Field</div>
-        <h2 style={{fontSize:"clamp(24px,4vw,36px)",color:C.white,fontFamily:D.display,fontWeight:600,margin:0}}>What Families Are Saying</h2>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:10}}>
+          <div style={{width:20,height:1,background:`linear-gradient(to right,transparent,rgba(255,77,46,0.4))`}}/>
+          <div style={{fontSize:8,letterSpacing:6,color:"#a07055",textTransform:"uppercase",fontFamily:D.body}}>From the Field</div>
+          <div style={{width:20,height:1,background:`linear-gradient(to left,transparent,rgba(255,77,46,0.4))`}}/>
+        </div>
+        <h2 style={{fontSize:"clamp(24px,4vw,36px)",color:C.white,fontFamily:D.display,fontWeight:600,margin:0,letterSpacing:1}}>What Families Are Saying</h2>
       </div>
 
       {testimonials.length===0&&!submitted&&(
@@ -524,7 +553,7 @@ function TestimonialsSection(){
       {testimonials.length>0&&(
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:14,marginBottom:28}}>
           {testimonials.map((t,i)=>(
-            <div key={i} style={{background:"#100c08",border:"1px solid #241a10",borderRadius:14,padding:"22px 20px",position:"relative"}}>
+            <div key={i} style={{background:"linear-gradient(160deg,#140e08,#0e0a06)",border:"1px solid #2e1e0e",borderRadius:14,padding:"22px 20px",position:"relative"}}>
               <div style={{fontSize:18,color:C.red,marginBottom:10,letterSpacing:2}}>
                 {"★".repeat(t.rating||5)}
               </div>
