@@ -22,13 +22,20 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
   const [reschedLoading,setReschedLoading] = useState(false);
   const [filterStatus,setFilterStatus]   = useState("all");
   const [searchQ,setSearchQ]             = useState("");
-  const [dashTab,setDashTab]             = useState("upcoming"); // "upcoming" | "packages"
+  const [dashTab,setDashTab]             = useState("upcoming"); // "upcoming" | "packages" | "testimonials"
+  const [testimonials,setTestimonials]   = useState([]);
   const [pkgReschedItem,setPkgReschedItem]   = useState(null); // single booking from a package
   const [pkgReschedAll,setPkgReschedAll]     = useState(null); // array of all bookings in pkg
   const [pkgReschedDate,setPkgReschedDate]   = useState(null);
   const [pkgReschedSess,setPkgReschedSess]   = useState(null);
   const [pkgReschedLoading,setPkgReschedLoading] = useState(false);
   const [pkgReschedMode,setPkgReschedMode]   = useState("one"); // "one" | "all"
+
+  useEffect(()=>{
+    if(!auth) return;
+    const unsub = onSnapshot(collection(db,"testimonials"), s=>setTestimonials(s.docs.map(d=>({id:d.id,...d.data()}))));
+    return unsub;
+  },[auth]);
 
   if(!auth) return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.black}}>
@@ -255,6 +262,7 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
           {[
             {id:"upcoming",label:`Upcoming (${upcomingSessions.length})`},
             {id:"packages",label:`Packages (${packageGroups.length})`},
+            {id:"testimonials",label:`Reviews (${testimonials.filter(t=>t.status==="pending").length} pending)`},
           ].map(t=>(
             <button key={t.id} onClick={()=>setDashTab(t.id)}
               style={{flex:1,background:dashTab===t.id?`linear-gradient(135deg,${C.red},${C.redDim})`:"transparent",
@@ -400,6 +408,71 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
                         </button>
                       )}
                     </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        )}
+
+        {/* ── TESTIMONIALS TAB ── */}
+        {dashTab==="testimonials"&&(
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:9,letterSpacing:3,color:C.silver,textTransform:"uppercase",fontFamily:D.body,marginBottom:14,fontWeight:600}}>
+            Reviews — {testimonials.length} total · {testimonials.filter(t=>t.status==="pending").length} pending
+          </div>
+          {testimonials.length===0?(
+            <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderRadius:12,padding:"28px",textAlign:"center",color:C.textDim,fontSize:12,fontFamily:D.body,fontStyle:"italic"}}>No reviews yet</div>
+          ):(
+            <div style={{display:"grid",gap:10}}>
+              {["pending","approved","rejected"].map(status=>{
+                const group = testimonials.filter(t=>t.status===status);
+                if(group.length===0) return null;
+                return(
+                  <div key={status}>
+                    <div style={{fontSize:8,letterSpacing:3,color:status==="pending"?"#c9a84c":status==="approved"?C.green:C.textDim,textTransform:"uppercase",fontFamily:D.body,marginBottom:8,fontWeight:600}}>
+                      {status==="pending"?"⏳ Pending Approval":status==="approved"?"✓ Live on Site":"✕ Rejected"} ({group.length})
+                    </div>
+                    {group.map((t,i)=>(
+                      <div key={i} style={{background:C.card,border:`1px solid ${status==="pending"?"#c9a84c33":status==="approved"?`${C.green}22`:C.cardBorder}`,borderLeft:`3px solid ${status==="pending"?"#c9a84c":status==="approved"?C.green:C.silverDark}`,borderRadius:10,padding:"14px 16px",marginBottom:8}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
+                          <div style={{flex:1}}>
+                            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap"}}>
+                              <span style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display}}>{t.name}</span>
+                              {t.role&&<span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{t.role}</span>}
+                              <span style={{fontSize:12,color:C.red,letterSpacing:1}}>{"★".repeat(t.rating||5)}</span>
+                            </div>
+                            <p style={{fontSize:12,color:C.textMid,fontFamily:D.body,lineHeight:1.8,margin:"0 0 6px",fontStyle:"italic"}}>"{t.quote}"</p>
+                            <div style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>{t.submittedAt ? new Date(t.submittedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : ""}</div>
+                          </div>
+                          <div style={{display:"flex",gap:6,flexShrink:0}}>
+                            {status!=="approved"&&(
+                              <button onClick={()=>updateDoc(doc(db,"testimonials",t.id),{status:"approved"})}
+                                style={{background:`${C.green}18`,border:`1px solid ${C.green}33`,borderRadius:7,padding:"6px 14px",color:C.green,fontSize:9,letterSpacing:1,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600}}>
+                                ✓ Approve
+                              </button>
+                            )}
+                            {status==="approved"&&(
+                              <button onClick={()=>updateDoc(doc(db,"testimonials",t.id),{status:"pending"})}
+                                style={{background:"transparent",border:`1px solid ${C.silver}33`,borderRadius:7,padding:"6px 14px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body}}>
+                                Unpublish
+                              </button>
+                            )}
+                            {status!=="rejected"&&(
+                              <button onClick={()=>updateDoc(doc(db,"testimonials",t.id),{status:"rejected"})}
+                                style={{background:"transparent",border:`1px solid ${C.redDim}44`,borderRadius:7,padding:"6px 10px",color:C.redDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>
+                                ✕
+                              </button>
+                            )}
+                            <button onClick={()=>deleteDoc(doc(db,"testimonials",t.id))}
+                              style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"6px 10px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>
+                              🗑
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 );
               })}
