@@ -9,7 +9,7 @@ export const stripePromise = loadStripe("pk_test_51TW0MzFU9deEKlhCmhj0SXJS0kQ4ZF
 export const BRAND = { name:"La Forja", coach:"Carlos Cepeda", venmo:"carlos-cepeda-41", tagline:"Where Champions Are Forged", coachPw:"LAForja37" };
 export const STRIPE_ENABLED = true;
 export const SITE_READY = true;
-export const MAX_PLAYERS = 6;
+export const MAX_PLAYERS = 5;
 export const PRICE_GROUP = 40;
 export const PRICE_1ON1 = 65;
 
@@ -41,8 +41,8 @@ export const DAY_SCHEDULE = {
     skill:"The Furnace", skillDesc:"Ball mastery · 1v1 dominance · Decision making under pressure", skillIcon:"🔥",
     dayLabel:"Friday",
     sessions:[
-      {id:"s1",label:"Little Forja",   time:"4:00 PM – 5:15 PM", ageGroup:"U9–U11", ageTag:"u9-u11", minAge:6,  maxAge:11, maxPlayers:6, ageDesc:"Ages 6–11"},
-      {id:"s2",label:"The Furnace",    time:"5:30 PM – 6:45 PM", ageGroup:"U12+",   ageTag:"u12+",   minAge:12, maxAge:99, maxPlayers:6, ageDesc:"Ages 12 & up"},
+      {id:"s1",label:"Little Forja",   time:"4:00 PM – 5:15 PM", ageGroup:"U9–U11", ageTag:"u9-u11", minAge:6,  maxAge:11, maxPlayers:5, ageDesc:"Ages 6–11"},
+      {id:"s2",label:"The Furnace",    time:"5:30 PM – 6:45 PM", ageGroup:"U12+",   ageTag:"u12+",   minAge:12, maxAge:99, maxPlayers:5, ageDesc:"Ages 12 & up"},
     ],
   },
 };
