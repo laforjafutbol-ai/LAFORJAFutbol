@@ -307,40 +307,8 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
                       <span style={{fontSize:11,fontWeight:600,color:C.white,fontFamily:D.display,letterSpacing:.5}}>{group.dateLabel}</span>
                       <span style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>· {group.items.length} session{group.items.length!==1?"s":""}</span>
                     </div>
-                    <div style={{display:"grid",gap:6,paddingLeft:13,borderLeft:`1px solid ${C.cardBorder}`}}>
-                      {group.items.map((s,i)=>(
-                        <div key={i} style={{background:C.card,border:`1px solid ${s.status==="awaiting_payment"?"#c9a84c33":C.cardBorder}`,borderLeft:`3px solid ${s.status==="confirmed"?C.green:s.status==="awaiting_payment"?"#c9a84c":s.status==="pending"?C.silver:C.silverDark}`,borderRadius:10,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                          <div style={{flex:1,minWidth:180}}>
-                            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3,flexWrap:"wrap"}}>
-                              <span style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display}}>{s.name}</span>
-                              {s.status==="confirmed"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.green}18`,color:C.green,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>✓ Confirmed</span>}
-                              {s.status==="awaiting_payment"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#1a1200",border:"1px solid #c9a84c55",color:"#c9a84c",fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>⏳ Awaiting Payment</span>}
-                              {s.status==="pending"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.silver}12`,color:C.silver,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>Pending</span>}
-                              {s.paymentMethod==="cash"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#1a1200",border:"1px solid #c9a84c44",color:"#c9a84c",fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>💵 Cash</span>}
-                              {s.count>1&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.silver}10`,color:C.silver,fontFamily:D.body}}>👥 {s.count}</span>}
-                              {s.sessId==="s1"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#0d1520",border:"1px solid #4a9eff44",color:"#4a9eff",fontFamily:D.body,letterSpacing:1}}>U9–U11 · 4 PM</span>}
-                              {s.sessId==="s2"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.red}12`,border:`1px solid ${C.red}33`,color:C.red,fontFamily:D.body,letterSpacing:1}}>U12+ · 5:30 PM</span>}
-                            </div>
-                            <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:4}}>
-                              <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>🕐 {s._time}</span>
-                              <span style={{fontSize:10,color:C.silver,fontFamily:D.body,fontWeight:600}}>${s.total||s.price||0}</span>
-                            </div>
-                            <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-                              {s.email&&<a href={`mailto:${s.email}`} style={{fontSize:9,color:C.textDim,fontFamily:D.body,textDecoration:"none"}}>✉ {s.email}</a>}
-                              {s.phone&&<a href={`tel:${s.phone}`} style={{fontSize:9,color:C.textDim,fontFamily:D.body,textDecoration:"none"}}>📞 {s.phone}</a>}
-                            </div>
-                            {s.notes&&<div style={{fontSize:9,color:C.textMid,fontFamily:D.body,marginTop:3,fontStyle:"italic"}}>📋 {s.notes}</div>}
-                            {s.coachNote&&<div style={{fontSize:9,color:C.silver,fontFamily:D.body,marginTop:3,fontStyle:"italic"}}>📝 {s.coachNote}</div>}
-                          </div>
-                          <div style={{display:"flex",gap:6,flexShrink:0}}>
-                            {s.status==="awaiting_payment"&&<button onClick={()=>confirmBooking(s.id,s._coll||"bookings")} style={{background:"#1a1200",border:"1px solid #c9a84c55",borderRadius:7,padding:"5px 12px",color:"#c9a84c",fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>💵 Mark Paid</button>}
-                            {s.status==="pending"&&s.paymentMethod!=="cash"&&<button onClick={()=>confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings")} style={{background:`${C.green}18`,border:`1px solid ${C.green}33`,borderRadius:7,padding:"5px 12px",color:C.green,fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓ Confirm</button>}
-                            <button onClick={()=>setReminderModal(s)} title="Send reminder" style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:7,padding:"5px 10px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📧</button>
-                            <button onClick={()=>{setRescheduleItem(s);setReschedDate(null);setReschedSess(null);}} title="Reschedule" style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:7,padding:"5px 10px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📅</button>
-                            <button onClick={()=>openAction(s)} title="More actions" style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"5px 10px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>⋯</button>
-                          </div>
-                        </div>
-                      ))}
+                    <div style={{display:"grid",gap:4,paddingLeft:13,borderLeft:`1px solid ${C.cardBorder}`}}>
+                      {group.items.map((s,i)=><UpcomingRow key={i} s={s} confirmBooking={confirmBooking} setReminderModal={setReminderModal} setRescheduleItem={setRescheduleItem} setReschedDate={setReschedDate} setReschedSess={setReschedSess} openAction={openAction}/>)}
                     </div>
                   </div>
                 ))}
@@ -788,62 +756,103 @@ export function Dashboard({bookings,inquiries,confirmBooking,removeBooking,sendR
   );
 }
 
-// ── PLAYER CARD (Today's Roster) ──────────────────────────
-function PlayerCard({s,onAction,onConfirm,onReminder}){
+// ── UPCOMING ROW — slim, tap to expand ────────────────────
+function UpcomingRow({s,confirmBooking,setReminderModal,setRescheduleItem,setReschedDate,setReschedSess,openAction}){
+  const [open,setOpen] = useState(false);
+  const accent = s.status==="confirmed"?C.green:s.status==="awaiting_payment"?"#c9a84c":s.status==="pending"?C.silver:C.silverDark;
+  const statusLabel = s.status==="confirmed"?"✓":s.status==="awaiting_payment"?"⏳":s.status==="pending"?"·":"?";
+  const statusColor = s.status==="confirmed"?C.green:s.status==="awaiting_payment"?"#c9a84c":C.silver;
   return(
-    <div style={{background:C.card,border:`1px solid ${s.status==="awaiting_payment"?"#c9a84c33":C.cardBorder}`,borderLeft:`3px solid ${s.status==="confirmed"?C.green:s.status==="awaiting_payment"?"#c9a84c":s.status==="pending"?C.silver:C.silverDark}`,borderRadius:12,padding:"14px 16px"}}>
-      {/* Row 1: Name + status */}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,flexWrap:"wrap"}}>
-            <span style={{fontSize:15,fontWeight:600,color:C.white,fontFamily:D.display}}>{s.name}</span>
-            {s.status==="confirmed"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.green}18`,color:C.green,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>✓ Confirmed</span>}
-            {s.status==="awaiting_payment"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#1a1200",border:"1px solid #c9a84c55",color:"#c9a84c",fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>⏳ Awaiting Payment</span>}
-            {s.status==="pending"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.silver}12`,color:C.silver,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>Pending</span>}
-            {s.paymentMethod==="cash"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:"#1a1200",border:"1px solid #c9a84c44",color:"#c9a84c",fontFamily:D.body}}>💵 Cash</span>}
-            {s._type==="1on1"&&<span style={{fontSize:7,padding:"2px 8px",borderRadius:10,background:`${C.silver}10`,color:C.silver,fontFamily:D.body}}>1-on-1</span>}
-          </div>
-          {/* Session info */}
-          <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:6}}>
-            <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>🕐 {s._time}</span>
-            {s.count>1&&<span style={{fontSize:10,color:C.silver,fontFamily:D.body}}>👥 {s.count} players</span>}
-            <span style={{fontSize:10,color:C.silverBright,fontFamily:D.body,fontWeight:600}}>${s.total||s.price||0}</span>
-          </div>
-          {/* Contact details — full display */}
-          <div style={{background:"#0a0908",border:`1px solid ${C.cardBorder}`,borderRadius:8,padding:"8px 10px",display:"flex",flexDirection:"column",gap:4}}>
-            {s.email&&(
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontSize:9,color:C.silverDim,fontFamily:D.body,width:14}}>✉</span>
-                <a href={`mailto:${s.email}`} style={{fontSize:10,color:C.silver,fontFamily:D.body,textDecoration:"none"}}>{s.email}</a>
-              </div>
-            )}
-            {s.phone&&(
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontSize:9,color:C.silverDim,fontFamily:D.body,width:14}}>📞</span>
-                <a href={`tel:${s.phone}`} style={{fontSize:10,color:C.silver,fontFamily:D.body,textDecoration:"none"}}>{s.phone}</a>
-              </div>
-            )}
-            {s.parentName&&s.parentName!==s.name&&(
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontSize:9,color:C.silverDim,fontFamily:D.body,width:14}}>👤</span>
-                <span style={{fontSize:10,color:C.textMid,fontFamily:D.body}}>Parent: {s.parentName}</span>
-              </div>
-            )}
-            {(!s.email&&!s.phone)&&<span style={{fontSize:10,color:C.textDim,fontFamily:D.body,fontStyle:"italic"}}>No contact info</span>}
-          </div>
-          {s.notes&&<div style={{fontSize:9,color:C.textMid,fontFamily:D.body,marginTop:6,fontStyle:"italic",lineHeight:1.5}}>📋 {s.notes}</div>}
-          {s.coachNote&&<div style={{fontSize:9,color:C.silver,fontFamily:D.body,marginTop:4,fontStyle:"italic"}}>📝 {s.coachNote}</div>}
+    <div style={{background:C.card,border:`1px solid ${C.cardBorder}`,borderLeft:`3px solid ${accent}`,borderRadius:9,overflow:"hidden"}}>
+      {/* Slim row */}
+      <div onClick={()=>setOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",cursor:"pointer"}}>
+        <div style={{flex:1,display:"flex",alignItems:"center",gap:8,minWidth:0,flexWrap:"wrap"}}>
+          <span style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display,whiteSpace:"nowrap"}}>{s.name}</span>
+          <span style={{fontSize:9,color:C.textDim,fontFamily:D.body,whiteSpace:"nowrap"}}>{s._time}</span>
+          {s.sessId==="s1"&&<span style={{fontSize:7,padding:"1px 6px",borderRadius:6,background:"#0d1520",border:"1px solid #4a9eff33",color:"#4a9eff",fontFamily:D.body}}>U9–U11</span>}
+          {s.sessId==="s2"&&<span style={{fontSize:7,padding:"1px 6px",borderRadius:6,background:`${C.red}10`,border:`1px solid ${C.red}22`,color:C.red,fontFamily:D.body}}>U12+</span>}
+          {s._type==="1on1"&&<span style={{fontSize:7,padding:"1px 6px",borderRadius:6,background:`${C.silver}10`,color:C.silverDim,fontFamily:D.body}}>1:1</span>}
         </div>
-        <div style={{display:"flex",flexDirection:"column",gap:5,flexShrink:0,marginLeft:8}}>
-          <button onClick={onReminder} title="Send reminder email" style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:6,padding:"5px 8px",color:C.silver,fontSize:10,cursor:"pointer",fontFamily:D.body}}>📧</button>
-          <button onClick={()=>onAction(s)} title="More actions" style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:6,padding:"5px 8px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>⋯</button>
-        </div>
+        <span style={{fontSize:9,color:statusColor,fontFamily:D.body,fontWeight:600,whiteSpace:"nowrap"}}>{statusLabel}</span>
+        <span style={{fontSize:10,color:C.silver,fontFamily:D.body,fontWeight:600,whiteSpace:"nowrap"}}>${s.total||s.price||0}</span>
+        <span style={{fontSize:10,color:C.textDim,flexShrink:0,transition:"transform 0.2s",transform:open?"rotate(180deg)":"none"}}>▾</span>
       </div>
-      {s.status==="pending"&&(
-        <button onClick={()=>onConfirm(s.id,s._type==="1on1"?"inquiries":"bookings")}
-          style={{width:"100%",background:`${C.green}18`,border:`1px solid ${C.green}33`,borderRadius:7,padding:"7px",color:C.green,fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600,letterSpacing:1,marginTop:4}}>
-          ✓ Mark Payment Received
-        </button>
+      {/* Expanded */}
+      {open&&(
+        <div style={{borderTop:`1px solid ${C.cardBorder}`,padding:"10px 12px",background:"#0c0b09"}}>
+          <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:10}}>
+            {s.email&&<a href={`mailto:${s.email}`} style={{fontSize:10,color:C.silver,fontFamily:D.body,textDecoration:"none"}}>✉ {s.email}</a>}
+            {s.phone&&<a href={`tel:${s.phone}`} style={{fontSize:10,color:C.silver,fontFamily:D.body,textDecoration:"none"}}>📞 {s.phone}</a>}
+            {s.notes&&<span style={{fontSize:9,color:C.textMid,fontFamily:D.body,fontStyle:"italic"}}>📋 {s.notes}</span>}
+            {s.coachNote&&<span style={{fontSize:9,color:C.silver,fontFamily:D.body,fontStyle:"italic"}}>📝 {s.coachNote}</span>}
+            {s.paymentMethod==="cash"&&<span style={{fontSize:9,color:"#c9a84c",fontFamily:D.body}}>💵 Cash payment</span>}
+          </div>
+          <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+            {s.status==="awaiting_payment"&&<button onClick={e=>{e.stopPropagation();confirmBooking(s.id,s._coll||"bookings");}} style={{background:"#1a1200",border:"1px solid #c9a84c44",borderRadius:7,padding:"5px 10px",color:"#c9a84c",fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>💵 Mark Paid</button>}
+            {s.status==="pending"&&s.paymentMethod!=="cash"&&<button onClick={e=>{e.stopPropagation();confirmBooking(s.id,s._type==="1on1"?"inquiries":"bookings");}} style={{background:`${C.green}18`,border:`1px solid ${C.green}33`,borderRadius:7,padding:"5px 10px",color:C.green,fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>✓ Confirm</button>}
+            <button onClick={e=>{e.stopPropagation();setReminderModal(s);}} style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:7,padding:"5px 9px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📧</button>
+            <button onClick={e=>{e.stopPropagation();setRescheduleItem(s);setReschedDate(null);setReschedSess(null);}} style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:7,padding:"5px 9px",color:C.silver,fontSize:9,cursor:"pointer",fontFamily:D.body}}>📅</button>
+            <button onClick={e=>{e.stopPropagation();openAction(s);}} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"5px 9px",color:C.textDim,fontSize:9,cursor:"pointer",fontFamily:D.body}}>⋯</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── PLAYER CARD (Today's Roster) — tap to expand contact ──
+function PlayerCard({s,onAction,onConfirm,onReminder}){
+  const [open,setOpen] = useState(false);
+  const accent = s.status==="confirmed"?C.green:s.status==="awaiting_payment"?"#c9a84c":s.status==="pending"?C.silver:C.silverDark;
+  return(
+    <div style={{background:C.card,border:`1px solid ${s.status==="awaiting_payment"?"#c9a84c22":C.cardBorder}`,borderLeft:`3px solid ${accent}`,borderRadius:12,overflow:"hidden"}}>
+      {/* Main row — always visible, tap to expand */}
+      <div onClick={()=>setOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",cursor:"pointer"}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap",marginBottom:3}}>
+            <span style={{fontSize:14,fontWeight:600,color:C.white,fontFamily:D.display}}>{s.name}</span>
+            {s.status==="confirmed"&&<span style={{fontSize:7,padding:"2px 7px",borderRadius:8,background:`${C.green}18`,color:C.green,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>✓</span>}
+            {s.status==="awaiting_payment"&&<span style={{fontSize:7,padding:"2px 7px",borderRadius:8,background:"#1a1200",border:"1px solid #c9a84c44",color:"#c9a84c",fontFamily:D.body,letterSpacing:1}}>⏳</span>}
+            {s.status==="pending"&&<span style={{fontSize:7,padding:"2px 7px",borderRadius:8,background:`${C.silver}12`,color:C.silver,fontFamily:D.body,letterSpacing:1,textTransform:"uppercase"}}>Pending</span>}
+            {s.paymentMethod==="cash"&&<span style={{fontSize:7,padding:"2px 7px",borderRadius:8,background:"#1a1200",border:"1px solid #c9a84c33",color:"#c9a84c",fontFamily:D.body}}>💵</span>}
+            {s._type==="1on1"&&<span style={{fontSize:7,padding:"2px 7px",borderRadius:8,background:`${C.silver}10`,color:C.silverDim,fontFamily:D.body}}>1:1</span>}
+          </div>
+          <div style={{display:"flex",gap:10,alignItems:"center"}}>
+            <span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{s._time}</span>
+            {s.count>1&&<span style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>· {s.count} players</span>}
+            <span style={{fontSize:11,color:C.silverBright,fontFamily:D.body,fontWeight:600,marginLeft:"auto"}}>${s.total||s.price||0}</span>
+          </div>
+        </div>
+        <span style={{fontSize:11,color:C.textDim,transition:"transform 0.2s",transform:open?"rotate(180deg)":"none"}}>▾</span>
+      </div>
+
+      {/* Expanded: contact + actions */}
+      {open&&(
+        <div style={{borderTop:`1px solid ${C.cardBorder}`,padding:"10px 14px",background:"#0c0b09"}}>
+          <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:10}}>
+            {s.email&&<a href={`mailto:${s.email}`} style={{fontSize:10,color:C.silver,fontFamily:D.body,textDecoration:"none"}}>✉ {s.email}</a>}
+            {s.phone&&<a href={`tel:${s.phone}`} style={{fontSize:10,color:C.silver,fontFamily:D.body,textDecoration:"none"}}>📞 {s.phone}</a>}
+            {s.parentName&&s.parentName!==s.name&&<span style={{fontSize:10,color:C.textMid,fontFamily:D.body}}>👤 {s.parentName}</span>}
+            {s.notes&&<span style={{fontSize:9,color:C.textMid,fontFamily:D.body,fontStyle:"italic"}}>📋 {s.notes}</span>}
+            {s.coachNote&&<span style={{fontSize:9,color:C.silver,fontFamily:D.body,fontStyle:"italic"}}>📝 {s.coachNote}</span>}
+          </div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {s.status==="pending"&&(
+              <button onClick={e=>{e.stopPropagation();onConfirm(s.id,s._type==="1on1"?"inquiries":"bookings");}}
+                style={{flex:1,background:`${C.green}18`,border:`1px solid ${C.green}33`,borderRadius:7,padding:"7px",color:C.green,fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600,letterSpacing:1}}>
+                ✓ Confirm
+              </button>
+            )}
+            {s.status==="awaiting_payment"&&(
+              <button onClick={e=>{e.stopPropagation();onConfirm(s.id,"bookings");}}
+                style={{flex:1,background:"#1a1200",border:"1px solid #c9a84c44",borderRadius:7,padding:"7px",color:"#c9a84c",fontSize:9,cursor:"pointer",fontFamily:D.body,fontWeight:600}}>
+                💵 Mark Paid
+              </button>
+            )}
+            <button onClick={e=>{e.stopPropagation();onReminder(s);}} style={{background:"transparent",border:`1px solid ${C.silver}22`,borderRadius:7,padding:"7px 10px",color:C.silver,fontSize:10,cursor:"pointer",fontFamily:D.body}}>📧</button>
+            <button onClick={e=>{e.stopPropagation();onAction(s);}} style={{background:"transparent",border:`1px solid ${C.cardBorder}`,borderRadius:7,padding:"7px 10px",color:C.textDim,fontSize:10,cursor:"pointer",fontFamily:D.body}}>⋯</button>
+          </div>
+        </div>
       )}
     </div>
   );
