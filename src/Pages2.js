@@ -447,11 +447,11 @@ export function PlayersTab({user,players,playersLoaded}){
   const [editId,setEditId]           = useState(null);
   const [confirmDeleteId,setConfirmDeleteId] = useState(null);
   const [saving,setSaving]           = useState(false);
-  const [form,setForm]               = useState({name:"",age:"",position:"",notes:""});
+  const [form,setForm]               = useState({name:"",age:"",position:"",league:"",ageGroup:"",notes:""});
 
-  function openAdd(){ setEditId(null); setForm({name:"",age:"",position:"",notes:""}); setShowForm(true); }
-  function openEdit(p){ setEditId(p.id); setForm({name:p.name,age:p.age||"",position:p.position||"",notes:p.notes||""}); setShowForm(true); }
-  function cancel(){ setShowForm(false); setEditId(null); setForm({name:"",age:"",position:"",notes:""}); }
+  function openAdd(){ setEditId(null); setForm({name:"",age:"",position:"",league:"",ageGroup:"",notes:""}); setShowForm(true); }
+  function openEdit(p){ setEditId(p.id); setForm({name:p.name,age:p.age||"",position:p.position||"",league:p.league||"",ageGroup:p.ageGroup||"",notes:p.notes||""}); setShowForm(true); }
+  function cancel(){ setShowForm(false); setEditId(null); setForm({name:"",age:"",position:"",league:"",ageGroup:"",notes:""}); }
 
   async function handleSave(){
     if(!form.name.trim()) return;
@@ -506,12 +506,35 @@ export function PlayersTab({user,players,playersLoaded}){
                 placeholder="—" style={{...IS,fontSize:13,textAlign:"center"}}/>
             </div>
           </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+            <div>
+              <div style={{fontSize:8,color:C.textDim,letterSpacing:2,marginBottom:5,textTransform:"uppercase",fontFamily:D.body}}>Position</div>
+              <select value={form.position} onChange={e=>setForm(p=>({...p,position:e.target.value}))} style={{...IS,fontSize:12}}>
+                <option value="">Any / Not sure</option>
+                {POSITIONS.map(p=><option key={p.id} value={p.id}>{p.full} ({p.id})</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{fontSize:8,color:C.textDim,letterSpacing:2,marginBottom:5,textTransform:"uppercase",fontFamily:D.body}}>Age Group</div>
+              <select value={form.ageGroup} onChange={e=>setForm(p=>({...p,ageGroup:e.target.value}))} style={{...IS,fontSize:12}}>
+                <option value="">Not sure</option>
+                <option value="U9">U9</option>
+                <option value="U10">U10</option>
+                <option value="U11">U11</option>
+                <option value="U12">U12</option>
+                <option value="U13">U13</option>
+                <option value="U14">U14</option>
+                <option value="U15">U15</option>
+                <option value="U16">U16</option>
+                <option value="U17">U17</option>
+                <option value="U18+">U18+</option>
+              </select>
+            </div>
+          </div>
           <div style={{marginBottom:10}}>
-            <div style={{fontSize:8,color:C.textDim,letterSpacing:2,marginBottom:5,textTransform:"uppercase",fontFamily:D.body}}>Position</div>
-            <select value={form.position} onChange={e=>setForm(p=>({...p,position:e.target.value}))} style={{...IS,fontSize:12}}>
-              <option value="">Any / Not sure</option>
-              {POSITIONS.map(p=><option key={p.id} value={p.id}>{p.full} ({p.id})</option>)}
-            </select>
+            <div style={{fontSize:8,color:C.textDim,letterSpacing:2,marginBottom:5,textTransform:"uppercase",fontFamily:D.body}}>Current Team / League</div>
+            <input value={form.league} onChange={e=>setForm(p=>({...p,league:e.target.value}))}
+              placeholder="e.g. James Island United, AYSO, club team…" style={{...IS,fontSize:12}}/>
           </div>
           <div style={{marginBottom:16}}>
             <div style={{fontSize:8,color:C.textDim,letterSpacing:2,marginBottom:5,textTransform:"uppercase",fontFamily:D.body}}>Notes for Coach</div>
@@ -538,7 +561,7 @@ export function PlayersTab({user,players,playersLoaded}){
           <div style={{fontSize:11,letterSpacing:4,color:"#a07055",textTransform:"uppercase",fontFamily:D.body,marginBottom:14}}>No players yet</div>
           <div style={{fontSize:20,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:10}}>Add your first player</div>
           <div style={{fontSize:11,color:"#a07055",fontFamily:D.body,lineHeight:1.8,marginBottom:22}}>
-            Name, age, and position — makes booking faster and helps Coach prepare for each session.
+            Name, age, position, league, and age group — makes booking faster and helps Coach prepare for each session.
           </div>
           <button onClick={openAdd}
             style={{background:`linear-gradient(135deg,#e83820,#c02810)`,border:`1px solid rgba(255,100,60,0.4)`,color:C.white,borderRadius:9,padding:"12px 28px",fontSize:10,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",fontFamily:D.body,fontWeight:600,boxShadow:"0 4px 16px rgba(255,77,46,0.25)"}}>
@@ -557,11 +580,13 @@ export function PlayersTab({user,players,playersLoaded}){
                   <div style={{fontSize:16,fontWeight:700,color:C.white,fontFamily:D.display,marginBottom:4}}>{p.name}</div>
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
                     {p.age&&<span style={{fontSize:10,color:C.textMid,fontFamily:D.body}}>Age {p.age}</span>}
+                    {p.ageGroup&&<span style={{fontSize:9,padding:"2px 9px",borderRadius:5,background:"rgba(74,158,255,0.12)",color:"#4a9eff",fontFamily:D.body,letterSpacing:1,border:"1px solid rgba(74,158,255,0.2)"}}>{p.ageGroup}</span>}
                     {pos&&(
                       <span style={{fontSize:9,padding:"2px 9px",borderRadius:5,background:`${C.silver}15`,color:C.silver,fontFamily:D.body,letterSpacing:1,border:`1px solid ${C.silver}25`}}>
                         {pos.full}
                       </span>
                     )}
+                    {p.league&&<span style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>· {p.league}</span>}
                   </div>
                 </div>
                 <div style={{display:"flex",gap:6,flexShrink:0}}>
