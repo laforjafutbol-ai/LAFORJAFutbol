@@ -715,6 +715,13 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
     const isCash = paymentMethod==="cash";
     // Shared group ID ties all package bookings together so the webhook can confirm all of them
     const packageGroupId = isPackage ? `pkg_${Date.now()}_${Math.random().toString(36).slice(2,7)}` : "";
+    // Pull player profile fields so Coach sees them on every booking
+    const firstPlayer = selectedPlayers[0] || null;
+    const playerPosition = firstPlayer?.position || "";
+    const playerLeague   = selectedPlayers.length>1
+      ? selectedPlayers.map(p=>p.league||"").filter(Boolean).join(", ")
+      : (firstPlayer?.league || "");
+    const playerAgeGroup = firstPlayer?.ageGroup || "";
     const base = {
       skill:"The Furnace", skillIcon:"🔥",
       count:effectiveCount,
@@ -729,6 +736,9 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
       createdAt:new Date().toISOString(),
       ...(user?{uid:user.uid,userId:user.uid}:{}),
       ...(selPlayerIds.length>0?{playerIds:selPlayerIds}:{}),
+      ...(playerPosition?{position:playerPosition}:{}),
+      ...(playerLeague?{league:playerLeague}:{}),
+      ...(playerAgeGroup?{ageGroup:playerAgeGroup}:{}),
     };
     let refs = [];
     if(isPackage){
@@ -838,7 +848,7 @@ function BookPage({spotsLeft,addBooking,bookings,isBlocked,user,setPage}){
                     <button key={p.id} onClick={()=>setSelPlayerIds(sel?selPlayerIds.filter(id=>id!==p.id):[...selPlayerIds,p.id])} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",background:sel?`${C.red}12`:C.black,border:`1px solid ${sel?C.red:C.cardBorder}`,borderRadius:9,cursor:"pointer"}}>
                       <div style={{textAlign:"left"}}>
                         <div style={{fontSize:13,fontWeight:600,color:C.white,fontFamily:D.display}}>{p.name}</div>
-                        <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{p.age?"Age "+p.age:""}{p.age&&p.position?" · ":""}{p.position||""}</div>
+                        <div style={{fontSize:10,color:C.textDim,fontFamily:D.body}}>{[p.age?"Age "+p.age:"",p.ageGroup||"",p.position||""].filter(Boolean).join(" · ")}</div>
                       </div>
                       {sel&&<div style={{width:18,height:18,borderRadius:"50%",background:C.red,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:C.white}}>✓</div>}
                     </button>
