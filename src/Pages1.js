@@ -783,6 +783,13 @@ function UpcomingRow({s,confirmBooking,setReminderModal,setRescheduleItem,setRes
           <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:10}}>
             {s.email&&<a href={`mailto:${s.email}`} style={{fontSize:10,color:C.silver,fontFamily:D.body,textDecoration:"none"}}>✉ {s.email}</a>}
             {s.phone&&<a href={`tel:${s.phone}`} style={{fontSize:10,color:C.silver,fontFamily:D.body,textDecoration:"none"}}>📞 {s.phone}</a>}
+            {(s.position||s.ageGroup||s.league)&&(
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginTop:2}}>
+                {s.ageGroup&&<span style={{fontSize:8,padding:"2px 7px",borderRadius:5,background:"rgba(74,158,255,0.12)",color:"#4a9eff",fontFamily:D.body,border:"1px solid rgba(74,158,255,0.2)"}}>{s.ageGroup}</span>}
+                {s.position&&<span style={{fontSize:8,padding:"2px 7px",borderRadius:5,background:`${C.silver}12`,color:C.silver,fontFamily:D.body,border:`1px solid ${C.silver}22`}}>{s.position.toUpperCase()}</span>}
+                {s.league&&<span style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>⚽ {s.league}</span>}
+              </div>
+            )}
             {s.notes&&<span style={{fontSize:9,color:C.textMid,fontFamily:D.body,fontStyle:"italic"}}>📋 {s.notes}</span>}
             {s.coachNote&&<span style={{fontSize:9,color:C.silver,fontFamily:D.body,fontStyle:"italic"}}>📝 {s.coachNote}</span>}
             {s.paymentMethod==="cash"&&<span style={{fontSize:9,color:"#c9a84c",fontFamily:D.body}}>💵 Cash payment</span>}
@@ -833,6 +840,13 @@ function PlayerCard({s,onAction,onConfirm,onReminder}){
             {s.email&&<a href={`mailto:${s.email}`} style={{fontSize:10,color:C.silver,fontFamily:D.body,textDecoration:"none"}}>✉ {s.email}</a>}
             {s.phone&&<a href={`tel:${s.phone}`} style={{fontSize:10,color:C.silver,fontFamily:D.body,textDecoration:"none"}}>📞 {s.phone}</a>}
             {s.parentName&&s.parentName!==s.name&&<span style={{fontSize:10,color:C.textMid,fontFamily:D.body}}>👤 {s.parentName}</span>}
+            {(s.position||s.ageGroup||s.league)&&(
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginTop:1}}>
+                {s.ageGroup&&<span style={{fontSize:8,padding:"2px 7px",borderRadius:5,background:"rgba(74,158,255,0.12)",color:"#4a9eff",fontFamily:D.body,border:"1px solid rgba(74,158,255,0.2)"}}>{s.ageGroup}</span>}
+                {s.position&&<span style={{fontSize:8,padding:"2px 7px",borderRadius:5,background:`${C.silver}12`,color:C.silver,fontFamily:D.body,border:`1px solid ${C.silver}22`}}>{s.position.toUpperCase()}</span>}
+                {s.league&&<span style={{fontSize:9,color:C.textDim,fontFamily:D.body}}>⚽ {s.league}</span>}
+              </div>
+            )}
             {s.notes&&<span style={{fontSize:9,color:C.textMid,fontFamily:D.body,fontStyle:"italic"}}>📋 {s.notes}</span>}
             {s.coachNote&&<span style={{fontSize:9,color:C.silver,fontFamily:D.body,fontStyle:"italic"}}>📝 {s.coachNote}</span>}
           </div>
